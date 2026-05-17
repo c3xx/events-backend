@@ -1,10 +1,9 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
-import { event } from "@/db/schema.js";
 
 export const getEventInvitations = dbAction(async (eventId: number) => {
-    return await db.quer.eventOrganizerInvitation.findMany({
+    return await db.query.eventOrganizerInvitation.findMany({
         where: and(
             eq(schema.eventOrganizerInvitation.eventId, eventId),
             isNull(schema.eventOrganizerInvitation.deletedAt),
@@ -15,7 +14,7 @@ export const getEventInvitations = dbAction(async (eventId: number) => {
             invitedAt: true,
             closedAt: true,
         },
-        with{
+        with: {
             senderOrganization: {
                 columns: { id:true, name: true},
             },
@@ -44,7 +43,7 @@ export const findInvitationById = dbAction( async (eventId: number, invitationId
         .where(
             and(
                 eq(schema.eventOrganizerInvitation.eventId, eventId),
-                eq(schema.eventOrganizerInvitation.invitationId, invitationId),
+                eq(schema.eventOrganizerInvitation.id, invitationId),
                 isNull(schema.eventOrganizerInvitation.deletedAt),
             ),
         )
@@ -53,6 +52,61 @@ export const findInvitationById = dbAction( async (eventId: number, invitationId
         return invitation;
 });
 
+export const findPendingInvitation = dbAction( async (eventId: number, recipientOrganizationId: number) => {
+    const [invitation] = await db
+        .select({
+            id: schema.eventOrganizerInvitation.id})
+        .from(schema.eventOrganizerInvitation)
+        .where(
+            and(
+                eq(schema.eventOrganizerInvitation.eventId, eventId),
+                eq(schema.eventOrganizerInvitation.recipientOrganizationId, recipientOrganizationId),
+                eq(schema.eventOrganizerInvitation.status, "pending"),
+                isNull(schema.eventOrganizerInvitation.deletedAt),
+            ),)
+        .limit(1);
+        return invitation;
+},
+);
+
+export const findAcitveClubHead = dbAction( async (userId: number) =>{
+    const [userRole] = await db
+        .select({
+            userRoleId: schema.userRole.id,
+            organizationId: schema.userRole.managedEntityId,
+        })
+        .from(schema.userRole)
+        .innerJoin(schema.role, eq(schema.userRole.roleId, schema.role.id))
+        .where(
+            and(
+                eq(schema.userRole.userId, userId),
+                eq(schema.role.name, "club_head"),
+                isNull(schema.userRole.deletedAt),
+            ),
+        ).limit(1);
+        return userRole;
+})
+
+export const findOrganizerByOrganization = dbAction(
+	async (eventId: number, organizationId: number) => {
+		const [organizer] = await db
+			.select({
+				id: schema.eventOrganizer.id,
+				role: schema.eventOrganizer.role,
+			})
+			.from(schema.eventOrganizer)
+			.where(
+				and(
+					eq(schema.eventOrganizer.eventId, eventId),
+					eq(schema.eventOrganizer.organizationId, organizationId),
+					isNull(schema.eventOrganizer.deletedAt),
+				),
+			)
+			.limit(1);
+
+		return organizer;
+	},
+);
 export const sendInvitation = dbAction(async (data:{
     eventId: number,
     invitedByUserId: number,
@@ -82,7 +136,7 @@ export const respondToInvitation = dbAction( async (invitationId: number, data:{
                 status: data.status,
                 respondedByUserId: data.respondedByUserId,
                 closedAt: new Date().toISOString(),
-                //updatedAt: new Date().toISOString(),
+                //updatedAt: new Date().toISOString(), Required?
             })
             .where(
                 eq(schema.eventOrganizerInvitation.id, invitationId)
@@ -97,34 +151,10 @@ export const respondToInvitation = dbAction( async (invitationId: number, data:{
 });
 
 export const revokeInvitation = dbAction( async (invitationId: number) =>{
-    const [updated] = await db.
-        update(schema.eventOrganizerInvitation)
-        .set({
-            status: "revoked",
-            closedAt: new Date().toISOString(),
-            // updatedAt: new Date().toISOString(),
-        })
+    await db
+        .delete(schema.eventOrganizerInvitation)
         .where(
-            eq(schema.eventOrganizerInvitation.id, invitationId))
-            .returning({id: schema.eventOrganizerInvitation.id});
+            eq(schema.eventOrganizerInvitation.id, invitationId)
+        );
 });
-
-// export const findOrganizerByOrganization = dbAction(async (
-//     eventId: number,
-//     organizationId: number,
-// ) => {
-//     const [organizer] = await db
-//         .select({ id: schema.eventOrganizer.id })
-//         .from(schema.eventOrganizer)
-//         .where(
-//             and(
-//                 eq(schema.eventOrganizer.eventId, eventId),
-//                 eq(schema.eventOrganizer.organizationId, organizationId),
-//                 isNull(schema.eventOrganizer.deletedAt),
-//             ),
-//         )
-//         .limit(1);
-
-//     return organizer;
-// });
 
