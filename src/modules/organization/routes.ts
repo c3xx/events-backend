@@ -15,5 +15,15 @@ router.post(
 	requirePermissions(["organization:add_member"]),
 	controller.addMemberToOrganization,
 );
+router.put(
+	"/:id/members/:userId",
+	requirePermissions(["organization:add_member"]),
+	controller.updateOrganizationMemberRoles,
+);
+router.delete(
+	"/:id/members/:userId",
+	requirePermissions(["organization:add_member"]),
+	controller.deleteOrganizationMember,
+);
 
 export default router;

@@ -60,4 +60,15 @@ export const getUserOrganizations = dbAction(async (userId: number) => {
 			),
 		);
 	return rows.map((r) => r.orgId);
+  
+export const findUserById = dbAction(async (id: number) => {
+	return await db.query.user.findFirst({
+		where: and(eq(schema.user.id, id), isNull(schema.user.deletedAt)),
+	});
+});
+
+export const findUserByEmail = dbAction(async (email: string) => {
+	return await db.query.user.findFirst({
+		where: and(eq(schema.user.email, email), isNull(schema.user.deletedAt)),
+	});
 });

@@ -1,8 +1,11 @@
 import { ok } from "@/lib/helpers.js";
 import {
-	addMemberToOrganizationSchema,
 	createOrganizationSchema,
+	getOrganizationMembersQuerySchema,
+	organizationMemberScopedSchema,
 	organizationScopedSchema,
+	assignOrganizationMemberRolesSchema,
+	addOrganizationMemberSchema,
 } from "./schema.js";
 import * as service from "./service.js";
 
@@ -43,25 +46,51 @@ export const getOrganization: ApiRequestHandler<{
 export const getOrganizationMembers: ApiRequestHandler<
 	{
 		id: number;
-		isActive: boolean;
-		roleId: number;
-		user: {
+		fullName: string;
+		email: string;
+		roles: {
 			id: number;
-			fullName: string;
-			email: string;
-		};
+			isActive: boolean;
+			roleId: number;
+		}[];
 	}[]
 > = async (req, res) => {
 	const params = organizationScopedSchema.parse(req.params);
-	const result = await service.getOrganizationMembers(params.id);
+	const query = getOrganizationMembersQuerySchema.parse(req.query);
+	const result = await service.getOrganizationMembers(params.id, query);
 	return ok(res, result);
 };
 
-export const addMemberToOrganization: ApiRequestHandler<{
-	id: number;
-}> = async (req, res) => {
+export const addMemberToOrganization: ApiRequestHandler<
+	{
+		id: number;
+		roleId: number;
+	}[]
+> = async (req, res) => {
 	const params = organizationScopedSchema.parse(req.params);
-	const body = addMemberToOrganizationSchema.parse(req.body);
-	const result = await service.addMemberToOrganization(params.id, body);
+	const body = addOrganizationMemberSchema.parse(req.body);
+	const result = await service.addOrganizationMember(params.id, body);
+	return ok(res, result);
+};
+
+export const updateOrganizationMemberRoles: ApiRequestHandler<
+	{
+		id: number;
+		roleId: number;
+	}[]
+> = async (req, res) => {
+	const params = organizationMemberScopedSchema.parse(req.params);
+	const body = assignOrganizationMemberRolesSchema.parse(req.body);
+	const result = await service.assignOrganizationMemberRoles(params.id, params.userId, body);
+	return ok(res, result);
+};
+
+export const deleteOrganizationMember: ApiRequestHandler<
+	{
+		id: number;
+	}[]
+> = async (req, res) => {
+	const params = organizationMemberScopedSchema.parse(req.params);
+	const result = await service.deleteOrganizationMember(params.id, params.userId);
 	return ok(res, result);
 };

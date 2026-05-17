@@ -43,7 +43,7 @@ export const PERMISSION = {
 	organization: {
 		create: "Create organizations",
 		// get_members: "Get organization members", // todo: think hmmm
-		add_member: "Add users to organizations",
+		add_member: "Add users to organizations", // todo: rename to manage_members
 	},
 	organization_type: {
 		create: "Create organization types",
@@ -58,7 +58,7 @@ export const PERMISSION = {
 	},
 	venue: {
 		create: "Create venues",
-		add_member: "Add users to organizations",
+		add_member: "Add users to organizations", // todo: rename to manage_members
 		modify_facilities: "Modify facilities of venues",
 	},
 	venue_type: {
