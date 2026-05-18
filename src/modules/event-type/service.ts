@@ -20,9 +20,9 @@ export async function createEventType(input: CreateEventTypeSchema) {
 }
 
 export async function deleteEventType(eventTypeId: number) {
-	const exists = await repository.findEventType(eventTypeId);
-	if (!exists) throw new NotFoundError("Event type not found");
-	return await repository.deleteEventType(eventTypeId);
+	const result = await repository.deleteEventType(eventTypeId);
+	if ((result.rowCount ?? 0) === 0) throw new NotFoundError("Event type not found");
+	return result;
 }
 
 export async function getEventTypeChildTypes(parentEventTypeId: number) {

@@ -26,15 +26,6 @@ export const createEventType = dbAction(
 	},
 );
 
-export const findEventType = dbAction(async (id: number) => {
-	const [found] = await db
-		.select({ val: sql`1` })
-		.from(schema.eventType)
-		.where(and(eq(schema.eventType.id, id), isNull(schema.eventType.deletedAt)))
-		.limit(1);
-	return found != null;
-});
-
 export const getEventType = dbAction(async (evenTypeId: number) => {
 	return await db.query.eventType.findFirst({
 		where: and(eq(schema.eventType.id, evenTypeId), isNull(schema.eventType.deletedAt)),
@@ -47,10 +38,11 @@ export const getEventType = dbAction(async (evenTypeId: number) => {
 });
 
 export const deleteEventType = dbAction(async (id: number) => {
-	await db
+	const result = await db
 		.update(schema.eventType)
 		.set({ deletedAt: sql`NOW()` })
 		.where(and(eq(schema.eventType.id, id), isNull(schema.eventType.deletedAt)));
+	return result;
 });
 
 export const getEventTypeChildTypes = dbAction(async (parentEventId: number) => {
