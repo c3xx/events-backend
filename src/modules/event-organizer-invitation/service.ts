@@ -108,7 +108,7 @@ export async function revokeInvitation(
 		throw new ForbiddenError("You are not an active club head");
 	}
 	if (invitation.senderOrganizationId !== clubHeadRole.organizationId) {
-		throw new ForbiddenError("Only sender organization can revoke the invitaion");
+		throw new ForbiddenError("Only sender organization can revoke the invitation");
 	}
 
 	return await repository.revokeInvitation(invitationId);
