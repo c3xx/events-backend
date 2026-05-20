@@ -58,5 +58,5 @@ export const revokeInvitation: ApiRequestHandler<{
 	const user = getAuthenticatedUser(req);
 	const params = invitationItemScopedSchema.parse(req.params);
 	const result = await service.revokeInvitation(params.eventId, params.invitationId, user.id);
-	return ok(res, result, 204);
+	return ok(res, result, 200);
 };
