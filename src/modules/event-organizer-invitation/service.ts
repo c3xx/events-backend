@@ -22,7 +22,7 @@ export async function sendInvitation(
 		throw new ForbiddenError("Invitations can only be sent while the event is in Draft status");
 	}
 
-	const clubHeadRole = await repository.findAcitveClubHead(invitedByUserId);
+	const clubHeadRole = await repository.findActiveClubHead(invitedByUserId);
 	if (clubHeadRole == null) {
 		throw new ForbiddenError("You are not an active club head");
 	}
