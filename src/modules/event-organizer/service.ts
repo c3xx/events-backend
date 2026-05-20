@@ -14,7 +14,7 @@ export async function addEventOrganizer(eventId: number, input: AddEventOrganize
 	if (event == null) throw new NotFoundError("Event not found");
 
 	if (event.status !== "draft") {
-		throw new ForbiddenError("Organziers can be added only at draft stage");
+		throw new ForbiddenError("Organizers can be added only at draft stage");
 	}
 
 	return await repository.addEventOrganizer({
