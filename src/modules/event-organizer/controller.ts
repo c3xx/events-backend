@@ -9,7 +9,7 @@ import * as service from "./service.js";
 export const getEventOrganizers: ApiRequestHandler<
 	{
 		id: number;
-		role: "host" | "co_host"; //or should resource_provider also be given?
+		role: "host" | "co_host" | "resource_provider"; 
 		organization: {
 			id: number;
 			name: string;

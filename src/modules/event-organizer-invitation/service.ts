@@ -73,7 +73,7 @@ export async function respondToInvitation(
 		throw new ConflictError("The invitation has already been responded to");
 	}
 
-	const clubHeadRole = await repository.findAcitveClubHead(respondedByUserId);
+	const clubHeadRole = await repository.findActiveClubHead(respondedByUserId);
 	if (clubHeadRole == null) {
 		throw new ForbiddenError("You are not an active club head");
 	}
@@ -82,9 +82,21 @@ export async function respondToInvitation(
 		throw new ForbiddenError("Only recipient organization can respond to invitation");
 	}
 
+	if (input.status === "accepted") {
+		const existingOrganizer = await repository.findOrganizerByOrganization(
+			eventId,
+			clubHeadRole.organizationId,
+		);
+		if (existingOrganizer != null) {
+			throw new ConflictError("Your organization is already an organizer of the event");
+		}
+	}
+
 	return await repository.respondToInvitation(invitationId, {
 		status: input.status,
 		respondedByUserId: clubHeadRole.userRoleId,
+		eventId,
+		recipientOrganizationId: invitation.recipientOrganizationId,
 	});
 }
 
@@ -103,7 +115,7 @@ export async function revokeInvitation(
 		throw new ConflictError("Only pending invitations can be revoked");
 	}
 
-	const clubHeadRole = await repository.findAcitveClubHead(revokerUserId);
+	const clubHeadRole = await repository.findActiveClubHead(revokerUserId);
 	if (clubHeadRole == null) {
 		throw new ForbiddenError("You are not an active club head");
 	}

@@ -137,6 +137,8 @@ export const respondToInvitation = dbAction(
 		data: {
 			status: "accepted" | "rejected";
 			respondedByUserId: number;
+			eventId: number;
+			recipientOrganizationId: number;
 		},
 	) => {
 		const [updated] = await db
@@ -147,19 +149,36 @@ export const respondToInvitation = dbAction(
 				closedAt: new Date().toISOString(),
 				//updatedAt: new Date().toISOString(), Required?
 			})
-			.where(eq(schema.eventOrganizerInvitation.id, invitationId))
+			.where(
+				and(
+					eq(schema.eventOrganizerInvitation.id, invitationId),
+					isNull(schema.eventOrganizerInvitation.deletedAt),
+				)
+			)
 			.returning({
 				id: schema.eventOrganizerInvitation.id,
 				status: schema.eventOrganizerInvitation.status,
 			});
 
 		if (updated == null) unreachable();
+
+		if (data.status === "accepted") {
+			await db.insert(schema.eventOrganizer).values({
+				eventId: data.eventId,
+				organizationId: data.recipientOrganizationId,
+				role: "co_host",
+			});
+		}
 		return updated;
 	},
 );
 
 export const revokeInvitation = dbAction(async (invitationId: number) => {
 	await db
-		.delete(schema.eventOrganizerInvitation)
+		.update(schema.eventOrganizerInvitation)
+		.set({ 
+			status: "revoked",
+			closedAt: new Date().toISOString(),
+			deletedAt: new Date().toISOString() })
 		.where(eq(schema.eventOrganizerInvitation.id, invitationId));
 });
