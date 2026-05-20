@@ -2,14 +2,14 @@ import z from "zod";
 
 export const invitationScopedSchema = z
 	.object({
-		eventId: z.coerce.number({ error: "Invalid event ID" }),
+		eventId: z.coerce.number({ error: "Invalid event ID" }).int({ error: "Invalid event ID" }),
 	})
 	.strict();
 
 export const invitationItemScopedSchema = z
 	.object({
-		eventId: z.coerce.number({ error: "Invalid event ID" }),
-		invitationId: z.coerce.number({ error: "Invalid invitation ID" }),
+		eventId: z.coerce.number({ error: "Invalid event ID" }).int({ error: "Invalid event ID" }),
+		invitationId: z.coerce.number({ error: "Invalid invitation ID" }).int({ error: "Invalid invitation ID" }),
 	})
 	.strict();
 
