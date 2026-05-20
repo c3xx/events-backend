@@ -75,7 +75,7 @@ export async function respondToInvitation(
 
 	const clubHeadRole = await repository.findAcitveClubHead(respondedByUserId);
 	if (clubHeadRole == null) {
-		throw new ForbiddenError("You are not an acitve club head");
+		throw new ForbiddenError("You are not an active club head");
 	}
 
 	if (invitation.recipientOrganizationId !== clubHeadRole.organizationId) {
