@@ -72,7 +72,7 @@ export const findPendingInvitation = dbAction(
 	},
 );
 
-export const findAcitveClubHead = dbAction(async (userId: number) => {
+export const findActiveClubHead = dbAction(async (userId: number) => {
 	const [userRole] = await db
 		.select({
 			userRoleId: schema.userRole.id,
