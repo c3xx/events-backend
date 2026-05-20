@@ -11,7 +11,7 @@ export const organizerScopedSchema = z
 		eventId: z.coerce.number({ error: "Invalid event ID" }).int({ error: "Invalid event ID" }),
 		organizerId: z.coerce
 			.number({ error: "Invalid organizer ID" })
-			.int({ error: "Invalid event ID" }),
+			.int({ error: "Invalid organizer ID" }),
 	})
 	.strict();
 
@@ -19,7 +19,7 @@ export const addEventOrganizerSchema = z
 	.object({
 		organizationId: z.coerce
 			.number({ error: "Invalid organization ID" })
-			.int({ error: "Invalid event ID" }),
+			.int({ error: "Invalid organization ID" }),
 		role: z.enum(["host", "co_host"], { error: "Role must be a host or co_host" }),
 	})
 	.strict();
