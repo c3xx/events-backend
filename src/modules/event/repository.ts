@@ -58,12 +58,8 @@ export const findEvents = dbAction(
 
 		const accessConditions: SQL[] = [];
 
-		if (filter.viewAll) {
-			accessConditions.push(
-				filter.status && filter.status.length > 0
-					? inArray(schema.event.status, filter.status)
-					: sql`true`,
-			);
+		if (filter.viewAll && filter.status && filter.status.length > 0) {
+			accessConditions.push(inArray(schema.event.status, filter.status));
 		}
 
 		if (filter.viewAllConfirmed) {
