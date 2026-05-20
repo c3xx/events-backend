@@ -31,6 +31,7 @@ export const updateEventOrganizerRoleSchema = z
 	.strict();
 
 export type EventOrganizerScopedSchema = z.output<typeof eventScopedSchema>;
-export type OrgaznizerScopedSchema = z.output<typeof organizerScopedSchema>;
+export type OrganizerScopedSchema = z.output<typeof organizerScopedSchema>;
+export type OrgaznizerScopedSchema = OrganizerScopedSchema;
 export type AddEventOrganizerSchema = z.output<typeof addEventOrganizerSchema>;
 export type UpdateEventOrganizerRoleSchema = z.output<typeof updateEventOrganizerRoleSchema>;
