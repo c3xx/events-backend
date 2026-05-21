@@ -46,20 +46,19 @@ export const getUsers = dbAction(async () => {
 	});
 });
 
-export const getUserOrganizations = dbAction(async (userId: number) => {
-    const rows = await db
-        .select({ orgId: schema.managedEntity.refId })
-        .from(schema.userRole)
-        .innerJoin(schema.managedEntity, eq(schema.userRole.managedEntityId, schema.managedEntity.id))
-        .where(
-            and(
-                eq(schema.userRole.userId, userId),
-                eq(schema.managedEntity.managedEntityType, "organization"),
-                isNull(schema.userRole.deletedAt),
-                isNull(schema.managedEntity.deletedAt),
-            ),
-        );
-    return rows.map((r) => r.orgId);
+export const getUserOrganizationIds = dbAction(async (id: number) => {
+	const rows = await db
+		.select({ orgId: schema.managedEntity.refId })
+		.from(schema.userRole)
+		.innerJoin(schema.managedEntity, eq(schema.userRole.managedEntityId, schema.managedEntity.id))
+		.where(
+			and(
+				eq(schema.userRole.userId, id),
+				eq(schema.managedEntity.managedEntityType, "organization"),
+				isNull(schema.userRole.deletedAt),
+			),
+		);
+	return rows.map((r) => r.orgId);
 });
 
 export const findUserById = dbAction(async (id: number) => {
