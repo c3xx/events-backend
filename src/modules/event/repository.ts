@@ -261,46 +261,45 @@ export const updateEvent = dbAction(
 // 		.orderBy(schema.event.startsAt);
 // });
 
-export async function findOverlappingVenueAllotments(
-	allotments: { venueId: number; startsAt: string; endsAt: string }[],
-) {
-	if (allotments.length === 0) return [];
+export const findOverlappingVenueAllotments = dbAction(
+	async (allotments: { venueId: number; startsAt: string; endsAt: string }[]) => {
+		if (allotments.length === 0) return [];
 
-	const conflictConditions = allotments.map((a) =>
-		and(
-			eq(schema.venueAllotment.venueId, a.venueId),
-			lt(schema.venueAllotment.startsAt, a.endsAt),
-			gt(schema.venueAllotment.endsAt, a.startsAt),
-			isNull(schema.venueAllotment.deletedAt),
-		),
-	);
+		const conflictConditions = allotments.map((a) =>
+			and(
+				eq(schema.venueAllotment.venueId, a.venueId),
+				lt(schema.venueAllotment.startsAt, a.endsAt),
+				gt(schema.venueAllotment.endsAt, a.startsAt),
+				isNull(schema.venueAllotment.deletedAt),
+			),
+		);
 
-	return await db
-		.select({
-			venue: { id: schema.venue.id, name: schema.venue.name },
-			event: { id: schema.event.id, eventTitle: schema.event.eventTitle },
-			startsAt: schema.venueAllotment.startsAt,
-			endsAt: schema.venueAllotment.endsAt,
-		})
-		.from(schema.venueAllotment)
-		.innerJoin(schema.venue, eq(schema.venueAllotment.venueId, schema.venue.id))
-		.innerJoin(schema.event, eq(schema.venueAllotment.eventId, schema.event.id))
-		.where(or(...conflictConditions));
-}
+		return await db
+			.select({
+				venue: { id: schema.venue.id, name: schema.venue.name },
+				event: { id: schema.event.id, eventTitle: schema.event.eventTitle },
+				startsAt: schema.venueAllotment.startsAt,
+				endsAt: schema.venueAllotment.endsAt,
+			})
+			.from(schema.venueAllotment)
+			.innerJoin(schema.venue, eq(schema.venueAllotment.venueId, schema.venue.id))
+			.innerJoin(schema.event, eq(schema.venueAllotment.eventId, schema.event.id))
+			.where(or(...conflictConditions));
+	},
+);
 
-export async function insertVenueAllotments(
-	eventId: number,
-	allotments: { venueId: number; startsAt: string; endsAt: string }[],
-) {
-	const valuesToInsert = allotments.map((a) => ({
-		venueId: a.venueId,
-		eventId: eventId,
-		startsAt: a.startsAt,
-		endsAt: a.endsAt,
-	}));
+export const insertVenueAllotments = dbAction(
+	async (eventId: number, allotments: { venueId: number; startsAt: string; endsAt: string }[]) => {
+		const valuesToInsert = allotments.map((a) => ({
+			venueId: a.venueId,
+			eventId: eventId,
+			startsAt: a.startsAt,
+			endsAt: a.endsAt,
+		}));
 
-	return await db
-		.insert(schema.venueAllotment)
-		.values(valuesToInsert)
-		.returning({ id: schema.venueAllotment.id });
-}
+		return await db
+			.insert(schema.venueAllotment)
+			.values(valuesToInsert)
+			.returning({ id: schema.venueAllotment.id });
+	},
+);
