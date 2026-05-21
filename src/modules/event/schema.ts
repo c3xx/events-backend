@@ -14,14 +14,23 @@ export const createEventSchema = z
 		eventTypeId: z.coerce
 			.number({ error: "Invalid event type ID" })
 			.int({ error: "Invalid event type ID" }),
-		expectedParticipants: z.coerce.number({ error: "Invalid expected participants count" }).int({ error: "Invalid expected participants count" }).positive({ error: "Expected participants must be positive" }),
-		requestDetails: z.string({ error: "Invalid request details" }).trim().nonempty({ error: "Request details cannot be empty" }),
-		parentEventId: z.coerce.number({ error: "Invalid parent event ID" }).int({ error: "Invalid parent event ID" }).nullish(),
+		expectedParticipants: z.coerce
+			.number({ error: "Invalid expected participants count" })
+			.int({ error: "Invalid expected participants count" })
+			.positive({ error: "Expected participants must be positive" }),
+		requestDetails: z
+			.string({ error: "Invalid request details" })
+			.trim()
+			.nonempty({ error: "Request details cannot be empty" }),
+		parentEventId: z.coerce
+			.number({ error: "Invalid parent event ID" })
+			.int({ error: "Invalid parent event ID" })
+			.nullish(),
 		startsAt: z.iso.datetime({ offset: true, error: "Invalid start time format" }),
 		endsAt: z.iso.datetime({ offset: true, error: "Invalid end time format" }),
 	})
 	.refine((d) => new Date(d.startsAt) < new Date(d.endsAt), {
-		message: "startsAt must be before endsAt",
+		message: "Event cannot end before it starts",
 	})
 	.strict();
 
@@ -51,9 +60,18 @@ export const updateEventSchema = z
 		eventTypeId: z.coerce
 			.number({ error: "Invalid event type ID" })
 			.int({ error: "Invalid event type ID" }),
-		expectedParticipants: z.coerce.number({ error: "Invalid expected participants count" }).int({ error: "Invalid expected participants count" }).positive({ error: "Expected participants must be positive" }),
-		requestDetails: z.string({ error: "Invalid request details" }).trim().nonempty({ error: "Request details cannot be empty" }),
-		parentEventId: z.coerce.number({ error: "Invalid parent event ID" }).int({ error: "Invalid parent event ID" }).nullish(),
+		expectedParticipants: z.coerce
+			.number({ error: "Invalid expected participants count" })
+			.int({ error: "Invalid expected participants count" })
+			.positive({ error: "Expected participants must be positive" }),
+		requestDetails: z
+			.string({ error: "Invalid request details" })
+			.trim()
+			.nonempty({ error: "Request details cannot be empty" }),
+		parentEventId: z.coerce
+			.number({ error: "Invalid parent event ID" })
+			.int({ error: "Invalid parent event ID" })
+			.nullish(),
 		startsAt: z.iso.datetime({ offset: true, error: "Invalid start time format" }),
 		endsAt: z.iso.datetime({ offset: true, error: "Invalid end time format" }),
 	})
@@ -66,22 +84,22 @@ export const updateEventSchema = z
 			return true;
 		},
 		{
-			message: "startsAt must be before endsAt",
-		}
+			message: "Event cannot end before it starts",
+		},
 	);
 
-export const createVenueAllotmentSchema = z
-	.object({
-		venueId: z.coerce.number({ error: "Invalid venue ID" }).int({ error: "Invalid venue ID" }),
-		startsAt: z.iso.datetime({ offset: true }),
-		endsAt: z.iso.datetime({ offset: true }),
-	})
-	.refine((d) => new Date(d.startsAt) < new Date(d.endsAt), {
-		message: "startsAt must be before endsAt",
-	})
-	.strict();
-
-export const createVenueAllotmentBodySchema = z.array(createVenueAllotmentSchema);
+export const createVenueAllotmentBodySchema = z.array(
+	z
+		.object({
+			venueId: z.coerce.number({ error: "Invalid venue ID" }).int({ error: "Invalid venue ID" }),
+			startsAt: z.iso.datetime({ offset: true }),
+			endsAt: z.iso.datetime({ offset: true }),
+		})
+		.refine((d) => new Date(d.startsAt) < new Date(d.endsAt), {
+			message: "Event cannot end before it starts",
+		})
+		.strict(),
+);
 
 export type CreateEventSchema = z.output<typeof createEventSchema>;
 export type GetEventsQuerySchema = z.output<typeof getEventsQuerySchema>;
