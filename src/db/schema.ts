@@ -1,4 +1,4 @@
-import { type HasDefault, isNull, type NotNull, relations, sql } from "drizzle-orm";
+import { and, eq, type HasDefault, isNull, type NotNull, relations, sql } from "drizzle-orm";
 import {
 	type AnyPgColumn,
 	bigint,
@@ -373,9 +373,9 @@ export const eventType = pgTable(
 			.references(() => workflowTemplate.id)
 			.notNull(),
 		isActive: boolean().notNull().default(true),
-		...fields("common"),
+		...fields("common","soft-delete"),
 	},
-	(t) => [unique().on(t.name)],
+	(t) => [uniqueIndex().on(t.name).where(and(isNull(t.deletedAt),eq(t.isActive,true))!)],
 );
 
 export const eventTypeRelations = relations(eventType, (r) => ({
