@@ -15,30 +15,32 @@ export const createEvent = dbAction(
 		endsAt: string;
 		parentEventId: number | null | undefined;
 	}) => {
-		const [eventInserted] = await db
-			.insert(schema.event)
-			.values({
-				eventTitle: data.eventTitle,
-				eventTypeId: data.eventTypeId,
-				expectedParticipants: data.expectedParticipants,
-				requestDetails: data.requestDetails,
-				status: "draft",
-				startsAt: data.startsAt,
-				endsAt: data.endsAt,
-				parentEventId: data.parentEventId,
-			})
-			.returning({ id: schema.event.id });
-		if (eventInserted == null) unreachable();
-		const [oraganizerInsert] = await db
-			.insert(schema.eventOrganizer)
-			.values({
-				eventId: eventInserted.id,
-				organizationId: data.organizationId,
-				role: "host",
-			})
-			.returning({ id: schema.eventOrganizer.id });
-		if (oraganizerInsert == null) unreachable();
-		return eventInserted;
+		return await db.transaction(async (tx) => {
+			const [eventInserted] = await tx
+				.insert(schema.event)
+				.values({
+					eventTitle: data.eventTitle,
+					eventTypeId: data.eventTypeId,
+					expectedParticipants: data.expectedParticipants,
+					requestDetails: data.requestDetails,
+					status: "draft",
+					startsAt: data.startsAt,
+					endsAt: data.endsAt,
+					parentEventId: data.parentEventId,
+				})
+				.returning({ id: schema.event.id });
+			if (eventInserted == null) unreachable();
+			const [oraganizerInsert] = await tx
+				.insert(schema.eventOrganizer)
+				.values({
+					eventId: eventInserted.id,
+					organizationId: data.organizationId,
+					role: "host",
+				})
+				.returning({ id: schema.eventOrganizer.id });
+			if (oraganizerInsert == null) unreachable();
+			return eventInserted;
+		});
 	},
 );
 
