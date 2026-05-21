@@ -110,7 +110,7 @@ export const findEvents = dbAction(
 				},
 				organizers: {
 					where: isNull(schema.eventOrganizer.deletedAt),
-					columns: { role: true },
+					columns: { id: true, role: true },
 					with: {
 						organization: {
 							columns: { id: true, name: true },
@@ -131,9 +131,12 @@ export const findEvents = dbAction(
 				: null,
 			startsAt: event.startsAt,
 			organizers: event.organizers.map((o) => ({
-				organizerId: o.organization.id,
-				organizerName: o.organization.name,
-				organizerType: o.role,
+				id: o.id,
+				organization: {
+					id: o.organization.id,
+					name: o.organization.name,
+				},
+				role: o.role,
 			})),
 		}));
 	},
@@ -163,7 +166,7 @@ export const findEventById = dbAction(async (eventId: number) => {
 			},
 			organizers: {
 				where: isNull(schema.eventOrganizer.deletedAt),
-				columns: { role: true },
+				columns: { id: true, role: true },
 				with: {
 					organization: {
 						columns: { id: true, name: true },

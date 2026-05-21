@@ -26,9 +26,12 @@ export const getEvents: ApiRequestHandler<
 		parentEvent: { id: number; eventTitle: string } | null;
 		startsAt: string;
 		organizers: {
-			organizerId: number;
-			organizerName: string;
-			organizerType: EventOrganizerRole;
+			id: number;
+			organization: {
+				id: number;
+				name: string;
+			};
+			role: EventOrganizerRole;
 		}[];
 	}[]
 > = async (req, res) => {
@@ -52,8 +55,9 @@ export const getEvent: ApiRequestHandler<{
 	eventType: { id: number; name: string };
 	parentEvent: { id: number; eventTitle: string } | null;
 	organizers: {
-		role: EventOrganizerRole;
+		id: number;
 		organization: { id: number; name: string };
+		role: EventOrganizerRole;
 	}[];
 	venueAllotments: {
 		id: number;
