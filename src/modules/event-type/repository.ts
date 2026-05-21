@@ -26,9 +26,9 @@ export const createEventType = dbAction(
 	},
 );
 
-export const getEventType = dbAction(async (evenTypeId: number) => {
+export const getEventType = dbAction(async (id: number) => {
 	return await db.query.eventType.findFirst({
-		where: and(eq(schema.eventType.id, evenTypeId), isNull(schema.eventType.deletedAt)),
+		where: and(eq(schema.eventType.id, id), isNull(schema.eventType.deletedAt)),
 		columns: {
 			id: true,
 			name: true,
