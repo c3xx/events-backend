@@ -1,5 +1,4 @@
 import { db, schema } from "@/db/index.js";
-import { ConflictError, NotFoundError } from "@/lib/errors.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 import { and, eq, exists, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
@@ -232,13 +231,11 @@ export const updateEvent = dbAction(
 		if (updated != null) return updated;
 
 		const [existing] = await db
-			.select({ status: schema.event.status })
+			.select({ eventExist: sql`1` })
 			.from(schema.event)
 			.where(and(eq(schema.event.id, data.eventId), isNull(schema.event.deletedAt)))
 			.limit(1);
-
-		if (existing == null) throw new NotFoundError("Event not found");
-		throw new ConflictError("Only draft events can be updated");
+		return existing;
 	},
 );
 
