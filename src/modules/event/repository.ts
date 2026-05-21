@@ -62,9 +62,7 @@ export const findEvents = dbAction(
 
 		if (filter.viewAll && filter.status && filter.status.length > 0) {
 			accessConditions.push(inArray(schema.event.status, filter.status));
-		}
-
-		if (filter.viewAllConfirmed) {
+		} else if (filter.viewAllConfirmed) {
 			accessConditions.push(eq(schema.event.status, "completed" as const));
 		}
 
@@ -84,7 +82,7 @@ export const findEvents = dbAction(
 
 			if (filter.status && filter.status.length > 0) {
 				const statusCondition = inArray(schema.event.status, filter.status);
-				accessConditions.push(and(statusCondition, orgExists) ?? orgExists);
+				accessConditions.push(and(statusCondition, orgExists) as SQL);
 			} else {
 				accessConditions.push(orgExists);
 			}
