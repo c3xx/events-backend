@@ -25,7 +25,7 @@ export const findPermission = dbAction(async (permissionId: number) => {
 	return permission;
 });
 
-export const hasPermissionInEntity = dbAction(
+export const hasPermission = dbAction(
 	async (
 		user: {
 			id: number;

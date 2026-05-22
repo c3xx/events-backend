@@ -7,15 +7,13 @@ import type {
 	UpdateEventSchema,
 } from "./schema.js";
 import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
-import { hasPermissionInEntity } from "../permission/repository.js";
+import { hasPermission } from "../permission/repository.js";
 
 export async function createEvent(
 	user: { id: number; type: UserType; permissions: PermissionCode[] },
 	input: CreateEventSchema,
 ) {
-	if (
-		!(await hasPermissionInEntity(user, "organization", [input.organizationId], "event:manage"))
-	) {
+	if (!(await hasPermission(user, "organization", [input.organizationId], "event:manage"))) {
 		throw new ForbiddenError("You do not have any required permission for this");
 	}
 	return await repository.createEvent({
@@ -38,7 +36,7 @@ export async function updateEvent(
 	const orgIds = await repository.findEventOrganizerOrgIds(eventId);
 	if (orgIds.length === 0) throw new NotFoundError("Event not found");
 
-	const hasAccess = await hasPermissionInEntity(user, "organization", orgIds, "event:manage");
+	const hasAccess = await hasPermission(user, "organization", orgIds, "event:manage");
 
 	if (!hasAccess) {
 		throw new ForbiddenError("You do not have any required permission for this");
@@ -79,12 +77,7 @@ export async function getEvent(
 	const eventOrgIds = event.organizers.map((o) => o.organization.id);
 
 	if (eventOrgIds.length > 0) {
-		const hasAccess = await hasPermissionInEntity(
-			user,
-			"organization",
-			eventOrgIds,
-			"event:view_own",
-		);
+		const hasAccess = await hasPermission(user, "organization", eventOrgIds, "event:view_own");
 
 		if (hasAccess) return event;
 	}
@@ -139,7 +132,7 @@ export async function createVenueAllotment(
 		throw new NotFoundError("Event not found");
 	}
 
-	const hasAccess = await hasPermissionInEntity(user, "organization", orgIds, "event:allot_venue");
+	const hasAccess = await hasPermission(user, "organization", orgIds, "event:allot_venue");
 
 	if (!hasAccess) {
 		throw new ForbiddenError("You do not have permission to allot venues for this event");
