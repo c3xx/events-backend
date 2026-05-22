@@ -1,6 +1,6 @@
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
-import { and, eq, exists, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, exists, gt, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 
 export const createEvent = dbAction(
@@ -48,6 +48,7 @@ export const findEvents = dbAction(
 		status?: EventStatus[] | undefined;
 		eventTypeId?: number | undefined;
 		viewAll?: boolean | undefined;
+		viewAllNonDraft?: boolean | undefined;
 		viewAllConfirmed?: boolean | undefined;
 		orgIds?: number[] | undefined;
 	}) => {
@@ -57,10 +58,19 @@ export const findEvents = dbAction(
 			baseConditions.push(eq(schema.event.eventTypeId, filter.eventTypeId));
 		}
 
+		const withStatusFilter = (condition: SQL): SQL => {
+			if (filter.status && filter.status.length > 0) {
+				return and(condition, inArray(schema.event.status, filter.status)) as SQL;
+			}
+			return condition;
+		};
+
 		const accessConditions: SQL[] = [];
 
 		if (filter.viewAll && filter.status && filter.status.length > 0) {
 			accessConditions.push(inArray(schema.event.status, filter.status));
+		} else if (filter.viewAllNonDraft) {
+			accessConditions.push(withStatusFilter(ne(schema.event.status, "draft" as const)));
 		} else if (filter.viewAllConfirmed) {
 			accessConditions.push(eq(schema.event.status, "completed" as const));
 		}
@@ -78,13 +88,7 @@ export const findEvents = dbAction(
 						),
 					),
 			);
-
-			if (filter.status && filter.status.length > 0) {
-				const statusCondition = inArray(schema.event.status, filter.status);
-				accessConditions.push(and(statusCondition, orgExists) as SQL);
-			} else {
-				accessConditions.push(orgExists);
-			}
+			accessConditions.push(withStatusFilter(orgExists));
 		}
 
 		const where =

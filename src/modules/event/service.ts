@@ -71,11 +71,10 @@ export async function getEvent(
 
 	if (user.type === "admin") return event;
 
-	const hasViewAll = user.permissions.includes("event:view_all");
-	if (hasViewAll) return event;
-
-	const hasViewAllConfirmed = user.permissions.includes("event:view_all_confirmed");
-	if (hasViewAllConfirmed && event.status === "completed") return event;
+	const perms = new Set(user.permissions);
+	if (perms.has("event:view_all")) return event;
+	if (perms.has("event:view_all_non_draft") && event.status !== "draft") return event;
+	if (perms.has("event:view_all_confirmed") && event.status === "completed") return event;
 
 	const eventOrgIds = event.organizers.map((o) => o.organization.id);
 
@@ -105,19 +104,27 @@ export async function getEvents(
 		});
 	}
 
-	const canViewAll = user.permissions.includes("event:view_all");
-	const canViewAllConfirmed = user.permissions.includes("event:view_all_confirmed");
-	const canViewOwn = user.permissions.includes("event:view_own");
+	const perms = new Set(user.permissions);
+	const grants = {
+		viewAll: perms.has("event:view_all"),
+		viewAllNonDraft: perms.has("event:view_all_non_draft"),
+		viewAllConfirmed: perms.has("event:view_all_confirmed"),
+		viewOwn: perms.has("event:view_own"),
+	};
 
-	if (!canViewAll && !canViewAllConfirmed && !canViewOwn) return [];
+	if (!Object.values(grants).some(Boolean)) return [];
 
-	const orgIds = canViewOwn && !canViewAll ? await getUserOrganizationIds(user.id) : [];
+	const orgIds =
+		grants.viewOwn && !grants.viewAll
+			? await getUserOrganizationIds(user.id, "event:view_own")
+			: [];
 
 	return await repository.findEvents({
 		status: filter.status,
 		eventTypeId: filter.eventTypeId,
-		viewAll: canViewAll,
-		viewAllConfirmed: !canViewAll && canViewAllConfirmed,
+		viewAll: grants.viewAll,
+		viewAllNonDraft: !grants.viewAll && grants.viewAllNonDraft,
+		viewAllConfirmed: !grants.viewAll && !grants.viewAllNonDraft && grants.viewAllConfirmed,
 		orgIds,
 	});
 }

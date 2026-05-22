@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, SQL } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
@@ -46,19 +46,26 @@ export const getUsers = dbAction(async () => {
 	});
 });
 
-export const getUserOrganizationIds = dbAction(async (id: number) => {
+export const getUserOrganizationIds = dbAction(async (id: number, permission?: PermissionCode) => {
+	const conditions: SQL[] = [
+		eq(schema.userRole.userId, id),
+		eq(schema.managedEntity.managedEntityType, "organization"),
+		isNull(schema.userRole.deletedAt),
+	];
+
+	if (permission) {
+		conditions.push(eq(schema.permission.code, permission));
+	}
+
 	const rows = await db
 		.select({ orgId: schema.managedEntity.refId })
 		.from(schema.userRole)
 		.innerJoin(schema.managedEntity, eq(schema.userRole.managedEntityId, schema.managedEntity.id))
-		.where(
-			and(
-				eq(schema.userRole.userId, id),
-				eq(schema.managedEntity.managedEntityType, "organization"),
-				isNull(schema.userRole.deletedAt),
-			),
-		);
-	return rows.map((r) => r.orgId);
+		.innerJoin(schema.role, eq(schema.userRole.roleId, schema.role.id))
+		.innerJoin(schema.rolePermission, eq(schema.role.id, schema.rolePermission.roleId))
+		.innerJoin(schema.permission, eq(schema.rolePermission.permissionId, schema.permission.id))
+		.where(and(...conditions));
+	return [...new Set(rows.map((r) => r.orgId))];
 });
 
 export const findUserById = dbAction(async (id: number) => {
