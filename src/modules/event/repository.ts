@@ -265,45 +265,48 @@ export const updateEvent = dbAction(
 // 		.orderBy(schema.event.startsAt);
 // });
 
-export const findOverlappingVenueAllotments = dbAction(
-	async (allotments: { venueId: number; startsAt: string; endsAt: string }[]) => {
-		if (allotments.length === 0) return [];
-
-		const conflictConditions = allotments.map((a) =>
-			and(
-				eq(schema.venueAllotment.venueId, a.venueId),
-				lt(schema.venueAllotment.startsAt, a.endsAt),
-				gt(schema.venueAllotment.endsAt, a.startsAt),
-				isNull(schema.venueAllotment.deletedAt),
-			),
-		);
-
-		return await db
-			.select({
-				venue: { id: schema.venue.id, name: schema.venue.name },
-				event: { id: schema.event.id, eventTitle: schema.event.eventTitle },
-				startsAt: schema.venueAllotment.startsAt,
-				endsAt: schema.venueAllotment.endsAt,
-			})
-			.from(schema.venueAllotment)
-			.innerJoin(schema.venue, eq(schema.venueAllotment.venueId, schema.venue.id))
-			.innerJoin(schema.event, eq(schema.venueAllotment.eventId, schema.event.id))
-			.where(or(...conflictConditions));
-	},
-);
-
 export const insertVenueAllotments = dbAction(
-	async (eventId: number, allotments: { venueId: number; startsAt: string; endsAt: string }[]) => {
-		const valuesToInsert = allotments.map((a) => ({
-			venueId: a.venueId,
-			eventId: eventId,
-			startsAt: a.startsAt,
-			endsAt: a.endsAt,
-		}));
+	async (eventId: number, allotments: { venueId: number; startsAt: string; endsAt: string }) => {
+		return await db.transaction(async (tx) => {
+			const [overlap] = await tx
+				.select({
+					venue: { id: schema.venue.id, name: schema.venue.name },
+					event: { id: schema.event.id, eventTitle: schema.event.eventTitle },
+					startsAt: schema.venueAllotment.startsAt,
+					endsAt: schema.venueAllotment.endsAt,
+				})
+				.from(schema.venueAllotment)
+				.innerJoin(schema.venue, eq(schema.venueAllotment.venueId, schema.venue.id))
+				.innerJoin(schema.event, eq(schema.venueAllotment.eventId, schema.event.id))
+				.where(
+					and(
+						eq(schema.venueAllotment.venueId, allotments.venueId),
+						lt(schema.venueAllotment.startsAt, allotments.endsAt),
+						gt(schema.venueAllotment.endsAt, allotments.startsAt),
+						isNull(schema.venueAllotment.deletedAt),
+					),
+				);
 
-		return await db
-			.insert(schema.venueAllotment)
-			.values(valuesToInsert)
-			.returning({ id: schema.venueAllotment.id });
+			if (overlap)
+				return {
+					success: false as const,
+					conflict: overlap,
+				};
+
+			const [created] = await tx
+				.insert(schema.venueAllotment)
+				.values({
+					eventId: eventId,
+					venueId: allotments.venueId,
+					startsAt: allotments.startsAt,
+					endsAt: allotments.endsAt,
+				})
+				.returning({ id: schema.venueAllotment.id });
+			if (created == null) unreachable();
+			return {
+				success: true as const,
+				id: created.id,
+			};
+		});
 	},
 );

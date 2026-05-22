@@ -145,14 +145,11 @@ export async function createVenueAllotment(
 		throw new ForbiddenError("You do not have permission to allot venues for this event");
 	}
 
-	const conflictingAllotments = await repository.findOverlappingVenueAllotments(input);
+	const result = await repository.insertVenueAllotments(eventId, input);
 
-	if (conflictingAllotments.length > 0) {
-		throw new ConflictError(
-			"Venue(s) are not available for the requested time slots",
-			conflictingAllotments,
-		);
+	if (!result.success) {
+		throw new ConflictError("Venue is not available for the requested time slot", result.conflict);
 	}
 
-	return await repository.insertVenueAllotments(eventId, input);
+	return { id: result.id };
 }
