@@ -372,9 +372,10 @@ export const eventType = pgTable(
 		workflowTemplateId: integer()
 			.references(() => workflowTemplate.id)
 			.notNull(),
+		isActive: boolean().notNull().default(true),
 		...fields("common", "soft-delete"),
 	},
-	(t) => [uniqueIndex().on(t.name).where(isNull(t.deletedAt))],
+	(t) => [uniqueIndex().on(t.name).where(sql`${t.deletedAt} IS NULL AND ${t.isActive} = true`)],
 );
 
 export const eventTypeRelations = relations(eventType, (r) => ({
