@@ -2,10 +2,10 @@ import { NotFoundError } from "@/lib/errors.js";
 import * as userRepository from "../user/repository.js";
 import * as repository from "./repository.js";
 import type {
+	AddOrganizationMemberSchema,
+	AssignOrganizationMemberRolesSchema,
 	CreateOrganizationSchema,
 	GetOrganizationMembersQuerySchema,
-	AssignOrganizationMemberRolesSchema,
-	AddOrganizationMemberSchema,
 } from "./schema.js";
 
 export async function createOrganization(input: CreateOrganizationSchema) {

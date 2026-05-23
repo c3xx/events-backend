@@ -1,12 +1,12 @@
 import { ok } from "@/lib/helpers.js";
 import {
+	addVenueMemberSchema,
+	assignVenueMemberRolesSchema,
 	createVenueSchema,
 	getVenueMembersQuerySchema,
 	setVenueFacilitiesSchema,
 	venueMemberScopedSchema,
 	venueScopedSchema,
-	addVenueMemberSchema,
-	assignVenueMemberRolesSchema,
 } from "./schema.js";
 import * as service from "./service.js";
 

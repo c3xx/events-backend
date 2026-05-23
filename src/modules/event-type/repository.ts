@@ -1,6 +1,6 @@
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
-import { eq, isNull, sql, and } from "drizzle-orm";
 
 export const getEventTypes = dbAction(async () => {
 	return await db

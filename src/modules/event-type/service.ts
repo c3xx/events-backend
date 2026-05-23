@@ -1,6 +1,6 @@
 import { NotFoundError } from "@/lib/errors.js";
 import * as repository from "./repository.js";
-import type { CreateEventTypeSchema, AllowedParentParamsSchema } from "./schema.js";
+import type { AllowedParentParamsSchema, CreateEventTypeSchema } from "./schema.js";
 
 export async function getEventTypes() {
 	return await repository.getEventTypes();

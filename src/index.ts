@@ -10,6 +10,8 @@ import { prepare } from "./prepare.js";
 // end of normal imports, and router imports follow:
 
 import authRouter from "@/modules/auth/routes.js";
+import eventRouter from "@/modules/event/routes.js";
+import eventTypesRouter from "@/modules/event-type/routes.js";
 import facilitiesRouter from "@/modules/facility/routes.js";
 import organizationRouter from "@/modules/organization/routes.js";
 import organizationTypesRouter from "@/modules/organization-type/routes.js";
@@ -18,8 +20,6 @@ import rolesRouter from "@/modules/role/routes.js";
 import usersRouter from "@/modules/user/routes.js";
 import venuesRouter from "@/modules/venue/routes.js";
 import venueTypesRouter from "@/modules/venue-type/routes.js";
-import eventTypesRouter from "@/modules/event-type/routes.js";
-import eventRouter from "@/modules/event/routes.js";
 
 console.info(
 	"[i] starting in",

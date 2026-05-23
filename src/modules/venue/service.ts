@@ -2,11 +2,11 @@ import { NotFoundError } from "@/lib/errors.js";
 import * as userRepository from "../user/repository.js";
 import * as repository from "./repository.js";
 import type {
+	AddVenueMemberSchema,
+	AssignVenueMemberRolesSchema,
 	CreateVenueSchema,
 	GetVenueMembersQuerySchema,
 	SetVenueFacilitiesSchema,
-	AssignVenueMemberRolesSchema,
-	AddVenueMemberSchema,
 } from "./schema.js";
 
 export async function createVenue(input: CreateVenueSchema) {
