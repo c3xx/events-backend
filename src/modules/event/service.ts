@@ -8,6 +8,8 @@ import type {
 } from "./schema.js";
 import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
 import { hasPermissionInManagedEntity } from "../permission/repository.js";
+import { getOrganization } from "../organization/repository.js";
+import { getEventType } from "../event-type/repository.js";
 
 export async function createEvent(
 	user: { id: number; type: UserType; permissions: PermissionCode[] },
@@ -23,7 +25,21 @@ export async function createEvent(
 	) {
 		throw new ForbiddenError("You do not have any required permission for this");
 	}
-	const result = await repository.createEvent({
+
+	if ((await getOrganization(input.organizationId)) == null) {
+		throw new NotFoundError("Organization not found");
+	}
+	if ((await getEventType(input.eventTypeId)) == null) {
+		throw new NotFoundError("Event type not found");
+	}
+	if (
+		input.parentEventId != null &&
+		(await repository.findEventById(input.parentEventId)) == null
+	) {
+		throw new NotFoundError("Parent event not found");
+	}
+
+	return await repository.createEvent({
 		organizationId: input.organizationId,
 		eventTitle: input.eventTitle,
 		eventTypeId: input.eventTypeId,
@@ -33,24 +49,6 @@ export async function createEvent(
 		endsAt: input.endsAt,
 		parentEventId: input.parentEventId,
 	});
-
-	if (!result.success) {
-		switch (result.reason) {
-			case "ORGANIZATION_NOT_FOUND":
-				throw new NotFoundError("Organization not found");
-
-			case "EVENT_TYPE_NOT_FOUND":
-				throw new NotFoundError("Event type not found");
-
-			case "PARENT_EVENT_NOT_FOUND":
-				throw new NotFoundError("Parent event not found");
-
-			default:
-				result satisfies never;
-		}
-	}
-
-	return result.eventId;
 }
 
 export async function updateEvent(
