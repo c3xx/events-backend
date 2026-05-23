@@ -62,6 +62,7 @@ export const findEvents = dbAction(
 			baseConditions.push(eq(schema.event.eventTypeId, filter.eventTypeId));
 		}
 
+		// Wraps a condition with an optional status filter on top
 		const withStatusFilter = (condition: SQL): SQL => {
 			if (filter.status && filter.status.length > 0) {
 				return and(condition, inArray(schema.event.status, filter.status)) as SQL;
@@ -69,17 +70,22 @@ export const findEvents = dbAction(
 			return condition;
 		};
 
+		// Each item here is an OR branch — user sees events matching any one of these
 		const accessConditions: SQL[] = [];
 
 		if (filter.viewAll && filter.status && filter.status.length > 0) {
+			// Admin-like: see all events but filtered by status
 			accessConditions.push(inArray(schema.event.status, filter.status));
 		} else if (filter.viewAllNonDraft) {
+			// Can see everything except drafts
 			accessConditions.push(withStatusFilter(ne(schema.event.status, "draft" as const)));
 		} else if (filter.viewAllConfirmed) {
+			// Can only see completed events
 			accessConditions.push(eq(schema.event.status, "completed" as const));
 		}
 
 		if (filter.orgIds && filter.orgIds.length > 0) {
+			// User's orgs: show events where their org is an organizer
 			const orgExists = exists(
 				db
 					.select({ _: sql`1` })
@@ -95,6 +101,7 @@ export const findEvents = dbAction(
 			accessConditions.push(withStatusFilter(orgExists));
 		}
 
+		// Base conditions always apply; access is granted if any OR branch matches
 		const where =
 			accessConditions.length > 0
 				? and(...baseConditions, or(...accessConditions))
