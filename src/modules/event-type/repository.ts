@@ -7,6 +7,7 @@ export const getEventTypes = dbAction(async () => {
 		.select({
 			id: schema.eventType.id,
 			name: schema.eventType.name,
+			isActive: schema.eventType.isActive,
 		})
 		.from(schema.eventType)
 		.where(isNull(schema.eventType.deletedAt))
@@ -33,6 +34,7 @@ export const getEventType = dbAction(async (id: number) => {
 			id: true,
 			name: true,
 			workflowTemplateId: true,
+			isActive: true,
 		},
 	});
 });

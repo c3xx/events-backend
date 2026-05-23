@@ -10,6 +10,7 @@ export const getEventTypes: ApiRequestHandler<
 	{
 		id: number;
 		name: string;
+		isActive: boolean;
 	}[]
 > = async (_req, res) => {
 	const result = await service.getEventTypes();
@@ -20,6 +21,7 @@ export const getEventType: ApiRequestHandler<{
 	id: number;
 	name: string;
 	workflowTemplateId: number;
+	isActive: boolean;
 }> = async (req, res) => {
 	const params = eventTypeScopedSchema.parse(req.params);
 	const result = await service.getEventType(params.id);
