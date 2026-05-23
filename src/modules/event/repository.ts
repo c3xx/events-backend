@@ -15,7 +15,53 @@ export const createEvent = dbAction(
 		parentEventId: number | null | undefined;
 	}) => {
 		return await db.transaction(async (tx) => {
-			const [eventInserted] = await tx
+			const [organizationExists] = await tx
+				.select({ exists: sql`1` })
+				.from(schema.organization)
+				.where(
+					and(
+						eq(schema.organization.id, data.organizationId),
+						isNull(schema.organization.deletedAt),
+					),
+				)
+				.limit(1);
+
+			if (!organizationExists) {
+				return {
+					success: false,
+					reason: "ORGANIZATION_NOT_FOUND",
+				} as const;
+			}
+
+			const [eventTypeExists] = await tx
+				.select({ exists: sql`1` })
+				.from(schema.eventType)
+				.where(and(eq(schema.eventType.id, data.eventTypeId), eq(schema.eventType.isActive, true)))
+				.limit(1);
+
+			if (!eventTypeExists) {
+				return {
+					success: false,
+					reason: "EVENT_TYPE_NOT_FOUND",
+				} as const;
+			}
+
+			if (data.parentEventId != null) {
+				const [parentEventExists] = await tx
+					.select({ exists: sql`1` })
+					.from(schema.event)
+					.where(and(eq(schema.event.id, data.parentEventId), isNull(schema.event.deletedAt)))
+					.limit(1);
+
+				if (!parentEventExists) {
+					return {
+						success: false,
+						reason: "PARENT_EVENT_NOT_FOUND",
+					} as const;
+				}
+			}
+
+			const [event] = await tx
 				.insert(schema.event)
 				.values({
 					eventTitle: data.eventTitle,
@@ -27,18 +73,25 @@ export const createEvent = dbAction(
 					endsAt: data.endsAt,
 					parentEventId: data.parentEventId,
 				})
-				.returning({ id: schema.event.id });
-			if (eventInserted == null) unreachable();
-			const [oraganizerInsert] = await tx
+				.returning({
+					id: schema.event.id,
+				});
+			if (event == null) unreachable();
+
+			const [organizer] = await tx
 				.insert(schema.eventOrganizer)
 				.values({
-					eventId: eventInserted.id,
+					eventId: event.id,
 					organizationId: data.organizationId,
 					role: "host",
 				})
 				.returning({ id: schema.eventOrganizer.id });
-			if (oraganizerInsert == null) unreachable();
-			return eventInserted;
+			if (organizer == null) unreachable();
+
+			return {
+				success: true,
+				eventId: event,
+			} as const;
 		});
 	},
 );

@@ -16,7 +16,7 @@ export async function createEvent(
 	if (!(await hasPermission(user, "organization", [input.organizationId], "event:manage"))) {
 		throw new ForbiddenError("You do not have any required permission for this");
 	}
-	return await repository.createEvent({
+	const result = await repository.createEvent({
 		organizationId: input.organizationId,
 		eventTitle: input.eventTitle,
 		eventTypeId: input.eventTypeId,
@@ -26,6 +26,24 @@ export async function createEvent(
 		endsAt: input.endsAt,
 		parentEventId: input.parentEventId,
 	});
+
+	if (!result.success) {
+		switch (result.reason) {
+			case "ORGANIZATION_NOT_FOUND":
+				throw new NotFoundError("Organization not found");
+
+			case "EVENT_TYPE_NOT_FOUND":
+				throw new NotFoundError("Event type not found");
+
+			case "PARENT_EVENT_NOT_FOUND":
+				throw new NotFoundError("Parent event not found");
+
+			default:
+				result satisfies never;
+		}
+	}
+
+	return result.eventId;
 }
 
 export async function updateEvent(
