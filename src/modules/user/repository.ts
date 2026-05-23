@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
@@ -43,5 +43,39 @@ export const getUsers = dbAction(async () => {
 				},
 			},
 		},
+	});
+});
+
+export const getUserOrganizationIds = dbAction(async (id: number, permission?: PermissionCode) => {
+	const conditions: SQL[] = [
+		eq(schema.userRole.userId, id),
+		eq(schema.managedEntity.managedEntityType, "organization"),
+		isNull(schema.userRole.deletedAt),
+	];
+
+	if (permission) {
+		conditions.push(eq(schema.permission.code, permission));
+	}
+
+	const rows = await db
+		.select({ orgId: schema.managedEntity.refId })
+		.from(schema.userRole)
+		.innerJoin(schema.managedEntity, eq(schema.userRole.managedEntityId, schema.managedEntity.id))
+		.innerJoin(schema.role, eq(schema.userRole.roleId, schema.role.id))
+		.innerJoin(schema.rolePermission, eq(schema.role.id, schema.rolePermission.roleId))
+		.innerJoin(schema.permission, eq(schema.rolePermission.permissionId, schema.permission.id))
+		.where(and(...conditions));
+	return [...new Set(rows.map((r) => r.orgId))];
+});
+
+export const findUserById = dbAction(async (id: number) => {
+	return await db.query.user.findFirst({
+		where: and(eq(schema.user.id, id), isNull(schema.user.deletedAt)),
+	});
+});
+
+export const findUserByEmail = dbAction(async (email: string) => {
+	return await db.query.user.findFirst({
+		where: and(eq(schema.user.email, email), isNull(schema.user.deletedAt)),
 	});
 });

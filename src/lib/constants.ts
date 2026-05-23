@@ -43,7 +43,7 @@ export const PERMISSION = {
 	organization: {
 		create: "Create organizations",
 		// get_members: "Get organization members", // todo: think hmmm
-		add_member: "Add users to organizations",
+		add_member: "Add users to organizations", // todo: rename to manage_members
 	},
 	organization_type: {
 		create: "Create organization types",
@@ -58,12 +58,25 @@ export const PERMISSION = {
 	},
 	venue: {
 		create: "Create venues",
-		add_member: "Add users to organizations",
+		add_member: "Add users to organizations", // todo: rename to manage_members
 		modify_facilities: "Modify facilities of venues",
 	},
 	venue_type: {
 		create: "Create venue types",
 		create_role: "Create roles under venue types",
+	},
+	event_type: {
+		create: "Create event types",
+		delete: "Delete event types",
+		modify_hierarchy: "Modify hierarchy of event types",
+	},
+	event: {
+		manage: "Manage events",
+		view_own: "View own organization's events of all statuses",
+		view_all_confirmed: "View all confirmed and upcoming events",
+		view_all: "View all events of all statuses",
+		view_all_non_draft: "View all events except drafts",
+		allot_venue: "Allot and remove venues for events",
 	},
 	event_organizer: {
 		add: "Add organizer to event",
@@ -74,7 +87,7 @@ export const PERMISSION = {
 		respond: "Accept or reject a co_host invitation",
 		revoke: "Revoke a sent co_host invitation",
 		view: "View organizer invitations for an event" //or can everyone view this?
-	}
+	},
 } as const;
 
 export const PERMISSION_SCOPES = Object.keys(PERMISSION) as PermissionScope[];

@@ -372,9 +372,10 @@ export const eventType = pgTable(
 		workflowTemplateId: integer()
 			.references(() => workflowTemplate.id)
 			.notNull(),
+		isActive: boolean().notNull().default(true),
 		...fields("common", "soft-delete"),
 	},
-	(t) => [uniqueIndex().on(t.name).where(isNull(t.deletedAt))],
+	(t) => [uniqueIndex().on(t.name).where(sql`${t.deletedAt} IS NULL AND ${t.isActive} = true`)],
 );
 
 export const eventTypeRelations = relations(eventType, (r) => ({
@@ -444,6 +445,11 @@ export const eventRelations = relations(event, (r) => ({
 	eventType: r.one(eventType, {
 		fields: [event.eventTypeId],
 		references: [eventType.id],
+	}),
+	parentEvent: r.one(event, {
+		fields: [event.parentEventId],
+		references: [event.id],
+		relationName: "parent_child",
 	}),
 	venueAllotments: r.many(venueAllotment),
 	organizers: r.many(eventOrganizer),

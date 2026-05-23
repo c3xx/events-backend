@@ -17,6 +17,7 @@ export const errorHandler: ErrorRequestHandler = (error: Error, _req, res: ApiRe
 	}
 
 	if (error instanceof AppError) {
+		//TODO: ConflictError details need to be sent in response.
 		return res.status(error.statusCode).json({
 			success: false,
 			code: error.errorCode,
