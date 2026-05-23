@@ -9,7 +9,9 @@ export const invitationScopedSchema = z
 export const invitationItemScopedSchema = z
 	.object({
 		eventId: z.coerce.number({ error: "Invalid event ID" }).int({ error: "Invalid event ID" }),
-		invitationId: z.coerce.number({ error: "Invalid invitation ID" }).int({ error: "Invalid invitation ID" }),
+		invitationId: z.coerce
+			.number({ error: "Invalid invitation ID" })
+			.int({ error: "Invalid invitation ID" }),
 	})
 	.strict();
 

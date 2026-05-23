@@ -38,23 +38,29 @@ export const findEventOrganizer = dbAction(async (eventId: number, organizerId: 
 	return organizer;
 });
 
-export const findEventOrganizersByOrganizationId = dbAction(async (eventId: number, organizationId: number) => {	
-	const [organizer] = await db
-		.select({ id: schema.eventOrganizer.id})
-		.from(schema.eventOrganizer)
-		.where(
-			and(
-				eq(schema.eventOrganizer.eventId, eventId),
-				eq(schema.eventOrganizer.organizationId, organizationId),
-				isNull(schema.eventOrganizer.deletedAt),
-			),
-		)
-		.limit(1);
-	return organizer;
-});
+export const findEventOrganizersByOrganizationId = dbAction(
+	async (eventId: number, organizationId: number) => {
+		const [organizer] = await db
+			.select({ id: schema.eventOrganizer.id })
+			.from(schema.eventOrganizer)
+			.where(
+				and(
+					eq(schema.eventOrganizer.eventId, eventId),
+					eq(schema.eventOrganizer.organizationId, organizationId),
+					isNull(schema.eventOrganizer.deletedAt),
+				),
+			)
+			.limit(1);
+		return organizer;
+	},
+);
 
 export const addEventOrganizer = dbAction(
-	async (data: { eventId: number; organizationId: number; role: "host" | "co_host" | "resource_provider" }) => {
+	async (data: {
+		eventId: number;
+		organizationId: number;
+		role: "host" | "co_host" | "resource_provider";
+	}) => {
 		const [inserted] = await db
 			.insert(schema.eventOrganizer)
 			.values(data)

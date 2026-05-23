@@ -17,11 +17,14 @@ export async function addEventOrganizer(eventId: number, input: AddEventOrganize
 		throw new ForbiddenError("Organizers can be added only at draft stage");
 	}
 
-	const existing = await repository.findEventOrganizersByOrganizationId(eventId, input.organizationId);
+	const existing = await repository.findEventOrganizersByOrganizationId(
+		eventId,
+		input.organizationId,
+	);
 	if (existing != null) {
 		throw new ConflictError("Organization is already an organizer of the event");
 	}
-	
+
 	return await repository.addEventOrganizer({
 		eventId,
 		organizationId: input.organizationId,

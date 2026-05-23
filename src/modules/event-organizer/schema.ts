@@ -20,13 +20,17 @@ export const addEventOrganizerSchema = z
 		organizationId: z.coerce
 			.number({ error: "Invalid organization ID" })
 			.int({ error: "Invalid organization ID" }),
-		role: z.enum(["host", "co_host", "resource_provider"], { error: "Role must be a host, co_host, or resource_provider" }),
+		role: z.enum(["host", "co_host", "resource_provider"], {
+			error: "Role must be a host, co_host, or resource_provider",
+		}),
 	})
 	.strict();
 
 export const updateEventOrganizerRoleSchema = z
 	.object({
-		role: z.enum(["host", "co_host", "resource_provider"], { error: "Role must be host, co_host, or resource_provider" }),
+		role: z.enum(["host", "co_host", "resource_provider"], {
+			error: "Role must be host, co_host, or resource_provider",
+		}),
 	})
 	.strict();
 

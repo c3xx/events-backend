@@ -153,7 +153,7 @@ export const respondToInvitation = dbAction(
 				and(
 					eq(schema.eventOrganizerInvitation.id, invitationId),
 					isNull(schema.eventOrganizerInvitation.deletedAt),
-				)
+				),
 			)
 			.returning({
 				id: schema.eventOrganizerInvitation.id,
@@ -176,9 +176,10 @@ export const respondToInvitation = dbAction(
 export const revokeInvitation = dbAction(async (invitationId: number) => {
 	await db
 		.update(schema.eventOrganizerInvitation)
-		.set({ 
+		.set({
 			status: "revoked",
 			closedAt: new Date().toISOString(),
-			deletedAt: new Date().toISOString() })
+			deletedAt: new Date().toISOString(),
+		})
 		.where(eq(schema.eventOrganizerInvitation.id, invitationId));
 });

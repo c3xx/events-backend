@@ -1,15 +1,11 @@
 import { ok } from "@/lib/helpers.js";
-import {
-	addEventOrganizerSchema,
-	eventScopedSchema,
-	organizerScopedSchema,
-} from "./schema.js";
+import { addEventOrganizerSchema, eventScopedSchema, organizerScopedSchema } from "./schema.js";
 import * as service from "./service.js";
 
 export const getEventOrganizers: ApiRequestHandler<
 	{
 		id: number;
-		role: "host" | "co_host" | "resource_provider"; 
+		role: "host" | "co_host" | "resource_provider";
 		organization: {
 			id: number;
 			name: string;

@@ -86,7 +86,7 @@ export const PERMISSION = {
 		send: "Send co_host invitation to another organization",
 		respond: "Accept or reject a co_host invitation",
 		revoke: "Revoke a sent co_host invitation",
-		view: "View organizer invitations for an event" //or can everyone view this?
+		view: "View organizer invitations for an event", //or can everyone view this?
 	},
 } as const;
 
