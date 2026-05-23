@@ -20,7 +20,7 @@ router.patch(
 
 router.delete(
 	"/:invitationId",
-	requirePermissions(["event_organizer_invitation:revoke"]),
+	requirePermissions(["event_organizer_invitation:send"]),
 	controller.revokeInvitation,
 );
 

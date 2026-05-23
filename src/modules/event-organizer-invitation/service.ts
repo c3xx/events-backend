@@ -2,6 +2,7 @@ import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
 import * as eventRepository from "@/modules/event/repository.js";
 import * as repository from "./repository.js";
 import type { RespondToInvitationSchema, SendInvitationSchema } from "./schema.js";
+import { hasPermissionInManagedEntity } from "@/modules/permission/repository.js";
 
 export async function getEventInvitations(eventId: number) {
 	const event = await eventRepository.findEventById(eventId);
@@ -13,7 +14,7 @@ export async function getEventInvitations(eventId: number) {
 export async function sendInvitation(
 	eventId: number,
 	input: SendInvitationSchema,
-	invitedByUserId: number,
+	user: { id: number; type: UserType },
 ) {
 	const event = await eventRepository.findEventById(eventId);
 	if (event == null) throw new NotFoundError("Event not found");
@@ -22,20 +23,22 @@ export async function sendInvitation(
 		throw new ForbiddenError("Invitations can only be sent while the event is in Draft status");
 	}
 
-	const clubHeadRole = await repository.findActiveClubHead(invitedByUserId);
-	if (clubHeadRole == null) {
-		throw new ForbiddenError("You are not an active club head");
+	const eventOrganizer = await repository.findEventOrganizerUser(eventId, user.id);
+	if (eventOrganizer == null) {
+		throw new ForbiddenError("Your organization not an organizer of the event");
 	}
 
-	const organizer = await repository.findOrganizerByOrganization(
-		eventId,
-		clubHeadRole.organizationId,
+	const canSend = await hasPermissionInManagedEntity(
+		user,
+		"organization",
+		[eventOrganizer.organizationId],
+		"event_organizer_invitation:send",
 	);
-	if (organizer == null) {
-		throw new ForbiddenError("Your club is not an organizer of the event");
+	if (!canSend) {
+		throw new ForbiddenError("You do not have permission to send invitation");
 	}
 
-	if (clubHeadRole.organizationId === input.recipientOrganizationId) {
+	if (eventOrganizer.organizationId === input.recipientOrganizationId) {
 		throw new ConflictError("Cannot send invite to your own organization");
 	}
 
@@ -49,8 +52,8 @@ export async function sendInvitation(
 
 	return await repository.sendInvitation({
 		eventId,
-		invitedByUserId: clubHeadRole.userRoleId,
-		senderOrganizationId: clubHeadRole.organizationId,
+		invitedByUserId: eventOrganizer.userRoleId,
+		senderOrganizationId: eventOrganizer.organizationId,
 		recipientOrganizationId: input.recipientOrganizationId,
 	});
 }
@@ -59,7 +62,7 @@ export async function respondToInvitation(
 	eventId: number,
 	invitationId: number,
 	input: RespondToInvitationSchema,
-	respondedByUserId: number,
+	user: { id: number; type: UserType },
 ) {
 	const event = await eventRepository.findEventById(eventId);
 	if (event == null) throw new NotFoundError("Event not found");
@@ -73,19 +76,29 @@ export async function respondToInvitation(
 		throw new ConflictError("The invitation has already been responded to");
 	}
 
-	const clubHeadRole = await repository.findActiveClubHead(respondedByUserId);
-	if (clubHeadRole == null) {
-		throw new ForbiddenError("You are not an active club head");
-	}
+	const userRole = await repository.findUserRoleInOrganization(
+		user.id,
+		invitation.recipientOrganizationId,
+	);
 
-	if (invitation.recipientOrganizationId !== clubHeadRole.organizationId) {
+	if (userRole == null) {
 		throw new ForbiddenError("Only recipient organization can respond to invitation");
 	}
 
+	const canRespond = await hasPermissionInManagedEntity(
+		user,
+		"organization",
+		[invitation.recipientOrganizationId],
+		"event_organizer_invitation:respond",
+	);
+
+	if (!canRespond) {
+		throw new ForbiddenError("You do not have permission to respond to this invite.");
+	}
 	if (input.status === "accepted") {
 		const existingOrganizer = await repository.findOrganizerByOrganization(
 			eventId,
-			clubHeadRole.organizationId,
+			invitation.recipientOrganizationId,
 		);
 		if (existingOrganizer != null) {
 			throw new ConflictError("Your organization is already an organizer of the event");
@@ -94,7 +107,7 @@ export async function respondToInvitation(
 
 	return await repository.respondToInvitation(invitationId, {
 		status: input.status,
-		respondedByUserId: clubHeadRole.userRoleId,
+		respondedByUserId: userRole.userRoleId,
 		eventId,
 		recipientOrganizationId: invitation.recipientOrganizationId,
 	});
@@ -103,7 +116,7 @@ export async function respondToInvitation(
 export async function revokeInvitation(
 	eventId: number,
 	invitationId: number,
-	revokerUserId: number,
+	user: { id: number; type: UserType },
 ) {
 	const event = await eventRepository.findEventById(eventId);
 	if (event == null) throw new NotFoundError("Event not found");
@@ -114,13 +127,13 @@ export async function revokeInvitation(
 	if (invitation.status !== "pending") {
 		throw new ConflictError("Only pending invitations can be revoked");
 	}
-
-	const clubHeadRole = await repository.findActiveClubHead(revokerUserId);
-	if (clubHeadRole == null) {
-		throw new ForbiddenError("You are not an active club head");
+	const eventOrganizer = await repository.findEventOrganizerUser(eventId, user.id);
+	if (eventOrganizer == null) {
+		throw new ForbiddenError("Your organization is not an organizer of this event");
 	}
-	if (invitation.senderOrganizationId !== clubHeadRole.organizationId) {
-		throw new ForbiddenError("Only sender organization can revoke the invitation");
+
+	if (invitation.senderOrganizationId !== eventOrganizer.organizationId) {
+		throw new ForbiddenError("Only the sender organization can revoke this invitation");
 	}
 
 	return await repository.revokeInvitation(invitationId);

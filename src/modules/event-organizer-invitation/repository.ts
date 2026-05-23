@@ -72,25 +72,42 @@ export const findPendingInvitation = dbAction(
 	},
 );
 
-export const findActiveClubHead = dbAction(async (userId: number) => {
-	const [userRole] = await db
+export const findEventOrganizerUser = dbAction(async (eventId: number, userId: number) => {
+	const [result] = await db
 		.select({
 			userRoleId: schema.userRole.id,
-			organizationId: schema.userRole.managedEntityId,
+			organizationId: schema.eventOrganizer.organizationId,
 		})
-		.from(schema.userRole)
-		.innerJoin(schema.role, eq(schema.userRole.roleId, schema.role.id))
-		.where(
+		.from(schema.eventOrganizer)
+		.innerJoin(
+			schema.userRole,
 			and(
+				eq(schema.userRole.managedEntityId, schema.eventOrganizer.organizationId),
 				eq(schema.userRole.userId, userId),
-				eq(schema.role.name, "club_head"),
 				isNull(schema.userRole.deletedAt),
 			),
 		)
+		.where(and(eq(schema.eventOrganizer.eventId, eventId), isNull(schema.eventOrganizer.deletedAt)))
 		.limit(1);
-	return userRole;
+	return result;
 });
 
+export const findUserRoleInOrganization = dbAction(
+	async (userId: number, organizationId: number) => {
+		const [result] = await db
+			.select({ userRoleId: schema.userRole.id })
+			.from(schema.userRole)
+			.where(
+				and(
+					eq(schema.userRole.userId, userId),
+					eq(schema.userRole.managedEntityId, organizationId),
+					isNull(schema.userRole.deletedAt),
+				),
+			)
+			.limit(1);
+		return result;
+	},
+);
 export const findOrganizerByOrganization = dbAction(
 	async (eventId: number, organizationId: number) => {
 		const [organizer] = await db
