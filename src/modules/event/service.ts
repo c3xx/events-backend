@@ -29,8 +29,11 @@ export async function createEvent(
 	if ((await getOrganization(input.organizationId)) == null) {
 		throw new NotFoundError("Organization not found");
 	}
-	if ((await getEventType(input.eventTypeId)) == null) {
+	const eventType = await getEventType(input.eventTypeId);
+	if (eventType == null) {
 		throw new NotFoundError("Event type not found");
+	} else if (eventType.isActive === false) {
+		throw new ConflictError("Event type is inactive");
 	}
 	if (
 		input.parentEventId != null &&
