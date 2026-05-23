@@ -39,7 +39,10 @@ export class NotFoundError extends AppError {
 }
 
 export class ConflictError extends AppError {
-	constructor(message: string, public details?: unknown,) {
+	constructor(
+		message: string,
+		public details?: unknown, //TODO: define a type for details
+	) {
 		super(409, ERROR_CODES.conflict, message);
 	}
 }
