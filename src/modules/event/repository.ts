@@ -283,6 +283,7 @@ export const insertVenueAllotments = dbAction(
 						eq(schema.venueAllotment.venueId, allotments.venueId),
 						lt(schema.venueAllotment.startsAt, allotments.endsAt),
 						gt(schema.venueAllotment.endsAt, allotments.startsAt),
+						or(eq(schema.venueAllotment.eventId, eventId), eq(schema.event.status, "completed")),
 						isNull(schema.venueAllotment.deletedAt),
 					),
 				);
