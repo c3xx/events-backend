@@ -65,6 +65,19 @@ export const PERMISSION = {
 		create: "Create venue types",
 		create_role: "Create roles under venue types",
 	},
+	event_type: {
+		create: "Create event types",
+		delete: "Delete event types",
+		modify_hierarchy: "Modify hierarchy of event types",
+	},
+	event: {
+		manage: "Manage events",
+		view_own: "View own organization's events of all statuses",
+		view_all_confirmed: "View all confirmed and upcoming events",
+		view_all: "View all events of all statuses",
+		view_all_non_draft: "View all events except drafts",
+		allot_venue: "Allot and remove venues for events",
+	},
 } as const;
 
 export const PERMISSION_SCOPES = Object.keys(PERMISSION) as PermissionScope[];
