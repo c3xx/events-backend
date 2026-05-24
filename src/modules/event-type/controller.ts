@@ -1,8 +1,8 @@
 import { ok } from "@/lib/helpers.js";
 import {
+	allowedParentParamsSchema,
 	createEventTypeSchema,
 	eventTypeScopedSchema,
-	allowedParentParamsSchema,
 } from "./schema.js";
 import * as service from "./service.js";
 

@@ -1,5 +1,4 @@
 import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
-import * as service from "./service.js";
 import {
 	createEventSchema,
 	createVenueAllotmentSchema,
@@ -7,6 +6,7 @@ import {
 	getEventsQuerySchema,
 	updateEventSchema,
 } from "./schema.js";
+import * as service from "./service.js";
 
 export const createEvent: ApiRequestHandler<{
 	id: number;

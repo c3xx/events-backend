@@ -1,15 +1,15 @@
-import * as repository from "./repository.js";
+import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
+import { getEventType } from "../event-type/repository.js";
+import { getOrganization } from "../organization/repository.js";
+import { hasPermissionInManagedEntity } from "../permission/repository.js";
 import { getUserOrganizationIds } from "../user/repository.js";
+import * as repository from "./repository.js";
 import type {
 	CreateEventSchema,
 	CreateVenueAllotmentSchema,
 	GetEventsQuerySchema,
 	UpdateEventSchema,
 } from "./schema.js";
-import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
-import { hasPermissionInManagedEntity } from "../permission/repository.js";
-import { getOrganization } from "../organization/repository.js";
-import { getEventType } from "../event-type/repository.js";
 
 export async function createEvent(
 	user: { id: number; type: UserType; permissions: PermissionCode[] },
