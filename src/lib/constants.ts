@@ -14,13 +14,7 @@ export const MANAGED_ENTITY_TYPES = ["organization", "venue"] as const;
 export const VENUE_ACCESS_LEVELS = ["public", "private"] as const;
 export const EVENT_TYPE_VENUE_POLICY = ["required", "optional", "forbidden"] as const;
 export const EVENT_TYPE_COLLABORATION_POLICY = ["required", "optional", "forbidden"] as const;
-export const EVENT_STATUS = [
-	"draft",
-	"awaiting_approval",
-	"cancelled",
-	"overridden",
-	"completed",
-] as const;
+export const EVENT_STATUS = ["draft", "pending", "approved", "cancelled", "overridden"] as const;
 export const EVENT_ORGANIZER_ROLES = ["host", "co_host"] as const;
 export const EVENT_ORGANIZER_INVITATION_STATUS = [
 	"pending",
