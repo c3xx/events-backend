@@ -428,6 +428,17 @@ export const eventTypeAllowedParentRelations = relations(eventTypeAllowedParent,
 	}),
 }));
 
+export const eventCategory = pgTable("event_category", {
+	id: smallint().primaryKey().generatedAlwaysAsIdentity(),
+	name: text().notNull(),
+	isActive: boolean().notNull().default(true),
+	...fields("common", "soft-delete"),
+});
+
+export const eventCategoryRelations = relations(eventCategory, (r) => ({
+	events: r.many(event),
+}));
+
 export const event = pgTable(
 	"event",
 	{
@@ -435,6 +446,9 @@ export const event = pgTable(
 		title: text().notNull(),
 		eventTypeId: smallint()
 			.references(() => eventType.id)
+			.notNull(),
+		eventCategoryId: smallint()
+			.references(() => eventCategory.id)
 			.notNull(),
 		expectedParticipants: integer().notNull(),
 		requestDetails: text().notNull(),
