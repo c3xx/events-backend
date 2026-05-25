@@ -26,15 +26,6 @@ export const addEventOrganizerSchema = z
 	})
 	.strict();
 
-export const updateEventOrganizerRoleSchema = z
-	.object({
-		role: z.enum(["host", "co_host", "resource_provider"], {
-			error: "Role must be host, co_host, or resource_provider",
-		}),
-	})
-	.strict();
-
 export type EventOrganizerScopedSchema = z.output<typeof eventScopedSchema>;
 export type OrganizerScopedSchema = z.output<typeof organizerScopedSchema>;
 export type AddEventOrganizerSchema = z.output<typeof addEventOrganizerSchema>;
-export type UpdateEventOrganizerRoleSchema = z.output<typeof updateEventOrganizerRoleSchema>;

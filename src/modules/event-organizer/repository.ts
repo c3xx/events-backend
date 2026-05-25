@@ -25,6 +25,7 @@ export const findEventOrganizer = dbAction(async (eventId: number, organizerId: 
 		.select({
 			id: schema.eventOrganizer.id,
 			role: schema.eventOrganizer.role,
+			organizationId: schema.eventOrganizer.organizationId,
 		})
 		.from(schema.eventOrganizer)
 		.where(
@@ -56,11 +57,7 @@ export const findEventOrganizersByOrganizationId = dbAction(
 );
 
 export const addEventOrganizer = dbAction(
-	async (data: {
-		eventId: number;
-		organizationId: number;
-		role: "host" | "co_host" | "resource_provider";
-	}) => {
+	async (data: { eventId: number; organizationId: number; role: "resource_provider" }) => {
 		const [inserted] = await db
 			.insert(schema.eventOrganizer)
 			.values(data)

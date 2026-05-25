@@ -1,3 +1,4 @@
+import type { EVENT_ORGANIZER_INVITATION_STATUS } from "@/lib/constants.js";
 import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
 import {
 	invitationItemScopedSchema,
@@ -10,8 +11,8 @@ import * as service from "./service.js";
 export const getEventInvitations: ApiRequestHandler<
 	{
 		id: number;
-		status: "pending" | "accepted" | "rejected" | "revoked" | "expired";
-		invitedAt: string | null;
+		status: (typeof EVENT_ORGANIZER_INVITATION_STATUS)[number];
+		invitedAt: string;
 		closedAt: string | null;
 		invitedByUser: {
 			id: number;
@@ -47,7 +48,7 @@ export const sendInvitation: ApiRequestHandler<{
 
 export const respondToInvitation: ApiRequestHandler<{
 	id: number;
-	status: "pending" | "accepted" | "rejected" | "revoked" | "expired";
+	status: (typeof EVENT_ORGANIZER_INVITATION_STATUS)[number];
 }> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
 	const params = invitationItemScopedSchema.parse(req.params);

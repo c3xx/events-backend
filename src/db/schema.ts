@@ -523,7 +523,7 @@ export const eventOrganizerInvitation = pgTable(
 		eventId: bigint({ mode: "number" })
 			.references(() => event.id, { onDelete: "cascade" })
 			.notNull(),
-		invitedAt: timestamp({ mode: "string", withTimezone: true }).defaultNow(),
+		invitedAt: timestamp({ mode: "string", withTimezone: true }).defaultNow().notNull(),
 		invitedByUserId: bigint({ mode: "number" })
 			.references(() => userRole.id, { onDelete: "cascade" })
 			.notNull(),

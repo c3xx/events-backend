@@ -72,50 +72,29 @@ export const findPendingInvitation = dbAction(
 	},
 );
 
-export const findEventOrganizerUser = dbAction(async (eventId: number, userId: number) => {
-	const [result] = await db
-		.select({
-			userRoleId: schema.userRole.id,
-			organizationId: schema.eventOrganizer.organizationId,
-		})
-		.from(schema.eventOrganizer)
-		.innerJoin(
-			schema.userRole,
-			and(
-				eq(schema.userRole.managedEntityId, schema.eventOrganizer.organizationId),
-				eq(schema.userRole.userId, userId),
-				isNull(schema.userRole.deletedAt),
-			),
-		)
-		.where(and(eq(schema.eventOrganizer.eventId, eventId), isNull(schema.eventOrganizer.deletedAt)))
-		.limit(1);
-	return result;
-});
-
-export const findUserRoleInOrganization = dbAction(
-	async (userId: number, organizationId: number) => {
+export const findEventOrganizerUser = dbAction(
+	async (eventId: number, userId: number, organizationId: number) => {
 		const [result] = await db
-			.select({ userRoleId: schema.userRole.id })
-			.from(schema.userRole)
-			.where(
+			.select({
+				userRoleId: schema.userRole.id,
+				organizationId: schema.eventOrganizer.organizationId,
+			})
+			.from(schema.eventOrganizer)
+			.innerJoin(
+				schema.managedEntity,
 				and(
+					eq(schema.managedEntity.refId, schema.eventOrganizer.organizationId),
+					eq(schema.managedEntity.managedEntityType, "organization"),
+				),
+			)
+			.innerJoin(
+				schema.userRole,
+				and(
+					eq(schema.userRole.managedEntityId, schema.managedEntity.id),
 					eq(schema.userRole.userId, userId),
-					eq(schema.userRole.managedEntityId, organizationId),
 					isNull(schema.userRole.deletedAt),
 				),
 			)
-			.limit(1);
-		return result;
-	},
-);
-export const findOrganizerByOrganization = dbAction(
-	async (eventId: number, organizationId: number) => {
-		const [organizer] = await db
-			.select({
-				id: schema.eventOrganizer.id,
-				role: schema.eventOrganizer.role,
-			})
-			.from(schema.eventOrganizer)
 			.where(
 				and(
 					eq(schema.eventOrganizer.eventId, eventId),
@@ -124,10 +103,29 @@ export const findOrganizerByOrganization = dbAction(
 				),
 			)
 			.limit(1);
-
-		return organizer;
+		return result;
 	},
 );
+
+export const findUserRoleInOrganization = dbAction(
+	async (userId: number, organizationId: number) => {
+		const [result] = await db
+			.select({ userRoleId: schema.userRole.id })
+			.from(schema.userRole)
+			.innerJoin(
+				schema.managedEntity,
+				and(
+					eq(schema.managedEntity.id, schema.userRole.managedEntityId),
+					eq(schema.managedEntity.managedEntityType, "organization"),
+					eq(schema.managedEntity.refId, organizationId),
+				),
+			)
+			.where(and(eq(schema.userRole.userId, userId), isNull(schema.userRole.deletedAt)))
+			.limit(1);
+		return result;
+	},
+);
+
 export const sendInvitation = dbAction(
 	async (data: {
 		eventId: number;
@@ -137,10 +135,7 @@ export const sendInvitation = dbAction(
 	}) => {
 		const [inserted] = await db
 			.insert(schema.eventOrganizerInvitation)
-			.values({
-				...data,
-				status: "pending",
-			})
+			.values(data)
 			.returning({ id: schema.eventOrganizerInvitation.id });
 
 		if (inserted == null) unreachable();
@@ -158,38 +153,34 @@ export const respondToInvitation = dbAction(
 			recipientOrganizationId: number;
 		},
 	) => {
-		const [updated] = await db
-			.update(schema.eventOrganizerInvitation)
-			.set({
-				status: data.status,
-				respondedByUserId: data.respondedByUserId,
-				closedAt: new Date().toISOString(),
-				//updatedAt: new Date().toISOString(), Required?
-			})
-			.where(
-				and(
-					eq(schema.eventOrganizerInvitation.id, invitationId),
-					isNull(schema.eventOrganizerInvitation.deletedAt),
-				),
-			)
-			.returning({
-				id: schema.eventOrganizerInvitation.id,
-				status: schema.eventOrganizerInvitation.status,
-			});
+		const updated = await db.transaction(async (tx) => {
+			const [updated] = await tx
+				.update(schema.eventOrganizerInvitation)
+				.set({
+					status: data.status,
+					respondedByUserId: data.respondedByUserId,
+					closedAt: new Date().toISOString(),
+				})
+				.where(eq(schema.eventOrganizerInvitation.id, invitationId))
+				.returning({
+					id: schema.eventOrganizerInvitation.id,
+					status: schema.eventOrganizerInvitation.status,
+				});
 
-		if (updated == null) unreachable();
+			if (updated == null) unreachable();
 
-		if (data.status === "accepted") {
-			await db.insert(schema.eventOrganizer).values({
-				eventId: data.eventId,
-				organizationId: data.recipientOrganizationId,
-				role: "co_host",
-			});
-		}
+			if (data.status === "accepted") {
+				await tx.insert(schema.eventOrganizer).values({
+					eventId: data.eventId,
+					organizationId: data.recipientOrganizationId,
+					role: "co_host",
+				});
+			}
+			return updated;
+		});
 		return updated;
 	},
 );
-
 export const revokeInvitation = dbAction(async (invitationId: number) => {
 	await db
 		.update(schema.eventOrganizerInvitation)

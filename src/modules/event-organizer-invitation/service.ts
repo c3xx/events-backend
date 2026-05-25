@@ -1,8 +1,8 @@
 import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
 import * as eventRepository from "@/modules/event/repository.js";
+import { hasPermissionInManagedEntity } from "@/modules/permission/repository.js";
 import * as repository from "./repository.js";
 import type { RespondToInvitationSchema, SendInvitationSchema } from "./schema.js";
-import { hasPermissionInManagedEntity } from "@/modules/permission/repository.js";
 
 export async function getEventInvitations(eventId: number) {
 	const event = await eventRepository.findEventById(eventId);
@@ -23,7 +23,11 @@ export async function sendInvitation(
 		throw new ForbiddenError("Invitations can only be sent while the event is in Draft status");
 	}
 
-	const eventOrganizer = await repository.findEventOrganizerUser(eventId, user.id);
+	const eventOrganizer = await repository.findEventOrganizerUser(
+		eventId,
+		user.id,
+		input.senderOrganizationId,
+	);
 	if (eventOrganizer == null) {
 		throw new ForbiddenError("Your organization not an organizer of the event");
 	}
@@ -95,15 +99,6 @@ export async function respondToInvitation(
 	if (!canRespond) {
 		throw new ForbiddenError("You do not have permission to respond to this invite.");
 	}
-	if (input.status === "accepted") {
-		const existingOrganizer = await repository.findOrganizerByOrganization(
-			eventId,
-			invitation.recipientOrganizationId,
-		);
-		if (existingOrganizer != null) {
-			throw new ConflictError("Your organization is already an organizer of the event");
-		}
-	}
 
 	return await repository.respondToInvitation(invitationId, {
 		status: input.status,
@@ -127,13 +122,13 @@ export async function revokeInvitation(
 	if (invitation.status !== "pending") {
 		throw new ConflictError("Only pending invitations can be revoked");
 	}
-	const eventOrganizer = await repository.findEventOrganizerUser(eventId, user.id);
+	const eventOrganizer = await repository.findEventOrganizerUser(
+		eventId,
+		user.id,
+		invitation.senderOrganizationId,
+	);
 	if (eventOrganizer == null) {
 		throw new ForbiddenError("Your organization is not an organizer of this event");
-	}
-
-	if (invitation.senderOrganizationId !== eventOrganizer.organizationId) {
-		throw new ForbiddenError("Only the sender organization can revoke this invitation");
 	}
 
 	return await repository.revokeInvitation(invitationId);

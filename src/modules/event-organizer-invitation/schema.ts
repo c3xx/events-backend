@@ -17,7 +17,12 @@ export const invitationItemScopedSchema = z
 
 export const sendInvitationSchema = z
 	.object({
-		recipientOrganizationId: z.int({ error: "Invalid organization ID" }),
+		recipientOrganizationId: z.coerce
+			.number({ error: "Invalid organization ID" })
+			.int({ error: "Invalid organization ID" }),
+		senderOrganizationId: z.coerce
+			.number({ error: "Invalid organization ID" })
+			.int({ error: "Invalid organization ID" }),
 	})
 	.strict();
 
