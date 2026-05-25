@@ -432,7 +432,7 @@ export const event = pgTable(
 	"event",
 	{
 		id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-		eventTitle: text().notNull(),
+		title: text().notNull(),
 		eventTypeId: smallint()
 			.references(() => eventType.id)
 			.notNull(),
