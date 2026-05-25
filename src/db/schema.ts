@@ -17,6 +17,8 @@ import {
 	EVENT_ORGANIZER_INVITATION_STATUS,
 	EVENT_ORGANIZER_ROLES,
 	EVENT_STATUS,
+	EVENT_TYPE_COLLABORATION_POLICY,
+	EVENT_TYPE_VENUE_POLICY,
 	INSTITUTION_DOMAIN,
 	MANAGED_ENTITY_TYPES,
 	USER_TYPES,
@@ -32,6 +34,11 @@ import { buildCheck } from "./checks.js";
 export const userTypeEnum = pgEnum("user_type", USER_TYPES);
 export const managedEntityTypeEnum = pgEnum("managed_entity_type", MANAGED_ENTITY_TYPES);
 export const venueAccessLevelEnum = pgEnum("venue_access_level", VENUE_ACCESS_LEVELS);
+export const eventTypeVenuePolicyEnum = pgEnum("event_type_venue_policy", EVENT_TYPE_VENUE_POLICY);
+export const eventTypCollaborationPolicyEnum = pgEnum(
+	"event_type_collaboration_policy",
+	EVENT_TYPE_COLLABORATION_POLICY,
+);
 export const eventStatusEnum = pgEnum("event_status", EVENT_STATUS);
 export const eventOrganizerRoleEnum = pgEnum("event_organizer_role", EVENT_ORGANIZER_ROLES);
 export const eventOrganizerInvitationStatusEnum = pgEnum(
@@ -368,11 +375,17 @@ export const eventType = pgTable(
 	"event_type",
 	{
 		id: smallint().primaryKey().generatedAlwaysAsIdentity(),
-		name: text().notNull(), //program/event or what type of event?
+		name: text().notNull(),
+		description: text().notNull(),
 		workflowTemplateId: integer()
 			.references(() => workflowTemplate.id)
 			.notNull(),
 		isActive: boolean().notNull().default(true),
+
+		// attributes
+		venuePolicy: eventTypeVenuePolicyEnum().notNull(),
+		collaborationPolicy: eventTypCollaborationPolicyEnum().notNull(),
+
 		...fields("common", "soft-delete"),
 	},
 	(t) => [uniqueIndex().on(t.name).where(sql`${t.deletedAt} IS NULL AND ${t.isActive} = true`)],
