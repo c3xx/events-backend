@@ -451,7 +451,7 @@ export const event = pgTable(
 		typeId: smallint()
 			.references(() => eventType.id)
 			.notNull(),
-		eventCategoryId: smallint()
+		categoryId: smallint()
 			.references(() => eventCategory.id)
 			.notNull(),
 		expectedParticipants: integer().notNull(),
