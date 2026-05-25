@@ -59,7 +59,7 @@ export const findEvents = dbAction(
 		const baseConditions: SQL[] = [isNull(schema.event.deletedAt)];
 
 		if (filter.eventTypeId !== undefined) {
-			baseConditions.push(eq(schema.event.eventTypeId, filter.eventTypeId));
+			baseConditions.push(eq(schema.event.typeId, filter.eventTypeId));
 		}
 
 		// Wraps a condition with an optional status filter on top

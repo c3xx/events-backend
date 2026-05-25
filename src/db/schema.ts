@@ -448,7 +448,7 @@ export const event = pgTable(
 	{
 		id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
 		title: text().notNull(),
-		eventTypeId: smallint()
+		typeId: smallint()
 			.references(() => eventType.id)
 			.notNull(),
 		eventCategoryId: smallint()
@@ -474,7 +474,7 @@ export const event = pgTable(
 
 export const eventRelations = relations(event, (r) => ({
 	eventType: r.one(eventType, {
-		fields: [event.eventTypeId],
+		fields: [event.typeId],
 		references: [eventType.id],
 	}),
 	parentEvent: r.one(event, {
