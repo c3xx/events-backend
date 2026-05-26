@@ -96,7 +96,7 @@ app.use("/venue-types", venueTypesRouter);
 app.use("/facilities", facilitiesRouter);
 app.use("/event-types", eventTypesRouter);
 app.use("/event-categories", eventCategoriesRouter);
-app.use("/event", eventRouter);
+app.use("/events", eventRouter);
 
 app.use(errorHandler);
 
