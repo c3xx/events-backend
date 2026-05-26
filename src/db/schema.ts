@@ -385,7 +385,6 @@ export const eventType = pgTable(
 	{
 		id: smallint().primaryKey().generatedAlwaysAsIdentity(),
 		name: text().notNull(),
-		description: text().notNull(),
 		workflowTemplateId: integer()
 			.references(() => workflowTemplate.id)
 			.notNull(),
@@ -651,7 +650,6 @@ export const workflowTemplate = pgTable(
 		id: integer().primaryKey().generatedAlwaysAsIdentity(),
 
 		name: text().notNull(),
-		description: text().notNull(),
 		initialStepId: integer().references(() => workflowTemplateStep.id),
 
 		...fields("common", "soft-delete"),
@@ -681,7 +679,6 @@ export const workflowTemplateStep = pgTable(
 			.notNull(),
 
 		name: text().notNull(),
-		description: text().notNull(),
 		nextStepId: integer().references((): AnyPgColumn => workflowTemplateStep.id),
 
 		...fields("common", "soft-delete"),
