@@ -78,6 +78,7 @@ export async function updateEvent(
 		id: eventId,
 		title: input.title,
 		typeId: input.typeId,
+		categoryId: input.categoryId,
 		expectedParticipants: input.expectedParticipants,
 		requestDetails: input.requestDetails,
 		startsAt: input.startsAt,

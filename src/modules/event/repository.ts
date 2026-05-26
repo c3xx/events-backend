@@ -122,6 +122,9 @@ export const findEvents = dbAction(
 				type: {
 					columns: { id: true, name: true },
 				},
+				category: {
+					columns: { id: true, name: true },
+				},
 				parentEvent: {
 					columns: { id: true, title: true },
 				},
@@ -142,6 +145,7 @@ export const findEvents = dbAction(
 			id: event.id,
 			title: event.title,
 			type: { id: event.type.id, name: event.type.name },
+			category: { id: event.category.id, name: event.category.name },
 			status: event.status,
 			parentEvent: event.parentEvent
 				? { id: event.parentEvent.id, title: event.parentEvent.title }
@@ -176,6 +180,9 @@ export const findEventById = dbAction(async (eventId: number) => {
 		},
 		with: {
 			type: {
+				columns: { id: true, name: true },
+			},
+			category: {
 				columns: { id: true, name: true },
 			},
 			parentEvent: {
@@ -223,6 +230,7 @@ export const updateEvent = dbAction(
 		id: number;
 		title?: string | undefined;
 		typeId?: number | undefined;
+		categoryId?: number | undefined;
 		expectedParticipants?: number | undefined;
 		requestDetails?: string | undefined;
 		parentEventId?: number | null | undefined;
@@ -234,6 +242,7 @@ export const updateEvent = dbAction(
 			.set({
 				title: data.title,
 				typeId: data.typeId,
+				categoryId: data.categoryId,
 				expectedParticipants: data.expectedParticipants,
 				requestDetails: data.requestDetails,
 				parentEventId: data.parentEventId,

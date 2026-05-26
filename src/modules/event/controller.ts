@@ -22,6 +22,7 @@ export const getEvents: ApiRequestHandler<
 		id: number;
 		title: string;
 		type: { id: number; name: string };
+		category: { id: number; name: string };
 		status: EventStatus;
 		parentEvent: { id: number; title: string } | null;
 		startsAt: string;
@@ -53,6 +54,7 @@ export const getEvent: ApiRequestHandler<{
 	createdAt: string;
 	updatedAt: string;
 	type: { id: number; name: string };
+	category: { id: number; name: string };
 	parentEvent: { id: number; title: string } | null;
 	organizers: {
 		id: number;

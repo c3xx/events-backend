@@ -485,6 +485,10 @@ export const eventRelations = relations(event, (r) => ({
 		fields: [event.typeId],
 		references: [eventType.id],
 	}),
+	category: r.one(eventCategory, {
+		fields: [event.categoryId],
+		references: [eventCategory.id],
+	}),
 	parentEvent: r.one(event, {
 		fields: [event.parentEventId],
 		references: [event.id],
