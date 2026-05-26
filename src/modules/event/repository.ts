@@ -293,7 +293,7 @@ export const insertVenueAllotments = dbAction(
 			const [overlap] = await tx
 				.select({
 					venue: { id: schema.venue.id, name: schema.venue.name },
-					event: { id: schema.event.id, eventTitle: schema.event.title },
+					event: { id: schema.event.id, title: schema.event.title },
 					startsAt: schema.venueAllotment.startsAt,
 					endsAt: schema.venueAllotment.endsAt,
 				})
