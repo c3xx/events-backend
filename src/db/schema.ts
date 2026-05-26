@@ -718,7 +718,6 @@ export const workflowTemplateStepRole = pgTable(
 			.notNull(),
 
 		targetGroupApprovalCriteria: workflowTargetGroupApprovalCriteriaEnum().notNull(),
-		// todo: decide skippable: boolean().notNull(),
 
 		...fields("common", "soft-delete"),
 	},
@@ -821,8 +820,6 @@ export const workflowInstanceStepRole = pgTable(
 			.references(() => role.id)
 			.notNull(),
 
-		// attributes
-		skippable: boolean().notNull(),
 		targetGroupApprovalCriteria: workflowTargetGroupApprovalCriteriaEnum().notNull(),
 
 		...fields("common", "soft-delete"),
