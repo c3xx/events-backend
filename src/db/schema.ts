@@ -482,7 +482,7 @@ export const event = pgTable(
 );
 
 export const eventRelations = relations(event, (r) => ({
-	eventType: r.one(eventType, {
+	type: r.one(eventType, {
 		fields: [event.typeId],
 		references: [eventType.id],
 	}),
