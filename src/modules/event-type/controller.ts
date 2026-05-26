@@ -11,6 +11,8 @@ export const getEventTypes: ApiRequestHandler<
 		id: number;
 		name: string;
 		isActive: boolean;
+		venuePolicy: EventTypeVenuePolicy;
+		collaborationPolicy: EventTypeCollaborationPolicy;
 	}[]
 > = async (_req, res) => {
 	const result = await service.getEventTypes();
@@ -22,6 +24,8 @@ export const getEventType: ApiRequestHandler<{
 	name: string;
 	workflowTemplateId: number;
 	isActive: boolean;
+	venuePolicy: EventTypeVenuePolicy;
+	collaborationPolicy: EventTypeCollaborationPolicy;
 }> = async (req, res) => {
 	const params = eventTypeScopedSchema.parse(req.params);
 	const result = await service.getEventType(params.id);
@@ -42,10 +46,12 @@ export const deleteEventType: ApiRequestHandler<true> = async (req, res) => {
 	return ok(res, true);
 };
 
-export const getEventTypeChildTypes: ApiRequestHandler<{ id: number; name: string }[]> = async (
-	req,
-	res,
-) => {
+export const getEventTypeChildTypes: ApiRequestHandler<
+	{
+		id: number;
+		name: string;
+	}[]
+> = async (req, res) => {
 	const params = eventTypeScopedSchema.parse(req.params);
 	const result = await service.getEventTypeChildTypes(params.id);
 	return ok(res, result);
