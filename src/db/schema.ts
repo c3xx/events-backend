@@ -24,7 +24,9 @@ import {
 	USER_TYPES,
 	VENUE_ACCESS_LEVELS,
 	WORKFLOW_INSTANCE_STATUS,
+	WORKFLOW_INSTANCE_STEP_ASSIGNMENT_STATUS,
 	WORKFLOW_INSTANCE_STEP_STATUS,
+	WORKFLOW_TARGET_GROUP_APPROVAL_CRITERIA,
 } from "@/lib/constants.js";
 import { buildCheck } from "./checks.js";
 
@@ -35,7 +37,7 @@ export const userTypeEnum = pgEnum("user_type", USER_TYPES);
 export const managedEntityTypeEnum = pgEnum("managed_entity_type", MANAGED_ENTITY_TYPES);
 export const venueAccessLevelEnum = pgEnum("venue_access_level", VENUE_ACCESS_LEVELS);
 export const eventTypeVenuePolicyEnum = pgEnum("event_type_venue_policy", EVENT_TYPE_VENUE_POLICY);
-export const eventTypCollaborationPolicyEnum = pgEnum(
+export const eventTypeCollaborationPolicyEnum = pgEnum(
 	"event_type_collaboration_policy",
 	EVENT_TYPE_COLLABORATION_POLICY,
 );
@@ -53,7 +55,14 @@ export const workflowInstanceStepStatusEnum = pgEnum(
 	"workflow_instance_step_status",
 	WORKFLOW_INSTANCE_STEP_STATUS,
 );
-
+export const workflowInstanceStepAssignmentStatusEnum = pgEnum(
+	"workflow_instance_step_assignment_status",
+	WORKFLOW_INSTANCE_STEP_ASSIGNMENT_STATUS,
+);
+export const workflowTargetGroupApprovalCriteriaEnum = pgEnum(
+	"workflow_target_group_approval_criteria",
+	WORKFLOW_TARGET_GROUP_APPROVAL_CRITERIA,
+);
 // === Tables
 export const managedEntity = pgTable(
 	"managed_entity",
@@ -152,7 +161,7 @@ export const userRoleRelations = relations(userRole, (r) => ({
 		fields: [userRole.managedEntityId],
 		references: [managedEntity.id],
 	}),
-	handledInstanceSteps: r.many(workflowInstanceStep),
+	workflowAssignments: r.many(workflowInstanceStepAssignment),
 }));
 
 export const permission = pgTable(
@@ -384,7 +393,7 @@ export const eventType = pgTable(
 
 		// attributes
 		venuePolicy: eventTypeVenuePolicyEnum().notNull(),
-		collaborationPolicy: eventTypCollaborationPolicyEnum().notNull(),
+		collaborationPolicy: eventTypeCollaborationPolicyEnum().notNull(),
 
 		...fields("common", "soft-delete"),
 	},
@@ -621,6 +630,7 @@ export const eventReport = pgTable(
 			.notNull(),
 		details: text().notNull(),
 		submittedAt: timestamp({ mode: "string", withTimezone: true }).defaultNow().notNull(),
+		...fields("common", "soft-delete"),
 	},
 	(t) => [unique().on(t.eventId)],
 );
@@ -632,17 +642,23 @@ export const eventReportRelations = relations(eventReport, (r) => ({
 	}),
 }));
 
+// WORKFLOWS
+
+// Workflow templates
 export const workflowTemplate = pgTable(
 	"workflow_template",
 	{
 		id: integer().primaryKey().generatedAlwaysAsIdentity(),
+
 		name: text().notNull(),
-		initialStepId: integer().references((): AnyPgColumn => workflowTemplateStep.id),
+		description: text().notNull(),
+		initialStepId: integer().references(() => workflowTemplateStep.id),
+
 		...fields("common", "soft-delete"),
 	},
 	(t) => [
-		uniqueIndex().on(t.initialStepId).where(isNull(t.deletedAt)),
-		uniqueIndex().on(t.name).where(isNull(t.deletedAt)),
+		uniqueIndex().on(sql`lower(${t.name})`).where(sql`${t.deletedAt} IS NULL`),
+		uniqueIndex().on(t.initialStepId).where(sql`${t.deletedAt} IS NULL`),
 	],
 );
 
@@ -660,38 +676,66 @@ export const workflowTemplateStep = pgTable(
 	"workflow_template_step",
 	{
 		id: integer().primaryKey().generatedAlwaysAsIdentity(),
-		workflowTemplateId: integer()
-			.references(() => workflowTemplate.id)
+		templateId: integer()
+			.references((): AnyPgColumn => workflowTemplate.id)
 			.notNull(),
-		roleId: smallint()
-			.references(() => role.id)
-			.notNull(),
+
+		name: text().notNull(),
+		description: text().notNull(),
 		nextStepId: integer().references((): AnyPgColumn => workflowTemplateStep.id),
-		...fields("common"),
+
+		...fields("common", "soft-delete"),
 	},
 	(t) => [
-		uniqueIndex().on(t.workflowTemplateId, t.nextStepId).where(sql`${t.nextStepId} IS NOT NULL`),
-		buildCheck("workflow_template_step:circular_reference", sql`${t.id}!=${t.nextStepId}`),
+		uniqueIndex().on(t.templateId, sql`lower(${t.name})`).where(sql`${t.deletedAt} IS NULL`),
+		uniqueIndex().on(t.templateId, t.nextStepId).where(sql`${t.deletedAt} IS NULL`),
 	],
 );
 
 export const workflowTemplateStepRelations = relations(workflowTemplateStep, (r) => ({
-	workflowTemplate: r.one(workflowTemplate, {
-		fields: [workflowTemplateStep.workflowTemplateId],
+	template: r.one(workflowTemplate, {
+		fields: [workflowTemplateStep.templateId],
 		references: [workflowTemplate.id],
-		relationName: "steps",
-	}),
-	associatedRole: r.one(role, {
-		fields: [workflowTemplateStep.roleId],
-		references: [role.id],
 	}),
 	nextStep: r.one(workflowTemplateStep, {
 		fields: [workflowTemplateStep.nextStepId],
 		references: [workflowTemplateStep.id],
-		relationName: "next_step",
+	}),
+	stepRoles: r.many(workflowTemplateStepRole),
+}));
+
+export const workflowTemplateStepRole = pgTable(
+	"workflow_template_step_role",
+	{
+		id: integer().primaryKey().generatedAlwaysAsIdentity(),
+		stepId: integer()
+			.references(() => workflowTemplateStep.id)
+			.notNull(),
+
+		roleId: smallint()
+			.references(() => role.id)
+			.notNull(),
+
+		targetGroupApprovalCriteria: workflowTargetGroupApprovalCriteriaEnum().notNull(),
+		// todo: decide skippable: boolean().notNull(),
+
+		...fields("common", "soft-delete"),
+	},
+	(t) => [uniqueIndex().on(t.stepId, t.roleId).where(sql`${t.deletedAt} IS NULL`)],
+);
+
+export const workflowTemplateStepRoleRelations = relations(workflowTemplateStepRole, (r) => ({
+	step: r.one(workflowTemplateStep, {
+		fields: [workflowTemplateStepRole.stepId],
+		references: [workflowTemplateStep.id],
+	}),
+	role: r.one(role, {
+		fields: [workflowTemplateStepRole.roleId],
+		references: [role.id],
 	}),
 }));
 
+// Workflow instances
 export const workflowInstance = pgTable(
 	"workflow_instance",
 	{
@@ -699,14 +743,22 @@ export const workflowInstance = pgTable(
 		eventId: bigint({ mode: "number" })
 			.references(() => event.id)
 			.notNull(),
-		initialStepId: integer().references((): AnyPgColumn => workflowInstanceStep.id),
-		initiatedOn: timestamp({ mode: "string", withTimezone: true }).defaultNow().notNull(),
+
+		initialStepId: bigint({ mode: "number" }).references(() => workflowInstanceStep.id),
 		status: workflowInstanceStatusEnum().notNull(),
-		...fields("common"),
+
+		completedAt: timestamp({ mode: "string", withTimezone: true }),
+		...fields("common", "soft-delete"),
 	},
 	(t) => [
-		uniqueIndex().on(t.eventId).where(sql`${t.status}='pending'`),
-		unique().on(t.initialStepId),
+		// only one active instance per event
+		uniqueIndex()
+			.on(t.eventId, t.initialStepId)
+			.where(sql`${t.deletedAt} IS NULL AND ${t.status} = 'active'`),
+		// while generation, initialstepid can be null. so can't allow generating two active ones for an event.
+		uniqueIndex()
+			.on(t.eventId)
+			.where(sql`${t.deletedAt} IS NULL AND ${t.status} = 'active' AND ${t.initialStepId} IS NULL`),
 	],
 );
 
@@ -718,44 +770,142 @@ export const workflowInstanceRelations = relations(workflowInstance, (r) => ({
 	initialStep: r.one(workflowInstanceStep, {
 		fields: [workflowInstance.initialStepId],
 		references: [workflowInstanceStep.id],
+		relationName: "initial_step",
 	}),
+	steps: r.many(workflowInstanceStep),
 }));
 
 export const workflowInstanceStep = pgTable(
 	"workflow_instance_step",
 	{
 		id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-		workflowInstanceId: bigint({ mode: "number" })
-			.references(() => workflowInstance.id)
+		instanceId: bigint({ mode: "number" })
+			.references((): AnyPgColumn => workflowInstance.id)
 			.notNull(),
-		roleId: smallint()
-			.references(() => role.id)
-			.notNull(),
+
 		nextStepId: bigint({ mode: "number" }).references((): AnyPgColumn => workflowInstanceStep.id),
-		handledByUserRoleId: bigint({ mode: "number" })
-			.references(() => userRole.id)
-			.notNull(),
 		status: workflowInstanceStepStatusEnum().notNull(),
-		remarks: text(),
-		handledAt: timestamp({ mode: "string", withTimezone: true }).defaultNow().notNull(),
-		...fields("common"),
+		name: text().notNull(),
+
+		completedAt: timestamp({ mode: "string", withTimezone: true }),
+		...fields("common", "soft-delete"),
 	},
 	(t) => [
-		unique().on(t.workflowInstanceId, t.nextStepId),
-		buildCheck("workflow_instance_step:circular_reference", sql`${t.id}!=${t.nextStepId}`),
+		uniqueIndex().on(t.instanceId, sql`lower(${t.name})`).where(sql`${t.deletedAt} IS NULL`),
+		uniqueIndex().on(t.instanceId, t.nextStepId).where(sql`${t.deletedAt} IS NULL`),
 	],
 );
 
 export const workflowInstanceStepRelations = relations(workflowInstanceStep, (r) => ({
-	workflowInstance: r.one(workflowInstance, {
-		fields: [workflowInstanceStep.workflowInstanceId],
+	instance: r.one(workflowInstance, {
+		fields: [workflowInstanceStep.instanceId],
 		references: [workflowInstance.id],
 	}),
-	handledBy: r.one(userRole, {
-		fields: [workflowInstanceStep.handledByUserRoleId],
-		references: [userRole.id],
+	nextStep: r.one(workflowInstanceStep, {
+		fields: [workflowInstanceStep.nextStepId],
+		references: [workflowInstanceStep.id],
 	}),
+	stepRoles: r.many(workflowInstanceStepRole),
 }));
+
+export const workflowInstanceStepRole = pgTable(
+	"workflow_instance_step_role",
+	{
+		id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+		stepId: bigint({ mode: "number" })
+			.references(() => workflowInstanceStep.id)
+			.notNull(),
+
+		roleId: smallint()
+			.references(() => role.id)
+			.notNull(),
+
+		// attributes
+		skippable: boolean().notNull(),
+		targetGroupApprovalCriteria: workflowTargetGroupApprovalCriteriaEnum().notNull(),
+
+		...fields("common", "soft-delete"),
+	},
+	(t) => [uniqueIndex().on(t.stepId, t.roleId).where(sql`${t.deletedAt} IS NULL`)],
+);
+
+export const workflowInstanceStepRoleRelations = relations(workflowInstanceStepRole, (r) => ({
+	step: r.one(workflowInstanceStep, {
+		fields: [workflowInstanceStepRole.stepId],
+		references: [workflowInstanceStep.id],
+	}),
+	role: r.one(role, {
+		fields: [workflowInstanceStepRole.roleId],
+		references: [role.id],
+	}),
+	targetGroups: r.many(workflowInstanceStepTargetGroup),
+}));
+
+export const workflowInstanceStepTargetGroup = pgTable(
+	"workflow_instance_step_target_group",
+	{
+		id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+		stepRoleId: bigint({ mode: "number" })
+			.references(() => workflowInstanceStepRole.id)
+			.notNull(),
+
+		managedEntityId: bigint({ mode: "number" })
+			.references(() => managedEntity.id)
+			.notNull(),
+
+		...fields("common", "soft-delete"),
+	},
+	(t) => [uniqueIndex().on(t.stepRoleId, t.managedEntityId).where(sql`${t.deletedAt} IS NULL`)],
+);
+
+export const workflowInstanceStepTargetGroupRelations = relations(
+	workflowInstanceStepTargetGroup,
+	(r) => ({
+		stepRole: r.one(workflowInstanceStepRole, {
+			fields: [workflowInstanceStepTargetGroup.stepRoleId],
+			references: [workflowInstanceStepRole.id],
+		}),
+		managedEntity: r.one(managedEntity, {
+			fields: [workflowInstanceStepTargetGroup.managedEntityId],
+			references: [managedEntity.id],
+		}),
+		assignments: r.many(workflowInstanceStepAssignment),
+	}),
+);
+
+export const workflowInstanceStepAssignment = pgTable(
+	"workflow_instance_step_assignment",
+	{
+		id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+		targetGroupId: bigint({ mode: "number" })
+			.references(() => workflowInstanceStepTargetGroup.id)
+			.notNull(),
+
+		userRoleId: bigint({ mode: "number" })
+			.references(() => userRole.id)
+			.notNull(),
+		status: workflowInstanceStepAssignmentStatusEnum().notNull(),
+		remarks: text(),
+
+		completedAt: timestamp({ mode: "string", withTimezone: true }),
+		...fields("common", "soft-delete"),
+	},
+	(t) => [uniqueIndex().on(t.targetGroupId, t.userRoleId).where(sql`${t.deletedAt} IS NULL`)],
+);
+
+export const workflowInstanceStepAssignmentRelations = relations(
+	workflowInstanceStepAssignment,
+	(r) => ({
+		targetGroup: r.one(workflowInstanceStepTargetGroup, {
+			fields: [workflowInstanceStepAssignment.targetGroupId],
+			references: [workflowInstanceStepTargetGroup.id],
+		}),
+		userRole: r.one(userRole, {
+			fields: [workflowInstanceStepAssignment.userRoleId],
+			references: [userRole.id],
+		}),
+	}),
+);
 
 // === Helpers
 type PgStringTimestamp = ReturnType<typeof timestamp<"string">>;
