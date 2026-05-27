@@ -88,6 +88,9 @@ export const PERMISSION = {
 		delete: "Delete event types",
 		modify_hierarchy: "Modify hierarchy of event types",
 	},
+	event_category: {
+		create: "Create event categories",
+	},
 	event: {
 		manage: "Manage events",
 		view_own: "View own organization's events of all statuses",

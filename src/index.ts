@@ -12,6 +12,7 @@ import { prepare } from "./prepare.js";
 import authRouter from "@/modules/auth/routes.js";
 import eventRouter from "@/modules/event/routes.js";
 import eventTypesRouter from "@/modules/event-type/routes.js";
+import eventCategoriesRouter from "@/modules/event-category/routes.js";
 import facilitiesRouter from "@/modules/facility/routes.js";
 import organizationRouter from "@/modules/organization/routes.js";
 import organizationTypesRouter from "@/modules/organization-type/routes.js";
@@ -94,6 +95,7 @@ app.use("/venues", venuesRouter);
 app.use("/venue-types", venueTypesRouter);
 app.use("/facilities", facilitiesRouter);
 app.use("/event-types", eventTypesRouter);
+app.use("/event-categories", eventCategoriesRouter);
 app.use("/events", eventRouter);
 
 app.use(errorHandler);
