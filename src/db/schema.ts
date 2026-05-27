@@ -63,6 +63,7 @@ export const workflowTargetGroupApprovalCriteriaEnum = pgEnum(
 	"workflow_target_group_approval_criteria",
 	WORKFLOW_TARGET_GROUP_APPROVAL_CRITERIA,
 );
+
 // === Tables
 export const managedEntity = pgTable(
 	"managed_entity",
@@ -659,7 +660,9 @@ export const workflowTemplate = pgTable(
 		...fields("common", "soft-delete"),
 	},
 	(t) => [
-		uniqueIndex().on(sql`lower(${t.name})`).where(sql`${t.deletedAt} IS NULL`),
+		uniqueIndex("workflow_template_unique_name")
+			.on(sql`lower(${t.name})`)
+			.where(sql`${t.deletedAt} IS NULL`),
 		uniqueIndex().on(t.initialStepId).where(sql`${t.deletedAt} IS NULL`),
 	],
 );
@@ -688,7 +691,9 @@ export const workflowTemplateStep = pgTable(
 		...fields("common", "soft-delete"),
 	},
 	(t) => [
-		uniqueIndex().on(t.templateId, sql`lower(${t.name})`).where(sql`${t.deletedAt} IS NULL`),
+		uniqueIndex("workflow_template_step_unique_name")
+			.on(t.templateId, sql`lower(${t.name})`)
+			.where(sql`${t.deletedAt} IS NULL`),
 		uniqueIndex().on(t.templateId, t.nextStepId).where(sql`${t.deletedAt} IS NULL`),
 	],
 );
@@ -791,7 +796,9 @@ export const workflowInstanceStep = pgTable(
 		...fields("common", "soft-delete"),
 	},
 	(t) => [
-		uniqueIndex().on(t.instanceId, sql`lower(${t.name})`).where(sql`${t.deletedAt} IS NULL`),
+		uniqueIndex("workflow_instance_step_unique_name")
+			.on(t.instanceId, sql`lower(${t.name})`)
+			.where(sql`${t.deletedAt} IS NULL`),
 		uniqueIndex().on(t.instanceId, t.nextStepId).where(sql`${t.deletedAt} IS NULL`),
 	],
 );

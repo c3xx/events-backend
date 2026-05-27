@@ -11,8 +11,8 @@ import { prepare } from "./prepare.js";
 
 import authRouter from "@/modules/auth/routes.js";
 import eventRouter from "@/modules/event/routes.js";
-import eventTypesRouter from "@/modules/event-type/routes.js";
 import eventCategoriesRouter from "@/modules/event-category/routes.js";
+import eventTypesRouter from "@/modules/event-type/routes.js";
 import facilitiesRouter from "@/modules/facility/routes.js";
 import organizationRouter from "@/modules/organization/routes.js";
 import organizationTypesRouter from "@/modules/organization-type/routes.js";
