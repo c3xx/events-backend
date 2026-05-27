@@ -1,4 +1,4 @@
-import { ok } from "@/lib/helpers.js";
+import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
 import {
 	addOrganizationMemberSchema,
 	assignOrganizationMemberRolesSchema,
@@ -40,6 +40,17 @@ export const getOrganization: ApiRequestHandler<{
 }> = async (req, res) => {
 	const params = organizationScopedSchema.parse(req.params);
 	const result = await service.getOrganization(params.id);
+	return ok(res, result);
+};
+
+export const getEventCreatableOrganizations: ApiRequestHandler<
+	{
+		id: number;
+		name: string;
+	}[]
+> = async (req, res) => {
+	const user = getAuthenticatedUser(req);
+	const result = await service.getEventCreatableOrganizations(user);
 	return ok(res, result);
 };
 
