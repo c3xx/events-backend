@@ -6,14 +6,17 @@ export const createEventSchema = z
 		organizationId: z.coerce
 			.number({ error: "Invalid organization ID" })
 			.int({ error: "Invalid organization ID" }),
-		eventTitle: z
+		title: z
 			.string({ error: "Invalid title value" })
 			.trim()
 			.nonempty({ error: "Title cannot be empty" })
 			.max(256, { error: "Title cannot exceed 256 characters" }),
-		eventTypeId: z.coerce
+		typeId: z.coerce
 			.number({ error: "Invalid event type ID" })
 			.int({ error: "Invalid event type ID" }),
+		categoryId: z.coerce
+			.number({ error: "Invalid category ID" })
+			.int({ error: "Invalid category ID" }),
 		expectedParticipants: z.coerce
 			.number({ error: "Invalid expected participants count" })
 			.int({ error: "Invalid expected participants count" })
@@ -46,20 +49,23 @@ export const getEventsQuerySchema = z
 			.string()
 			.transform((val) => val.split(",").map((s) => s.trim()))
 			.pipe(z.array(z.enum(EVENT_STATUS))),
-		eventTypeId: z.coerce.number().int({ error: "Invalid event type ID" }),
+		typeId: z.coerce.number().int({ error: "Invalid event type ID" }),
 	})
 	.partial();
 
 export const updateEventSchema = z
 	.object({
-		eventTitle: z
+		title: z
 			.string({ error: "Invalid title value" })
 			.trim()
 			.nonempty({ error: "Title cannot be empty" })
 			.max(256, { error: "Title cannot exceed 256 characters" }),
-		eventTypeId: z.coerce
+		typeId: z.coerce
 			.number({ error: "Invalid event type ID" })
 			.int({ error: "Invalid event type ID" }),
+		categoryId: z.coerce
+			.number({ error: "Invalid category ID" })
+			.int({ error: "Invalid category ID" }),
 		expectedParticipants: z.coerce
 			.number({ error: "Invalid expected participants count" })
 			.int({ error: "Invalid expected participants count" })

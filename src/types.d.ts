@@ -15,6 +15,10 @@ declare global {
 	export type EventStatus = (typeof schema.eventStatusEnum.enumValues)[number];
 	export type EventOrganizerRole = (typeof schema.eventOrganizerRoleEnum.enumValues)[number];
 
+	export type EventTypeVenuePolicy = (typeof schema.eventTypeVenuePolicyEnum.enumValues)[number];
+	export type EventTypeCollaborationPolicy =
+		(typeof schema.eventTypeCollaborationPolicyEnum.enumValues)[number];
+
 	// system types
 	export type PermissionScope = keyof typeof PERMISSION;
 	export type PermissionCode =

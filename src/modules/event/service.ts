@@ -29,7 +29,7 @@ export async function createEvent(
 	if ((await getOrganization(input.organizationId)) == null) {
 		throw new NotFoundError("Organization not found");
 	}
-	const eventType = await getEventType(input.eventTypeId);
+	const eventType = await getEventType(input.typeId);
 	if (eventType == null) {
 		throw new NotFoundError("Event type not found");
 	} else if (eventType.isActive === false) {
@@ -44,8 +44,9 @@ export async function createEvent(
 
 	return await repository.createEvent({
 		organizationId: input.organizationId,
-		eventTitle: input.eventTitle,
-		eventTypeId: input.eventTypeId,
+		title: input.title,
+		typeId: input.typeId,
+		categoryId: input.categoryId,
 		expectedParticipants: input.expectedParticipants,
 		requestDetails: input.requestDetails,
 		startsAt: input.startsAt,
@@ -74,9 +75,10 @@ export async function updateEvent(
 	}
 
 	const result = await repository.updateEvent({
-		eventId,
-		eventTitle: input.eventTitle,
-		eventTypeId: input.eventTypeId,
+		id: eventId,
+		title: input.title,
+		typeId: input.typeId,
+		categoryId: input.categoryId,
 		expectedParticipants: input.expectedParticipants,
 		requestDetails: input.requestDetails,
 		startsAt: input.startsAt,
@@ -103,7 +105,7 @@ export async function getEvent(
 	const perms = new Set(user.permissions);
 	if (perms.has("event:view_all")) return event;
 	if (perms.has("event:view_all_non_draft") && event.status !== "draft") return event;
-	if (perms.has("event:view_all_confirmed") && event.status === "completed") return event;
+	if (perms.has("event:view_all_confirmed") && event.status === "approved") return event;
 
 	const eventOrgIds = event.organizers.map((o) => o.organization.id);
 
@@ -128,7 +130,7 @@ export async function getEvents(
 	if (user.type === "admin") {
 		return await repository.findEvents({
 			status: filter.status,
-			eventTypeId: filter.eventTypeId,
+			typeId: filter.typeId,
 			viewAll: true,
 		});
 	}
@@ -150,7 +152,7 @@ export async function getEvents(
 
 	return await repository.findEvents({
 		status: filter.status,
-		eventTypeId: filter.eventTypeId,
+		typeId: filter.typeId,
 		viewAll: grants.viewAll,
 		viewAllNonDraft: !grants.viewAll && grants.viewAllNonDraft,
 		viewAllConfirmed: !grants.viewAll && !grants.viewAllNonDraft && grants.viewAllConfirmed,

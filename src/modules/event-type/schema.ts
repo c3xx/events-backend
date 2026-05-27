@@ -1,4 +1,5 @@
 import z from "zod";
+import { EVENT_TYPE_COLLABORATION_POLICY, EVENT_TYPE_VENUE_POLICY } from "@/lib/constants.js";
 
 export const createEventTypeSchema = z
 	.object({
@@ -10,6 +11,12 @@ export const createEventTypeSchema = z
 		workflowTemplateId: z.coerce
 			.number({ error: "Invalid workflow template ID" })
 			.int({ error: "Invalid workflow template ID" }),
+		venuePolicy: z.enum(EVENT_TYPE_VENUE_POLICY, {
+			error: "Event type must specify it's venue policy",
+		}),
+		collaborationPolicy: z.enum(EVENT_TYPE_COLLABORATION_POLICY, {
+			error: "Event type must specify it's collaboration policy",
+		}),
 	})
 	.strict();
 

@@ -8,6 +8,8 @@ export const getEventTypes = dbAction(async () => {
 			id: schema.eventType.id,
 			name: schema.eventType.name,
 			isActive: schema.eventType.isActive,
+			venuePolicy: schema.eventType.venuePolicy,
+			collaborationPolicy: schema.eventType.collaborationPolicy,
 		})
 		.from(schema.eventType)
 		.where(isNull(schema.eventType.deletedAt))
@@ -15,10 +17,20 @@ export const getEventTypes = dbAction(async () => {
 });
 
 export const createEventType = dbAction(
-	async (data: { name: string; workflowTemplateId: number }) => {
+	async (data: {
+		name: string;
+		venuePolicy: EventTypeVenuePolicy;
+		collaborationPolicy: EventTypeCollaborationPolicy;
+		workflowTemplateId: number;
+	}) => {
 		const [inserted] = await db
 			.insert(schema.eventType)
-			.values({ name: data.name, workflowTemplateId: data.workflowTemplateId })
+			.values({
+				name: data.name,
+				venuePolicy: data.venuePolicy,
+				collaborationPolicy: data.collaborationPolicy,
+				workflowTemplateId: data.workflowTemplateId,
+			})
 			.returning({ id: schema.eventType.id });
 
 		if (inserted == null) unreachable();
@@ -35,6 +47,8 @@ export const getEventType = dbAction(async (id: number) => {
 			name: true,
 			workflowTemplateId: true,
 			isActive: true,
+			collaborationPolicy: true,
+			venuePolicy: true,
 		},
 	});
 });

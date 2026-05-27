@@ -20,10 +20,11 @@ export const createEvent: ApiRequestHandler<{
 export const getEvents: ApiRequestHandler<
 	{
 		id: number;
-		eventTitle: string;
-		eventType: { id: number; name: string };
+		title: string;
+		type: { id: number; name: string };
+		category: { id: number; name: string };
 		status: EventStatus;
-		parentEvent: { id: number; eventTitle: string } | null;
+		parentEvent: { id: number; title: string } | null;
 		startsAt: string;
 		organizers: {
 			id: number;
@@ -43,7 +44,7 @@ export const getEvents: ApiRequestHandler<
 
 export const getEvent: ApiRequestHandler<{
 	id: number;
-	eventTitle: string;
+	title: string;
 	expectedParticipants: number;
 	requestDetails: string;
 	status: EventStatus;
@@ -52,8 +53,9 @@ export const getEvent: ApiRequestHandler<{
 	endsAt: string;
 	createdAt: string;
 	updatedAt: string;
-	eventType: { id: number; name: string };
-	parentEvent: { id: number; eventTitle: string } | null;
+	type: { id: number; name: string };
+	category: { id: number; name: string };
+	parentEvent: { id: number; title: string } | null;
 	organizers: {
 		id: number;
 		organization: { id: number; name: string };
