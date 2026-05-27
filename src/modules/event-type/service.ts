@@ -16,6 +16,8 @@ export async function createEventType(input: CreateEventTypeSchema) {
 	return await repository.createEventType({
 		name: input.name,
 		workflowTemplateId: input.workflowTemplateId,
+		venuePolicy: input.venuePolicy,
+		collaborationPolicy: input.collaborationPolicy,
 	});
 }
 

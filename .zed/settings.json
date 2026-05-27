@@ -4,9 +4,15 @@
 // see the documentation: https://zed.dev/docs/configuring-zed#settings-files
 {
 	"format_on_save": "on",
-	"project_name": "Club heads backend",
 	"languages": {
 		"TypeScript": {
+			"language_servers": [
+				"vtsls",
+				"biome",
+				"!deno",
+				"!tailwindcss-language-server",
+				"!eslint"
+			],
 			"formatter": {
 				"language_server": {
 					"name": "biome"

@@ -9,31 +9,49 @@ export const INSTITUTION_DOMAIN = "tkmce.ac.in";
 export const REFRESH_TOKEN_COOKIE_NAME = "refresh-token";
 
 // === System Level
+
+// Users & organizations
 export const USER_TYPES = ["admin", "end_user"] as const;
 export const MANAGED_ENTITY_TYPES = ["organization", "venue"] as const;
 export const VENUE_ACCESS_LEVELS = ["public", "private"] as const;
-export const EVENT_STATUS = [
-	"draft",
-	"awaiting_approval",
-	"cancelled",
-	"overridden",
-	"completed",
-] as const;
+
+// Events
+export const EVENT_TYPE_VENUE_POLICY = ["required", "optional", "forbidden"] as const;
+export const EVENT_TYPE_COLLABORATION_POLICY = ["required", "optional", "forbidden"] as const;
+export const EVENT_STATUS = ["draft", "pending", "approved", "cancelled", "overridden"] as const; // todo: an event should not get overridden by changing its status
 export const EVENT_ORGANIZER_ROLES = ["host", "co_host"] as const;
 export const EVENT_ORGANIZER_INVITATION_STATUS = [
 	"pending",
 	"accepted",
 	"rejected",
-	"revoked",
+	"revoked", // withdrawn
 	"expired",
 ] as const;
-export const WORKFLOW_INSTANCE_STATUS = ["pending", "approved", "rejected", "revoked"] as const;
-export const WORKFLOW_INSTANCE_STEP_STATUS = [
-	"approved",
-	"rejected",
-	"skipped",
-	"pending",
+
+// Workflows
+export const WORKFLOW_INSTANCE_STATUS = [
+	"active", // is running
+	"completed", // completed successfully
+	"denied", // denied somewhere, so stopped
+	"aborted", // cancelled by the host
+	"overridden", // overridden by higher authority
 ] as const;
+export const WORKFLOW_INSTANCE_STEP_STATUS = [
+	"pending", // yet to execute
+	"active", // step is currently active & awaiting response
+	"completed", // step completed!
+	"skipped", // step was skipped because no such target groups can be created
+	"blocked", // step cannot be skipped, because there are target groups, but at least one had no assignments
+	"denied", // someone denied, so, the outcome is rejected.
+	"overridden", // overridden by higher authority
+] as const;
+export const WORKFLOW_INSTANCE_STEP_ASSIGNMENT_STATUS = [
+	"pending", // still waiting for response
+	"approved", // approved!
+	"denied", // denied
+	"skipped", // if the criterias were met by someone else's approval, and yours got skipped
+] as const;
+export const WORKFLOW_TARGET_GROUP_APPROVAL_CRITERIA = ["all", "any"] as const;
 
 // note: keep it sorted like the schema:
 export const PERMISSION = {
