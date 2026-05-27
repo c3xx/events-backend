@@ -40,8 +40,8 @@ export const WORKFLOW_INSTANCE_STEP_STATUS = [
 	"pending", // yet to execute
 	"active", // step is currently active & awaiting response
 	"completed", // step completed!
-	"skipped", // step was skipped because a) no such target groups can be created, or b) due to no assignments & all roles were skippable
-	"blocked", // step cannot be skipped, because there are target groups, but no assignments & at least one role that cannot be skipped
+	"skipped", // step was skipped because no such target groups can be created
+	"blocked", // step cannot be skipped, because there are target groups, but at least one had no assignments
 	"denied", // someone denied, so, the outcome is rejected.
 	"overridden", // overridden by higher authority
 ] as const;
