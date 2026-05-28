@@ -26,10 +26,7 @@ export async function getOrganization(organizationId: number) {
 	return organization;
 }
 
-export async function getEventCreatableOrganizations(user: { id: number; type: UserType }) {
-	if (user.type === "admin") {
-		return await repository.getOrganizations();
-	}
+export async function getEventCreatableOrganizations(user: { id: number }) {
 	return await userRepository.getUserOrganizations(user.id, "event:manage");
 }
 
