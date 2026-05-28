@@ -46,7 +46,7 @@ export const getUsers = dbAction(async () => {
 	});
 });
 
-export const getUserOrganizationIds = dbAction(async (id: number, permission?: PermissionCode) => {
+export const getUserOrganizations = dbAction(async (id: number, permission?: PermissionCode) => {
 	const conditions: SQL[] = [
 		eq(schema.userRole.userId, id),
 		eq(schema.managedEntity.managedEntityType, "organization"),
@@ -58,14 +58,15 @@ export const getUserOrganizationIds = dbAction(async (id: number, permission?: P
 	}
 
 	const rows = await db
-		.select({ orgId: schema.managedEntity.refId })
+		.selectDistinct({ id: schema.organization.id, name: schema.organization.name })
 		.from(schema.userRole)
 		.innerJoin(schema.managedEntity, eq(schema.userRole.managedEntityId, schema.managedEntity.id))
 		.innerJoin(schema.role, eq(schema.userRole.roleId, schema.role.id))
 		.innerJoin(schema.rolePermission, eq(schema.role.id, schema.rolePermission.roleId))
 		.innerJoin(schema.permission, eq(schema.rolePermission.permissionId, schema.permission.id))
+		.innerJoin(schema.organization, eq(schema.managedEntity.refId, schema.organization.id))
 		.where(and(...conditions));
-	return [...new Set(rows.map((r) => r.orgId))];
+	return rows;
 });
 
 export const findUserById = dbAction(async (id: number) => {

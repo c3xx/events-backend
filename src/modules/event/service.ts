@@ -2,7 +2,7 @@ import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
 import { getEventType } from "../event-type/repository.js";
 import { getOrganization } from "../organization/repository.js";
 import { hasPermissionInManagedEntity } from "../permission/repository.js";
-import { getUserOrganizationIds } from "../user/repository.js";
+import { getUserOrganizations } from "../user/repository.js";
 import * as repository from "./repository.js";
 import type {
 	CreateEventSchema,
@@ -147,7 +147,7 @@ export async function getEvents(
 
 	const orgIds =
 		grants.viewOwn && !grants.viewAll
-			? await getUserOrganizationIds(user.id, "event:view_own")
+			? (await getUserOrganizations(user.id, "event:view_own")).map((org) => org.id)
 			: [];
 
 	return await repository.findEvents({
