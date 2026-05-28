@@ -58,7 +58,7 @@ export const getUserOrganizations = dbAction(async (id: number, permission?: Per
 	}
 
 	const rows = await db
-		.selectDistinct({ id: schema.managedEntity.refId, name: schema.organization.name })
+		.selectDistinct({ id: schema.organization.id, name: schema.organization.name })
 		.from(schema.userRole)
 		.innerJoin(schema.managedEntity, eq(schema.userRole.managedEntityId, schema.managedEntity.id))
 		.innerJoin(schema.role, eq(schema.userRole.roleId, schema.role.id))
