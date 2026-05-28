@@ -8,7 +8,6 @@ router.get("/", controller.getOrganizations);
 router.post("/", requirePermissions(["organization:create"]), controller.createOrganization);
 
 router.get("/:id", controller.getOrganization);
-router.get("/event-creatable", controller.getEventCreatableOrganizations);
 
 router.get("/:id/members", controller.getOrganizationMembers);
 router.post(

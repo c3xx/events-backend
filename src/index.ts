@@ -14,6 +14,7 @@ import eventRouter from "@/modules/event/routes.js";
 import eventCategoriesRouter from "@/modules/event-category/routes.js";
 import eventTypesRouter from "@/modules/event-type/routes.js";
 import facilitiesRouter from "@/modules/facility/routes.js";
+import meRouter from "@/modules/me/routes.js";
 import organizationRouter from "@/modules/organization/routes.js";
 import organizationTypesRouter from "@/modules/organization-type/routes.js";
 import permissionsRouter from "@/modules/permission/routes.js";
@@ -97,6 +98,7 @@ app.use("/facilities", facilitiesRouter);
 app.use("/event-types", eventTypesRouter);
 app.use("/event-categories", eventCategoriesRouter);
 app.use("/events", eventRouter);
+app.use("/me", meRouter);
 
 app.use(errorHandler);
 

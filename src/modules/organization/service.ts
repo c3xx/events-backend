@@ -26,10 +26,6 @@ export async function getOrganization(organizationId: number) {
 	return organization;
 }
 
-export async function getEventCreatableOrganizations(user: { id: number }) {
-	return await userRepository.getUserOrganizations(user.id, "event:manage");
-}
-
 export async function getOrganizationMembers(
 	organizationId: number,
 	filters: GetOrganizationMembersQuerySchema,
