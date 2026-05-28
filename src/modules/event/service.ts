@@ -52,6 +52,7 @@ export async function createEvent(
 		startsAt: input.startsAt,
 		endsAt: input.endsAt,
 		parentEventId: input.parentEventId,
+		createdBy: user.id,
 	});
 }
 

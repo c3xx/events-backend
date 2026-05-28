@@ -103,6 +103,7 @@ export const user = pgTable(
 
 export const userRelations = relations(user, (r) => ({
 	roles: r.many(userRole),
+	createdEvents: r.many(event),
 }));
 
 export const role = pgTable(
@@ -469,6 +470,9 @@ export const event = pgTable(
 		parentEventId: bigint({ mode: "number" }).references((): AnyPgColumn => event.id),
 		startsAt: timestamp({ mode: "string", withTimezone: true }).notNull(),
 		endsAt: timestamp({ mode: "string", withTimezone: true }).notNull(),
+		createdBy: bigint({ mode: "number" })
+			.references(() => user.id)
+			.notNull(),
 		...fields("common", "soft-delete"),
 	},
 	(t) => [
@@ -503,6 +507,10 @@ export const eventRelations = relations(event, (r) => ({
 		references: [eventReport.eventId],
 	}),
 	workflowInstances: r.many(workflowInstance),
+	creator: r.one(user, {
+		fields: [event.createdBy],
+		references: [user.id],
+	}),
 }));
 
 export const venueAllotment = pgTable(
@@ -748,6 +756,9 @@ export const workflowInstance = pgTable(
 		eventId: bigint({ mode: "number" })
 			.references(() => event.id)
 			.notNull(),
+		submittedBy: bigint({ mode: "number" })
+			.references(() => user.id)
+			.notNull(),
 
 		initialStepId: bigint({ mode: "number" }).references(() => workflowInstanceStep.id),
 		status: workflowInstanceStatusEnum().notNull(),
@@ -771,6 +782,10 @@ export const workflowInstanceRelations = relations(workflowInstance, (r) => ({
 	event: r.one(event, {
 		fields: [workflowInstance.eventId],
 		references: [event.id],
+	}),
+	submitter: r.one(user, {
+		fields: [workflowInstance.submittedBy],
+		references: [user.id],
 	}),
 	initialStep: r.one(workflowInstanceStep, {
 		fields: [workflowInstance.initialStepId],

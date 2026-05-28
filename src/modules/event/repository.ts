@@ -14,6 +14,7 @@ export const createEvent = dbAction(
 		startsAt: string;
 		endsAt: string;
 		parentEventId: number | null | undefined;
+		createdBy: number;
 	}) => {
 		return await db.transaction(async (tx) => {
 			const [event] = await tx
@@ -28,6 +29,7 @@ export const createEvent = dbAction(
 					startsAt: data.startsAt,
 					endsAt: data.endsAt,
 					parentEventId: data.parentEventId,
+					createdBy: data.createdBy,
 				})
 				.returning({
 					id: schema.event.id,
