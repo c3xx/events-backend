@@ -756,6 +756,9 @@ export const workflowInstance = pgTable(
 		eventId: bigint({ mode: "number" })
 			.references(() => event.id)
 			.notNull(),
+		submittedBy: bigint({ mode: "number" })
+			.references(() => user.id)
+			.notNull(),
 
 		initialStepId: bigint({ mode: "number" }).references(() => workflowInstanceStep.id),
 		status: workflowInstanceStatusEnum().notNull(),
@@ -779,6 +782,10 @@ export const workflowInstanceRelations = relations(workflowInstance, (r) => ({
 	event: r.one(event, {
 		fields: [workflowInstance.eventId],
 		references: [event.id],
+	}),
+	submitter: r.one(user, {
+		fields: [workflowInstance.submittedBy],
+		references: [user.id],
 	}),
 	initialStep: r.one(workflowInstanceStep, {
 		fields: [workflowInstance.initialStepId],
