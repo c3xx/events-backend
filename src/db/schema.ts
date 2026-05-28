@@ -103,6 +103,7 @@ export const user = pgTable(
 
 export const userRelations = relations(user, (r) => ({
 	roles: r.many(userRole),
+	createdEvents: r.many(event),
 }));
 
 export const role = pgTable(
@@ -469,6 +470,9 @@ export const event = pgTable(
 		parentEventId: bigint({ mode: "number" }).references((): AnyPgColumn => event.id),
 		startsAt: timestamp({ mode: "string", withTimezone: true }).notNull(),
 		endsAt: timestamp({ mode: "string", withTimezone: true }).notNull(),
+		createdBy: bigint({ mode: "number" })
+			.references(() => user.id)
+			.notNull(),
 		...fields("common", "soft-delete"),
 	},
 	(t) => [
@@ -503,6 +507,10 @@ export const eventRelations = relations(event, (r) => ({
 		references: [eventReport.eventId],
 	}),
 	workflowInstances: r.many(workflowInstance),
+	createdByUser: r.one(user, {
+		fields: [event.createdBy],
+		references: [user.id],
+	}),
 }));
 
 export const venueAllotment = pgTable(
