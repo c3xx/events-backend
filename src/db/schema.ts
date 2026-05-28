@@ -507,7 +507,7 @@ export const eventRelations = relations(event, (r) => ({
 		references: [eventReport.eventId],
 	}),
 	workflowInstances: r.many(workflowInstance),
-	createdByUser: r.one(user, {
+	creator: r.one(user, {
 		fields: [event.createdBy],
 		references: [user.id],
 	}),
