@@ -1,9 +1,5 @@
 import { ok } from "@/lib/helpers.js";
-import {
-	allowedParentParamsSchema,
-	createEventTypeSchema,
-	eventTypeScopedSchema,
-} from "./schema.js";
+import { createEventTypeSchema, eventTypeScopedSchema } from "./schema.js";
 import * as service from "./service.js";
 
 export const getEventTypes: ApiRequestHandler<
@@ -43,31 +39,5 @@ export const createEventType: ApiRequestHandler<{
 export const deleteEventType: ApiRequestHandler<true> = async (req, res) => {
 	const params = eventTypeScopedSchema.parse(req.params);
 	await service.deleteEventType(params.id);
-	return ok(res, true);
-};
-
-export const getEventTypeChildTypes: ApiRequestHandler<
-	{
-		id: number;
-		name: string;
-	}[]
-> = async (req, res) => {
-	const params = eventTypeScopedSchema.parse(req.params);
-	const result = await service.getEventTypeChildTypes(params.id);
-	return ok(res, result);
-};
-
-export const addAllowedChildType: ApiRequestHandler<{
-	parentTypeId: number;
-	childTypeId: number;
-}> = async (req, res) => {
-	const params = allowedParentParamsSchema.parse(req.params);
-	const result = await service.addAllowedChildType(params);
-	return ok(res, result);
-};
-
-export const removeAllowedChildType: ApiRequestHandler<true> = async (req, res) => {
-	const params = allowedParentParamsSchema.parse(req.params);
-	await service.removeAllowedChildType(params);
 	return ok(res, true);
 };

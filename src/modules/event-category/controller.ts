@@ -9,6 +9,7 @@ export const createEventType: ApiRequestHandler<{
 	const result = await service.createEventCategory(body);
 	return ok(res, result);
 };
+
 export const getEventCategories: ApiRequestHandler<
 	{
 		id: number;

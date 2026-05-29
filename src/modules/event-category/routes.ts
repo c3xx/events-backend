@@ -4,7 +4,7 @@ import * as controller from "./controller.js";
 
 const router: Router = Router();
 
-router.post("/", requirePermissions(["event_category:create"]), controller.createEventType);
 router.get("/", controller.getEventCategories);
+router.post("/", requirePermissions(["event_category:create"]), controller.createEventType);
 
 export default router;

@@ -1,5 +1,6 @@
 import { ok } from "@/lib/helpers.js";
-import { roleScopedSchema, setRolePermissionsSchema } from "./schema.js";
+import { roleScopedSchema } from "../schema.js";
+import { setRolePermissionsSchema } from "./schema.js";
 import * as service from "./service.js";
 
 export const getRolePermissions: ApiRequestHandler<

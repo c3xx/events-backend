@@ -2,6 +2,8 @@ import { Router } from "express";
 import { requirePermissions } from "@/middlewares/require-permissions.js";
 import * as controller from "./controller.js";
 
+import venueAllotmentRouter from "./venue-allotment/routes.js";
+
 const router: Router = Router();
 
 router.post("/", controller.createEvent);
@@ -10,9 +12,6 @@ router.patch("/:id", requirePermissions(["event:manage"]), controller.updateEven
 
 router.get("/:id", controller.getEvent);
 
-router.post(
-	"/:id/venues",
-	requirePermissions(["event:allot_venue"]),
-	controller.createVenueAllotment,
-);
+router.use("/:id/venue-allotments", venueAllotmentRouter);
+
 export default router;

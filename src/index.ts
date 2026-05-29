@@ -87,6 +87,8 @@ app.get("/", (_req, res) => res.status(200).json({ status: "active" }));
 app.use("/auth", authRouter);
 
 app.use(authenticateToken);
+
+app.use("/me", meRouter);
 app.use("/users", usersRouter);
 app.use("/permissions", permissionsRouter);
 app.use("/roles", rolesRouter);
@@ -98,7 +100,6 @@ app.use("/facilities", facilitiesRouter);
 app.use("/event-types", eventTypesRouter);
 app.use("/event-categories", eventCategoriesRouter);
 app.use("/events", eventRouter);
-app.use("/me", meRouter);
 
 app.use(errorHandler);
 
