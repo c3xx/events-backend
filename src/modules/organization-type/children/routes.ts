@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requirePermissions } from "@/middlewares/index.js";
 import * as controller from "./controller.js";
 
-const router: Router = Router();
+const router: Router = Router({ mergeParams: true });
 
 router.get("/", controller.getOrganizationTypeChildTypes);
 router.post(
