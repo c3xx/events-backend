@@ -1,15 +1,14 @@
 import { NotFoundError } from "@/lib/errors.js";
 import * as userRepository from "@/modules/user/repository.js";
-import { findVenueManagedEntity } from "../repository.js";
+import * as venueRepository from "@/modules/venue/repository.js";
 import * as repository from "./repository.js";
-import type {
-	AddVenueMemberSchema,
-	AssignVenueMemberRolesSchema,
-	GetVenueMembersQuerySchema,
-} from "./schema.js";
+import type * as schemas from "./schema.js";
 
-export async function getVenueMembers(venueId: number, filters: GetVenueMembersQuerySchema) {
-	const relatedManagedEntity = await findVenueManagedEntity(venueId);
+export async function getVenueMembers(
+	venueId: number,
+	filters: schemas.GetVenueMembersQuerySchema,
+) {
+	const relatedManagedEntity = await venueRepository.findVenueManagedEntity(venueId);
 	if (relatedManagedEntity == null) throw new NotFoundError("Could not find the venue");
 
 	// ?email={$email}: Find member by email
@@ -27,8 +26,8 @@ export async function getVenueMembers(venueId: number, filters: GetVenueMembersQ
 	return await repository.getVenueMembers(relatedManagedEntity.id, {});
 }
 
-export async function addVenueMember(venueId: number, input: AddVenueMemberSchema) {
-	const relatedManagedEntity = await findVenueManagedEntity(venueId);
+export async function addVenueMember(venueId: number, input: schemas.AddVenueMemberSchema) {
+	const relatedManagedEntity = await venueRepository.findVenueManagedEntity(venueId);
 	if (relatedManagedEntity == null) throw new NotFoundError("Could not find the venue");
 
 	const user = await userRepository.findUserById(input.userId);
@@ -46,9 +45,9 @@ export async function addVenueMember(venueId: number, input: AddVenueMemberSchem
 export async function assignVenueMemberRoles(
 	venueId: number,
 	userId: number,
-	input: AssignVenueMemberRolesSchema,
+	input: schemas.AssignVenueMemberRolesSchema,
 ) {
-	const relatedManagedEntity = await findVenueManagedEntity(venueId);
+	const relatedManagedEntity = await venueRepository.findVenueManagedEntity(venueId);
 	if (relatedManagedEntity == null) throw new NotFoundError("Could not find the venue");
 
 	const user = await userRepository.findUserById(userId);
@@ -64,7 +63,7 @@ export async function assignVenueMemberRoles(
 }
 
 export async function deleteVenueMember(venueId: number, userId: number) {
-	const relatedManagedEntity = await findVenueManagedEntity(venueId);
+	const relatedManagedEntity = await venueRepository.findVenueManagedEntity(venueId);
 	if (relatedManagedEntity == null) throw new NotFoundError("Could not find the venue");
 
 	const user = await userRepository.findUserById(userId);

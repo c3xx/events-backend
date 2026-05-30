@@ -3,10 +3,11 @@ import { styleText } from "node:util";
 import cookieParser from "cookie-parser";
 import express from "express";
 import { nanoid } from "nanoid";
+import { IS_PROD } from "@/lib/constants.js";
 import { quickEnv } from "@/lib/helpers.js";
 import { authenticateToken, cors, errorHandler } from "@/middlewares/index.js";
-import { IS_PROD } from "./lib/constants.js";
 import { prepare } from "./prepare.js";
+
 // end of normal imports, and router imports follow:
 
 import authRouter from "@/modules/auth/routes.js";

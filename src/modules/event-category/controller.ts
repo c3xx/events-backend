@@ -1,11 +1,11 @@
 import { ok } from "@/lib/helpers.js";
-import * as schema from "./schema.js";
+import * as schemas from "./schema.js";
 import * as service from "./service.js";
 
 export const createEventType: ApiRequestHandler<{
 	id: number;
 }> = async (req, res) => {
-	const body = schema.createEventCategorySchema.parse(req.body);
+	const body = schemas.createEventCategorySchema.parse(req.body);
 	const result = await service.createEventCategory(body);
 	return ok(res, result);
 };

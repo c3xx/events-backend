@@ -1,6 +1,6 @@
 import { ok } from "@/lib/helpers.js";
-import { organizationTypeScopedSchema } from "../schema.js";
-import { addAllowedParentParamsSchema } from "./schema.js";
+import { organizationTypeScopedSchema } from "@/modules/organization-type/schema.js";
+import * as schemas from "./schema.js";
 import * as service from "./service.js";
 
 export const getOrganizationTypeChildTypes: ApiRequestHandler<
@@ -18,7 +18,7 @@ export const addAllowedChildType: ApiRequestHandler<{
 	parentTypeId: number;
 	childTypeId: number;
 }> = async (req, res) => {
-	const params = addAllowedParentParamsSchema.parse(req.params);
+	const params = schemas.addAllowedParentParamsSchema.parse(req.params);
 	const result = await service.addAllowedChildType(params);
 	return ok(res, result);
 };

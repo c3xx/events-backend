@@ -2,13 +2,13 @@ import { IS_PROD, REFRESH_TOKEN_COOKIE_NAME } from "@/lib/constants.js";
 import { UnauthorizedError } from "@/lib/errors.js";
 import { ok } from "@/lib/helpers.js";
 import { JWT_REFRESH_TOKEN_EXPIRY } from "@/lib/jwt.js";
-import { loginSchema } from "./schema.js";
+import * as schemas from "./schema.js";
 import * as service from "./service.js";
 
 export const login: ApiRequestHandler<{
 	accessToken: string;
 }> = async (req, res) => {
-	const body = loginSchema.parse(req.body);
+	const body = schemas.loginSchema.parse(req.body);
 	const result = await service.login(body.email, body.password);
 
 	res.cookie(REFRESH_TOKEN_COOKIE_NAME, result.refreshToken, {

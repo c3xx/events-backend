@@ -1,18 +1,15 @@
 import { NotFoundError } from "@/lib/errors.js";
+import * as organizationRepository from "@/modules/organization/repository.js";
 import * as userRepository from "@/modules/user/repository.js";
-import { findOrganizationManagedEntity } from "../repository.js";
 import * as repository from "./repository.js";
-import type {
-	AddOrganizationMemberSchema,
-	AssignOrganizationMemberRolesSchema,
-	GetOrganizationMembersQuerySchema,
-} from "./schema.js";
+import type * as schemas from "./schema.js";
 
 export async function getOrganizationMembers(
 	organizationId: number,
-	filters: GetOrganizationMembersQuerySchema,
+	filters: schemas.GetOrganizationMembersQuerySchema,
 ) {
-	const relatedManagedEntity = await findOrganizationManagedEntity(organizationId);
+	const relatedManagedEntity =
+		await organizationRepository.findOrganizationManagedEntity(organizationId);
 	if (relatedManagedEntity == null) throw new NotFoundError("Could not find the organization");
 
 	// ?email={$email}: Find member by email
@@ -32,9 +29,10 @@ export async function getOrganizationMembers(
 
 export async function addOrganizationMember(
 	organizationId: number,
-	input: AddOrganizationMemberSchema,
+	input: schemas.AddOrganizationMemberSchema,
 ) {
-	const relatedManagedEntity = await findOrganizationManagedEntity(organizationId);
+	const relatedManagedEntity =
+		await organizationRepository.findOrganizationManagedEntity(organizationId);
 	if (relatedManagedEntity == null) throw new NotFoundError("Could not find the organization");
 
 	const user = await userRepository.findUserById(input.userId);
@@ -52,9 +50,10 @@ export async function addOrganizationMember(
 export async function assignOrganizationMemberRoles(
 	organizationId: number,
 	userId: number,
-	input: AssignOrganizationMemberRolesSchema,
+	input: schemas.AssignOrganizationMemberRolesSchema,
 ) {
-	const relatedManagedEntity = await findOrganizationManagedEntity(organizationId);
+	const relatedManagedEntity =
+		await organizationRepository.findOrganizationManagedEntity(organizationId);
 	if (relatedManagedEntity == null) throw new NotFoundError("Could not find the organization");
 
 	const user = await userRepository.findUserById(userId);
@@ -70,7 +69,8 @@ export async function assignOrganizationMemberRoles(
 }
 
 export async function deleteOrganizationMember(organizationId: number, userId: number) {
-	const relatedManagedEntity = await findOrganizationManagedEntity(organizationId);
+	const relatedManagedEntity =
+		await organizationRepository.findOrganizationManagedEntity(organizationId);
 	if (relatedManagedEntity == null) throw new NotFoundError("Could not find the organization");
 
 	const user = await userRepository.findUserById(userId);

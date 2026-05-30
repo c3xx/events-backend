@@ -1,11 +1,11 @@
 import { ok } from "@/lib/helpers.js";
-import { createOrganizationSchema, organizationScopedSchema } from "./schema.js";
+import * as schemas from "./schema.js";
 import * as service from "./service.js";
 
 export const createOrganization: ApiRequestHandler<{
 	id: number;
 }> = async (req, res) => {
-	const body = createOrganizationSchema.parse(req.body);
+	const body = schemas.createOrganizationSchema.parse(req.body);
 	// todo: handle problems with unique and foregin constraints
 	const result = await service.createOrganization(body);
 	return ok(res, result, 201);
@@ -31,7 +31,7 @@ export const getOrganization: ApiRequestHandler<{
 	parentOrganizationId: number | null;
 	isActive: boolean;
 }> = async (req, res) => {
-	const params = organizationScopedSchema.parse(req.params);
+	const params = schemas.organizationScopedSchema.parse(req.params);
 	const result = await service.getOrganization(params.id);
 	return ok(res, result);
 };

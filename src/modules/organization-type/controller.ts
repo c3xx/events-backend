@@ -1,5 +1,5 @@
 import { ok } from "@/lib/helpers.js";
-import { createOrganizationTypeSchema, organizationTypeScopedSchema } from "./schema.js";
+import * as schemas from "./schema.js";
 import * as service from "./service.js";
 
 export const getOrganizationTypes: ApiRequestHandler<
@@ -15,7 +15,7 @@ export const getOrganizationTypes: ApiRequestHandler<
 export const createOrganizationType: ApiRequestHandler<{
 	id: number;
 }> = async (req, res) => {
-	const body = createOrganizationTypeSchema.parse(req.body);
+	const body = schemas.createOrganizationTypeSchema.parse(req.body);
 	const result = await service.createOrganizationType(body);
 	return ok(res, result);
 };
@@ -24,7 +24,7 @@ export const getOrganizationType: ApiRequestHandler<{
 	id: number;
 	name: string;
 }> = async (req, res) => {
-	const params = organizationTypeScopedSchema.parse(req.params);
+	const params = schemas.organizationTypeScopedSchema.parse(req.params);
 	const result = await service.getOrganizationType(params.id);
 	return ok(res, result);
 };

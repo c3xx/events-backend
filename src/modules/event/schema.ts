@@ -33,7 +33,7 @@ export const createEventSchema = z
 		endsAt: z.iso.datetime({ offset: true, error: "Invalid end time format" }),
 	})
 	.refine((d) => new Date(d.startsAt) < new Date(d.endsAt), {
-		message: "Event cannot end before it starts",
+		error: "Event cannot end before it starts",
 	})
 	.strict();
 
@@ -90,7 +90,7 @@ export const updateEventSchema = z
 			return true;
 		},
 		{
-			message: "Event cannot end before it starts",
+			error: "Event cannot end before it starts",
 		},
 	);
 

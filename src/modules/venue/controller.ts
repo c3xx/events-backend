@@ -1,11 +1,11 @@
 import { ok } from "@/lib/helpers.js";
-import { createVenueSchema, venueScopedSchema } from "./schema.js";
+import * as schemas from "./schema.js";
 import * as service from "./service.js";
 
 export const createVenue: ApiRequestHandler<{
 	id: number;
 }> = async (req, res) => {
-	const body = createVenueSchema.parse(req.body);
+	const body = schemas.createVenueSchema.parse(req.body);
 	const result = await service.createVenue(body);
 	return ok(res, result, 201);
 };
@@ -39,7 +39,7 @@ export const getVenue: ApiRequestHandler<{
 	createdAt: string;
 	isActive: boolean;
 }> = async (req, res) => {
-	const params = venueScopedSchema.parse(req.params);
+	const params = schemas.venueScopedSchema.parse(req.params);
 	const result = await service.getVenue(params.id);
 	return ok(res, result);
 };

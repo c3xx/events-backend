@@ -1,12 +1,12 @@
 import { NotFoundError } from "@/lib/errors.js";
 import * as repository from "./repository.js";
-import type { CreateOrganizationTypeSchema } from "./schema.js";
+import type * as schemas from "./schema.js";
 
 export async function getOrganizationTypes() {
 	return await repository.getOrganizationTypes();
 }
 
-export async function createOrganizationType(input: CreateOrganizationTypeSchema) {
+export async function createOrganizationType(input: schemas.CreateOrganizationTypeSchema) {
 	return await repository.createOrganizationType({
 		name: input.name,
 	});

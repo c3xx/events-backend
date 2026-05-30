@@ -1,8 +1,8 @@
 import { NotFoundError } from "@/lib/errors.js";
 import * as repository from "./repository.js";
-import type { CreateVenueSchema } from "./schema.js";
+import type * as schemas from "./schema.js";
 
-export async function createVenue(input: CreateVenueSchema) {
+export async function createVenue(input: schemas.CreateVenueSchema) {
 	return await repository.createVenue({
 		name: input.name,
 		accessLevel: input.accessLevel,

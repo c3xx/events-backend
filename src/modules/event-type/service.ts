@@ -1,6 +1,6 @@
 import { NotFoundError } from "@/lib/errors.js";
 import * as repository from "./repository.js";
-import type { CreateEventTypeSchema } from "./schema.js";
+import type * as schemas from "./schema.js";
 
 export async function getEventTypes() {
 	return await repository.getEventTypes();
@@ -12,7 +12,7 @@ export async function getEventType(eventTypeId: number) {
 	return eventType;
 }
 
-export async function createEventType(input: CreateEventTypeSchema) {
+export async function createEventType(input: schemas.CreateEventTypeSchema) {
 	return await repository.createEventType({
 		name: input.name,
 		workflowTemplateId: input.workflowTemplateId,
