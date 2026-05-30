@@ -17,15 +17,25 @@ export const organizerScopedSchema = z
 
 export const addEventOrganizerSchema = z
 	.object({
+		userRoleId: z.coerce
+			.number({ error: "Invalid user role ID" })
+			.int({ error: "Invalid user role ID" }),
+
 		organizationId: z.coerce
 			.number({ error: "Invalid organization ID" })
 			.int({ error: "Invalid organization ID" }),
-		role: z.enum(["host", "co_host", "resource_provider"], {
-			error: "Role must be a host, co_host, or resource_provider",
-		}),
+	})
+	.strict();
+
+export const removeEventOrganizerSchema = z
+	.object({
+		userRoleId: z.coerce // CHANGED: added
+			.number({ error: "Invalid user role ID" })
+			.int({ error: "Invalid user role ID" }),
 	})
 	.strict();
 
 export type EventOrganizerScopedSchema = z.output<typeof eventScopedSchema>;
 export type OrganizerScopedSchema = z.output<typeof organizerScopedSchema>;
 export type AddEventOrganizerSchema = z.output<typeof addEventOrganizerSchema>;
+export type RemoveEventOrganizerSchema = z.output<typeof removeEventOrganizerSchema>;

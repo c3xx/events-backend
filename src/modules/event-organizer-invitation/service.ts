@@ -26,7 +26,7 @@ export async function sendInvitation(
 	const eventOrganizer = await repository.findEventOrganizerUser(
 		eventId,
 		user.id,
-		input.senderOrganizationId,
+		input.userRoleId,
 	);
 	if (eventOrganizer == null) {
 		throw new ForbiddenError("Your organization not an organizer of the event");
@@ -71,7 +71,7 @@ export async function respondToInvitation(
 	const event = await eventRepository.findEventById(eventId);
 	if (event == null) throw new NotFoundError("Event not found");
 
-	const invitation = await repository.findInvitationById(eventId, invitationId);
+	const invitation = await repository.findInvitationById(invitationId);
 	if (invitation == null) {
 		throw new NotFoundError("Invitation not found");
 	}
@@ -82,6 +82,7 @@ export async function respondToInvitation(
 
 	const userRole = await repository.findUserRoleInOrganization(
 		user.id,
+		input.userRoleId,
 		invitation.recipientOrganizationId,
 	);
 
@@ -111,24 +112,34 @@ export async function respondToInvitation(
 export async function revokeInvitation(
 	eventId: number,
 	invitationId: number,
+	userRoleId: number,
 	user: { id: number; type: UserType },
 ) {
 	const event = await eventRepository.findEventById(eventId);
 	if (event == null) throw new NotFoundError("Event not found");
 
-	const invitation = await repository.findInvitationById(eventId, invitationId);
+	const invitation = await repository.findInvitationById(invitationId);
 	if (invitation == null) throw new NotFoundError("Invitation not found");
 
 	if (invitation.status !== "pending") {
 		throw new ConflictError("Only pending invitations can be revoked");
 	}
-	const eventOrganizer = await repository.findEventOrganizerUser(
-		eventId,
-		user.id,
-		invitation.senderOrganizationId,
-	);
+	const eventOrganizer = await repository.findEventOrganizerUser(eventId, user.id, userRoleId);
 	if (eventOrganizer == null) {
 		throw new ForbiddenError("Your organization is not an organizer of this event");
+	}
+	if (eventOrganizer.organizationId !== invitation.senderOrganizationId) {
+		throw new ForbiddenError("You can only revoke invitations sent by your own organization");
+	}
+
+	const canRevoke = await hasPermissionInManagedEntity(
+		user,
+		"organization",
+		[eventOrganizer.organizationId],
+		"event_organizer_invitation:send",
+	);
+	if (!canRevoke) {
+		throw new ForbiddenError("You do not have permission to revoke this invitation");
 	}
 
 	return await repository.revokeInvitation(invitationId);

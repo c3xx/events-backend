@@ -14,6 +14,8 @@ declare global {
 	export type VenueAccessLevel = (typeof schema.venueAccessLevelEnum.enumValues)[number];
 	export type EventStatus = (typeof schema.eventStatusEnum.enumValues)[number];
 	export type EventOrganizerRole = (typeof schema.eventOrganizerRoleEnum.enumValues)[number];
+	export type EventOrganizerInvitationStatus =
+		(typeof schema.eventOrganizerInvitationStatusEnum.enumValues)[number];
 
 	// system types
 	export type PermissionScope = keyof typeof PERMISSION;

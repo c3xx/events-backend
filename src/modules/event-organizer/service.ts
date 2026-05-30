@@ -3,7 +3,7 @@ import * as eventRepository from "@/modules/event/repository.js"; //expected in 
 import * as invitationRepository from "@/modules/event-organizer-invitation/repository.js";
 import { hasPermissionInManagedEntity } from "@/modules/permission/repository.js";
 import * as repository from "./repository.js";
-import type { AddEventOrganizerSchema } from "./schema.js";
+import type { AddEventOrganizerSchema, RemoveEventOrganizerSchema } from "./schema.js";
 
 export async function getEventOrganizers(eventId: number) {
 	const event = await eventRepository.findEventById(eventId);
@@ -25,7 +25,7 @@ export async function addEventOrganizer(
 	const eventOrganizer = await invitationRepository.findEventOrganizerUser(
 		eventId,
 		user.id,
-		input.organizationId,
+		input.userRoleId,
 	);
 	if (eventOrganizer == null) {
 		throw new ForbiddenError("Your organization is not an organizer of this event");
@@ -48,16 +48,16 @@ export async function addEventOrganizer(
 		throw new ConflictError("Organization is already an organizer of the event");
 	}
 
-	return await repository.addEventOrganizer({
+	return await repository.addResourceProvider({
 		eventId,
 		organizationId: input.organizationId,
-		role: "resource_provider",
 	});
 }
 
 export async function removeEventOrganizer(
 	eventId: number,
 	organizerId: number,
+	input: RemoveEventOrganizerSchema,
 	user: { id: number; type: UserType },
 ) {
 	const event = await eventRepository.findEventById(eventId);
@@ -67,7 +67,7 @@ export async function removeEventOrganizer(
 		throw new ForbiddenError("Organizers can only be removed during draft stage");
 	}
 
-	const organizer = await repository.findEventOrganizer(eventId, organizerId);
+	const organizer = await repository.findEventOrganizer(organizerId);
 	if (organizer == null) {
 		throw new NotFoundError("Organizer not found");
 	}
@@ -78,7 +78,7 @@ export async function removeEventOrganizer(
 	const eventOrganizer = await invitationRepository.findEventOrganizerUser(
 		eventId,
 		user.id,
-		organizer.organizationId,
+		input.userRoleId,
 	);
 	if (eventOrganizer == null) {
 		throw new ForbiddenError("Your organization is not an organizer of this event");

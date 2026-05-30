@@ -17,10 +17,10 @@ export const invitationItemScopedSchema = z
 
 export const sendInvitationSchema = z
 	.object({
+		userRoleId: z.coerce
+			.number({ error: "Invalid user role id" })
+			.int({ error: "Invalid user role id" }),
 		recipientOrganizationId: z.coerce
-			.number({ error: "Invalid organization ID" })
-			.int({ error: "Invalid organization ID" }),
-		senderOrganizationId: z.coerce
 			.number({ error: "Invalid organization ID" })
 			.int({ error: "Invalid organization ID" }),
 	})
@@ -28,9 +28,20 @@ export const sendInvitationSchema = z
 
 export const respondToInvitationSchema = z
 	.object({
+		userRoleId: z.coerce
+			.number({ error: "Invalid user role id" })
+			.int({ error: "Invalid user role id" }),
 		status: z.enum(["accepted", "rejected"], {
 			error: "Status must be either accepted or rejected",
 		}),
+	})
+	.strict();
+
+export const revokeInvitationSchema = z
+	.object({
+		userRoleId: z.coerce
+			.number({ error: "Invalid user role ID" })
+			.int({ error: "Invalid user role ID" }),
 	})
 	.strict();
 
@@ -38,3 +49,4 @@ export type InvitationScopedSchema = z.output<typeof invitationScopedSchema>;
 export type InvitationItemScopedSchema = z.output<typeof invitationItemScopedSchema>;
 export type SendInvitationSchema = z.output<typeof sendInvitationSchema>;
 export type RespondToInvitationSchema = z.output<typeof respondToInvitationSchema>;
+export type RevokeInvitationSchema = z.output<typeof revokeInvitationSchema>;

@@ -31,7 +31,7 @@ export const getEventInvitations = dbAction(async (eventId: number) => {
 	});
 });
 
-export const findInvitationById = dbAction(async (eventId: number, invitationId: number) => {
+export const findInvitationById = dbAction(async (invitationId: number) => {
 	const [invitation] = await db
 		.select({
 			id: schema.eventOrganizerInvitation.id,
@@ -42,7 +42,6 @@ export const findInvitationById = dbAction(async (eventId: number, invitationId:
 		.from(schema.eventOrganizerInvitation)
 		.where(
 			and(
-				eq(schema.eventOrganizerInvitation.eventId, eventId),
 				eq(schema.eventOrganizerInvitation.id, invitationId),
 				isNull(schema.eventOrganizerInvitation.deletedAt),
 			),
@@ -73,33 +72,34 @@ export const findPendingInvitation = dbAction(
 );
 
 export const findEventOrganizerUser = dbAction(
-	async (eventId: number, userId: number, organizationId: number) => {
+	async (eventId: number, userId: number, userRoleId: number) => {
 		const [result] = await db
 			.select({
 				userRoleId: schema.userRole.id,
 				organizationId: schema.eventOrganizer.organizationId,
 			})
-			.from(schema.eventOrganizer)
+			.from(schema.userRole)
 			.innerJoin(
 				schema.managedEntity,
 				and(
-					eq(schema.managedEntity.refId, schema.eventOrganizer.organizationId),
+					eq(schema.managedEntity.id, schema.userRole.managedEntityId),
 					eq(schema.managedEntity.managedEntityType, "organization"),
 				),
 			)
 			.innerJoin(
-				schema.userRole,
+				schema.eventOrganizer,
 				and(
-					eq(schema.userRole.managedEntityId, schema.managedEntity.id),
-					eq(schema.userRole.userId, userId),
-					isNull(schema.userRole.deletedAt),
+					eq(schema.eventOrganizer.organizationId, schema.managedEntity.refId),
+					eq(schema.eventOrganizer.eventId, eventId),
+					isNull(schema.eventOrganizer.deletedAt),
 				),
 			)
+
 			.where(
 				and(
-					eq(schema.eventOrganizer.eventId, eventId),
-					eq(schema.eventOrganizer.organizationId, organizationId),
-					isNull(schema.eventOrganizer.deletedAt),
+					eq(schema.userRole.id, userRoleId),
+					eq(schema.userRole.userId, userId),
+					isNull(schema.userRole.deletedAt),
 				),
 			)
 			.limit(1);
@@ -108,7 +108,7 @@ export const findEventOrganizerUser = dbAction(
 );
 
 export const findUserRoleInOrganization = dbAction(
-	async (userId: number, organizationId: number) => {
+	async (userId: number, userRoleId: number, organizationId: number) => {
 		const [result] = await db
 			.select({ userRoleId: schema.userRole.id })
 			.from(schema.userRole)
@@ -120,7 +120,13 @@ export const findUserRoleInOrganization = dbAction(
 					eq(schema.managedEntity.refId, organizationId),
 				),
 			)
-			.where(and(eq(schema.userRole.userId, userId), isNull(schema.userRole.deletedAt)))
+			.where(
+				and(
+					eq(schema.userRole.id, userRoleId),
+					eq(schema.userRole.userId, userId),
+					isNull(schema.userRole.deletedAt),
+				),
+			)
 			.limit(1);
 		return result;
 	},
@@ -187,7 +193,6 @@ export const revokeInvitation = dbAction(async (invitationId: number) => {
 		.set({
 			status: "revoked",
 			closedAt: new Date().toISOString(),
-			deletedAt: new Date().toISOString(),
 		})
 		.where(eq(schema.eventOrganizerInvitation.id, invitationId));
 });

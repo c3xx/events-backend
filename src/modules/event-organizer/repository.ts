@@ -20,7 +20,7 @@ export const getEventOrganizers = dbAction(async (eventId: number) => {
 	});
 });
 
-export const findEventOrganizer = dbAction(async (eventId: number, organizerId: number) => {
+export const findEventOrganizer = dbAction(async (organizerId: number) => {
 	const [organizer] = await db
 		.select({
 			id: schema.eventOrganizer.id,
@@ -30,7 +30,6 @@ export const findEventOrganizer = dbAction(async (eventId: number, organizerId: 
 		.from(schema.eventOrganizer)
 		.where(
 			and(
-				eq(schema.eventOrganizer.eventId, eventId),
 				eq(schema.eventOrganizer.id, organizerId),
 				isNull(schema.eventOrganizer.deletedAt),
 			),
@@ -56,11 +55,11 @@ export const findEventOrganizersByOrganizationId = dbAction(
 	},
 );
 
-export const addEventOrganizer = dbAction(
-	async (data: { eventId: number; organizationId: number; role: "resource_provider" }) => {
+export const addResourceProvider = dbAction(
+	async (data: { eventId: number; organizationId: number }) => {
 		const [inserted] = await db
 			.insert(schema.eventOrganizer)
-			.values(data)
+			.values({ ...data, role: "resource_provider" })
 			.returning({ id: schema.eventOrganizer.id });
 		if (inserted == null) unreachable();
 		return inserted;

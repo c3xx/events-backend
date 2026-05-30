@@ -1,17 +1,17 @@
-import type { EVENT_ORGANIZER_INVITATION_STATUS } from "@/lib/constants.js";
 import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
 import {
 	invitationItemScopedSchema,
 	invitationScopedSchema,
 	respondToInvitationSchema,
 	sendInvitationSchema,
+	revokeInvitationSchema,
 } from "./schema.js";
 import * as service from "./service.js";
 
 export const getEventInvitations: ApiRequestHandler<
 	{
 		id: number;
-		status: (typeof EVENT_ORGANIZER_INVITATION_STATUS)[number];
+		status: EventOrganizerInvitationStatus;
 		invitedAt: string;
 		closedAt: string | null;
 		invitedByUser: {
@@ -48,7 +48,7 @@ export const sendInvitation: ApiRequestHandler<{
 
 export const respondToInvitation: ApiRequestHandler<{
 	id: number;
-	status: (typeof EVENT_ORGANIZER_INVITATION_STATUS)[number];
+	status: EventOrganizerInvitationStatus;
 }> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
 	const params = invitationItemScopedSchema.parse(req.params);
@@ -60,6 +60,7 @@ export const respondToInvitation: ApiRequestHandler<{
 export const revokeInvitation: ApiRequestHandler<null> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
 	const params = invitationItemScopedSchema.parse(req.params);
-	await service.revokeInvitation(params.eventId, params.invitationId, user);
+	const body = revokeInvitationSchema.parse(req.body);
+	await service.revokeInvitation(params.eventId, params.invitationId, body.userRoleId, user);
 	return ok(res, null);
 };

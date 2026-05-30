@@ -1,6 +1,11 @@
 import type { EVENT_ORGANIZER_ROLES } from "@/lib/constants.js";
 import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
-import { addEventOrganizerSchema, eventScopedSchema, organizerScopedSchema } from "./schema.js";
+import {
+	addEventOrganizerSchema,
+	eventScopedSchema,
+	organizerScopedSchema,
+	removeEventOrganizerSchema,
+} from "./schema.js";
 import * as service from "./service.js";
 
 export const getEventOrganizers: ApiRequestHandler<
@@ -33,6 +38,7 @@ export const removeEventOrganizer: ApiRequestHandler<{
 }> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
 	const params = organizerScopedSchema.parse(req.params);
-	const result = await service.removeEventOrganizer(params.eventId, params.organizerId, user);
+	const body = removeEventOrganizerSchema.parse(req.body);
+	const result = await service.removeEventOrganizer(params.eventId, params.organizerId, body, user);
 	return ok(res, result);
 };
