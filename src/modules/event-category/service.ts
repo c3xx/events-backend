@@ -1,7 +1,7 @@
 import * as repository from "./repository.js";
-import type * as schema from "./schema.js";
+import type * as schemas from "./schema.js";
 
-export async function createEventCategory(input: schema.CreateEventCategorySchema) {
+export async function createEventCategory(input: schemas.CreateEventCategorySchema) {
 	return await repository.insert({ name: input.name });
 }
 

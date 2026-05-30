@@ -1,5 +1,5 @@
 import { ok } from "@/lib/helpers.js";
-import { createFacilitySchema } from "./schema.js";
+import * as schemas from "./schema.js";
 import * as service from "./service.js";
 
 export const getFacilities: ApiRequestHandler<
@@ -15,7 +15,7 @@ export const getFacilities: ApiRequestHandler<
 export const createFacility: ApiRequestHandler<{
 	id: number;
 }> = async (req, res) => {
-	const body = createFacilitySchema.parse(req.body);
+	const body = schemas.createFacilitySchema.parse(req.body);
 
 	const result = await service.createFacility({
 		name: body.name,

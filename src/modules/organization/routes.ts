@@ -2,6 +2,8 @@ import { Router } from "express";
 import { requirePermissions } from "@/middlewares/index.js";
 import * as controller from "./controller.js";
 
+import membersRouter from "./member/routes.js";
+
 const router: Router = Router();
 
 router.get("/", controller.getOrganizations);
@@ -9,21 +11,6 @@ router.post("/", requirePermissions(["organization:create"]), controller.createO
 
 router.get("/:id", controller.getOrganization);
 
-router.get("/:id/members", controller.getOrganizationMembers);
-router.post(
-	"/:id/members",
-	requirePermissions(["organization:add_member"]),
-	controller.addMemberToOrganization,
-);
-router.put(
-	"/:id/members/:userId",
-	requirePermissions(["organization:add_member"]),
-	controller.updateOrganizationMemberRoles,
-);
-router.delete(
-	"/:id/members/:userId",
-	requirePermissions(["organization:add_member"]),
-	controller.deleteOrganizationMember,
-);
+router.use("/:id/members", membersRouter);
 
 export default router;

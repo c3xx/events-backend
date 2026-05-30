@@ -1,22 +1,17 @@
 import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
-import { getEventType } from "../event-type/repository.js";
-import { getOrganization } from "../organization/repository.js";
-import { hasPermissionInManagedEntity } from "../permission/repository.js";
-import { getUserOrganizations } from "../user/repository.js";
+import * as eventTypeRepository from "@/modules/event-type/repository.js";
+import * as organizationRepository from "@/modules/organization/repository.js";
+import * as permissionRepository from "@/modules/permission/repository.js";
+import * as userRepository from "@/modules/user/repository.js";
 import * as repository from "./repository.js";
-import type {
-	CreateEventSchema,
-	CreateVenueAllotmentSchema,
-	GetEventsQuerySchema,
-	UpdateEventSchema,
-} from "./schema.js";
+import type * as schemas from "./schema.js";
 
 export async function createEvent(
 	user: { id: number; type: UserType; permissions: PermissionCode[] },
-	input: CreateEventSchema,
+	input: schemas.CreateEventSchema,
 ) {
 	if (
-		!(await hasPermissionInManagedEntity(
+		!(await permissionRepository.hasPermissionInManagedEntity(
 			user,
 			"organization",
 			[input.organizationId],
@@ -26,10 +21,10 @@ export async function createEvent(
 		throw new ForbiddenError("You do not have any required permission for this");
 	}
 
-	if ((await getOrganization(input.organizationId)) == null) {
+	if ((await organizationRepository.getOrganization(input.organizationId)) == null) {
 		throw new NotFoundError("Organization not found");
 	}
-	const eventType = await getEventType(input.typeId);
+	const eventType = await eventTypeRepository.getEventType(input.typeId);
 	if (eventType == null) {
 		throw new NotFoundError("Event type not found");
 	} else if (eventType.isActive === false) {
@@ -59,12 +54,12 @@ export async function createEvent(
 export async function updateEvent(
 	user: { id: number; type: UserType; permissions: PermissionCode[] },
 	eventId: number,
-	input: UpdateEventSchema,
+	input: schemas.UpdateEventSchema,
 ) {
 	const orgIds = await repository.findEventOrganizerOrgIds(eventId);
 	if (orgIds.length === 0) throw new NotFoundError("Event not found");
 
-	const hasAccess = await hasPermissionInManagedEntity(
+	const hasAccess = await permissionRepository.hasPermissionInManagedEntity(
 		user,
 		"organization",
 		orgIds,
@@ -111,7 +106,7 @@ export async function getEvent(
 	const eventOrgIds = event.organizers.map((o) => o.organization.id);
 
 	if (eventOrgIds.length > 0) {
-		const hasAccess = await hasPermissionInManagedEntity(
+		const hasAccess = await permissionRepository.hasPermissionInManagedEntity(
 			user,
 			"organization",
 			eventOrgIds,
@@ -126,7 +121,7 @@ export async function getEvent(
 
 export async function getEvents(
 	user: { id: number; type: UserType; permissions: PermissionCode[] },
-	filter: GetEventsQuerySchema,
+	filter: schemas.GetEventsQuerySchema,
 ) {
 	if (user.type === "admin") {
 		return await repository.findEvents({
@@ -148,7 +143,7 @@ export async function getEvents(
 
 	const orgIds =
 		grants.viewOwn && !grants.viewAll
-			? (await getUserOrganizations(user.id, "event:view_own")).map((org) => org.id)
+			? (await userRepository.getUserOrganizations(user.id, "event:view_own")).map((org) => org.id)
 			: [];
 
 	return await repository.findEvents({
@@ -159,34 +154,4 @@ export async function getEvents(
 		viewAllConfirmed: !grants.viewAll && !grants.viewAllNonDraft && grants.viewAllConfirmed,
 		orgIds,
 	});
-}
-
-export async function createVenueAllotment(
-	user: { id: number; type: UserType },
-	eventId: number,
-	input: CreateVenueAllotmentSchema,
-) {
-	const orgIds = await repository.findEventOrganizerOrgIds(eventId);
-	if (orgIds.length === 0) {
-		throw new NotFoundError("Event not found");
-	}
-
-	const hasAccess = await hasPermissionInManagedEntity(
-		user,
-		"organization",
-		orgIds,
-		"event:allot_venue",
-	);
-
-	if (!hasAccess) {
-		throw new ForbiddenError("You do not have permission to allot venues for this event");
-	}
-
-	const result = await repository.insertVenueAllotments(eventId, input);
-
-	if (!result.success) {
-		throw new ConflictError("Venue is not available for the requested time slot", result.conflict);
-	}
-
-	return { id: result.id };
 }

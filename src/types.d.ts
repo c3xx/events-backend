@@ -1,8 +1,8 @@
 import type * as express from "express";
 import type { JWTPayload } from "jose";
-import type { schema } from "./db/index.ts";
-import type { PERMISSION } from "./lib/constants.ts";
-import type { ErrorCode } from "./lib/errors.ts";
+import type { schema } from "@/db/index.ts";
+import type { PERMISSION } from "@/lib/constants.ts";
+import type { ErrorCode } from "@/lib/errors.ts";
 
 declare global {
 	// schema types

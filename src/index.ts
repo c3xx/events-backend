@@ -3,10 +3,11 @@ import { styleText } from "node:util";
 import cookieParser from "cookie-parser";
 import express from "express";
 import { nanoid } from "nanoid";
+import { IS_PROD } from "@/lib/constants.js";
 import { quickEnv } from "@/lib/helpers.js";
 import { authenticateToken, cors, errorHandler } from "@/middlewares/index.js";
-import { IS_PROD } from "./lib/constants.js";
 import { prepare } from "./prepare.js";
+
 // end of normal imports, and router imports follow:
 
 import authRouter from "@/modules/auth/routes.js";
@@ -87,6 +88,8 @@ app.get("/", (_req, res) => res.status(200).json({ status: "active" }));
 app.use("/auth", authRouter);
 
 app.use(authenticateToken);
+
+app.use("/me", meRouter);
 app.use("/users", usersRouter);
 app.use("/permissions", permissionsRouter);
 app.use("/roles", rolesRouter);
@@ -98,7 +101,6 @@ app.use("/facilities", facilitiesRouter);
 app.use("/event-types", eventTypesRouter);
 app.use("/event-categories", eventCategoriesRouter);
 app.use("/events", eventRouter);
-app.use("/me", meRouter);
 
 app.use(errorHandler);
 

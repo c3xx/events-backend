@@ -33,7 +33,7 @@ export const createEventSchema = z
 		endsAt: z.iso.datetime({ offset: true, error: "Invalid end time format" }),
 	})
 	.refine((d) => new Date(d.startsAt) < new Date(d.endsAt), {
-		message: "Event cannot end before it starts",
+		error: "Event cannot end before it starts",
 	})
 	.strict();
 
@@ -90,23 +90,11 @@ export const updateEventSchema = z
 			return true;
 		},
 		{
-			message: "Event cannot end before it starts",
+			error: "Event cannot end before it starts",
 		},
 	);
-
-export const createVenueAllotmentSchema = z
-	.object({
-		venueId: z.coerce.number({ error: "Invalid venue ID" }).int({ error: "Invalid venue ID" }),
-		startsAt: z.iso.datetime({ offset: true }),
-		endsAt: z.iso.datetime({ offset: true }),
-	})
-	.refine((d) => new Date(d.startsAt) < new Date(d.endsAt), {
-		message: "Event cannot end before it starts",
-	})
-	.strict();
 
 export type CreateEventSchema = z.output<typeof createEventSchema>;
 export type GetEventsQuerySchema = z.output<typeof getEventsQuerySchema>;
 export type UpdateEventSchema = z.output<typeof updateEventSchema>;
 export type EventScopedSchema = z.output<typeof eventScopedSchema>;
-export type CreateVenueAllotmentSchema = z.output<typeof createVenueAllotmentSchema>;
