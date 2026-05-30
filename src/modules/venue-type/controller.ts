@@ -1,9 +1,5 @@
 import { ok } from "@/lib/helpers.js";
-import {
-	createVenueTypeRoleSchema,
-	createVenueTypeSchema,
-	venueTypeScopedSchema,
-} from "./schema.js";
+import * as schemas from "./schema.js";
 import * as service from "./service.js";
 
 export const getVenueTypes: ApiRequestHandler<
@@ -19,7 +15,7 @@ export const getVenueTypes: ApiRequestHandler<
 export const createVenueType: ApiRequestHandler<{
 	id: number;
 }> = async (req, res) => {
-	const body = createVenueTypeSchema.parse(req.body);
+	const body = schemas.createVenueTypeSchema.parse(req.body);
 	const result = await service.createVenueType(body);
 	return ok(res, result);
 };
@@ -28,27 +24,7 @@ export const getVenueType: ApiRequestHandler<{
 	id: number;
 	name: string;
 }> = async (req, res) => {
-	const params = venueTypeScopedSchema.parse(req.params);
+	const params = schemas.venueTypeScopedSchema.parse(req.params);
 	const result = await service.getVenueType(params.id);
-	return ok(res, result);
-};
-
-export const getVenueTypeRoles: ApiRequestHandler<
-	{
-		id: number;
-		name: string;
-	}[]
-> = async (req, res) => {
-	const params = venueTypeScopedSchema.parse(req.params);
-	const result = await service.getVenueTypeRoles(params.id);
-	return ok(res, result);
-};
-
-export const createVenueTypeRole: ApiRequestHandler<{
-	id: number;
-}> = async (req, res) => {
-	const params = venueTypeScopedSchema.parse(req.params);
-	const body = createVenueTypeRoleSchema.parse(req.body);
-	const result = await service.createVenueTypeRole(params.id, body);
 	return ok(res, result);
 };

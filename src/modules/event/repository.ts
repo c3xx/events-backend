@@ -1,31 +1,35 @@
 import type { SQL } from "drizzle-orm";
-import { and, eq, exists, gt, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { and, eq, exists, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
 export const createEvent = dbAction(
 	async (data: {
 		organizationId: number;
-		eventTitle: string;
-		eventTypeId: number;
+		title: string;
+		typeId: number;
+		categoryId: number;
 		expectedParticipants: number;
 		requestDetails: string;
 		startsAt: string;
 		endsAt: string;
 		parentEventId: number | null | undefined;
+		createdBy: number;
 	}) => {
 		return await db.transaction(async (tx) => {
 			const [event] = await tx
 				.insert(schema.event)
 				.values({
-					eventTitle: data.eventTitle,
-					eventTypeId: data.eventTypeId,
+					title: data.title,
+					typeId: data.typeId,
+					categoryId: data.categoryId,
 					expectedParticipants: data.expectedParticipants,
 					requestDetails: data.requestDetails,
 					status: "draft",
 					startsAt: data.startsAt,
 					endsAt: data.endsAt,
 					parentEventId: data.parentEventId,
+					createdBy: data.createdBy,
 				})
 				.returning({
 					id: schema.event.id,
@@ -50,7 +54,7 @@ export const createEvent = dbAction(
 export const findEvents = dbAction(
 	async (filter: {
 		status?: EventStatus[] | undefined;
-		eventTypeId?: number | undefined;
+		typeId?: number | undefined;
 		viewAll?: boolean | undefined;
 		viewAllNonDraft?: boolean | undefined;
 		viewAllConfirmed?: boolean | undefined;
@@ -58,8 +62,8 @@ export const findEvents = dbAction(
 	}) => {
 		const baseConditions: SQL[] = [isNull(schema.event.deletedAt)];
 
-		if (filter.eventTypeId !== undefined) {
-			baseConditions.push(eq(schema.event.eventTypeId, filter.eventTypeId));
+		if (filter.typeId !== undefined) {
+			baseConditions.push(eq(schema.event.typeId, filter.typeId));
 		}
 
 		// Wraps a condition with an optional status filter on top
@@ -81,7 +85,7 @@ export const findEvents = dbAction(
 			accessConditions.push(withStatusFilter(ne(schema.event.status, "draft" as const)));
 		} else if (filter.viewAllConfirmed) {
 			// Can only see completed events
-			accessConditions.push(eq(schema.event.status, "completed" as const));
+			accessConditions.push(eq(schema.event.status, "approved" as const));
 		}
 
 		if (filter.orgIds && filter.orgIds.length > 0) {
@@ -111,17 +115,20 @@ export const findEvents = dbAction(
 			where,
 			columns: {
 				id: true,
-				eventTitle: true,
+				title: true,
 				status: true,
 				parentEventId: true,
 				startsAt: true,
 			},
 			with: {
-				eventType: {
+				type: {
+					columns: { id: true, name: true },
+				},
+				category: {
 					columns: { id: true, name: true },
 				},
 				parentEvent: {
-					columns: { id: true, eventTitle: true },
+					columns: { id: true, title: true },
 				},
 				organizers: {
 					where: isNull(schema.eventOrganizer.deletedAt),
@@ -138,11 +145,12 @@ export const findEvents = dbAction(
 
 		return rows.map((event) => ({
 			id: event.id,
-			eventTitle: event.eventTitle,
-			eventType: { id: event.eventType.id, name: event.eventType.name },
+			title: event.title,
+			type: { id: event.type.id, name: event.type.name },
+			category: { id: event.category.id, name: event.category.name },
 			status: event.status,
 			parentEvent: event.parentEvent
-				? { id: event.parentEvent.id, eventTitle: event.parentEvent.eventTitle }
+				? { id: event.parentEvent.id, title: event.parentEvent.title }
 				: null,
 			startsAt: event.startsAt,
 			organizers: event.organizers.map((o) => ({
@@ -162,7 +170,7 @@ export const findEventById = dbAction(async (eventId: number) => {
 		where: and(eq(schema.event.id, eventId), isNull(schema.event.deletedAt)),
 		columns: {
 			id: true,
-			eventTitle: true,
+			title: true,
 			expectedParticipants: true,
 			requestDetails: true,
 			status: true,
@@ -173,11 +181,14 @@ export const findEventById = dbAction(async (eventId: number) => {
 			updatedAt: true,
 		},
 		with: {
-			eventType: {
+			type: {
+				columns: { id: true, name: true },
+			},
+			category: {
 				columns: { id: true, name: true },
 			},
 			parentEvent: {
-				columns: { id: true, eventTitle: true },
+				columns: { id: true, title: true },
 			},
 			organizers: {
 				where: isNull(schema.eventOrganizer.deletedAt),
@@ -218,9 +229,10 @@ export const findEventOrganizerOrgIds = dbAction(async (eventId: number) => {
 
 export const updateEvent = dbAction(
 	async (data: {
-		eventId: number;
-		eventTitle?: string | undefined;
-		eventTypeId?: number | undefined;
+		id: number;
+		title?: string | undefined;
+		typeId?: number | undefined;
+		categoryId?: number | undefined;
 		expectedParticipants?: number | undefined;
 		requestDetails?: string | undefined;
 		parentEventId?: number | null | undefined;
@@ -230,8 +242,9 @@ export const updateEvent = dbAction(
 		const [updated] = await db
 			.update(schema.event)
 			.set({
-				eventTitle: data.eventTitle,
-				eventTypeId: data.eventTypeId,
+				title: data.title,
+				typeId: data.typeId,
+				categoryId: data.categoryId,
 				expectedParticipants: data.expectedParticipants,
 				requestDetails: data.requestDetails,
 				parentEventId: data.parentEventId,
@@ -240,7 +253,7 @@ export const updateEvent = dbAction(
 			})
 			.where(
 				and(
-					eq(schema.event.id, data.eventId),
+					eq(schema.event.id, data.id),
 					eq(schema.event.status, "draft"),
 					isNull(schema.event.deletedAt),
 				),
@@ -251,7 +264,7 @@ export const updateEvent = dbAction(
 		const [existing] = await db
 			.select({ eventExist: sql`1` })
 			.from(schema.event)
-			.where(and(eq(schema.event.id, data.eventId), isNull(schema.event.deletedAt)))
+			.where(and(eq(schema.event.id, data.id), isNull(schema.event.deletedAt)))
 			.limit(1);
 		return existing;
 	},
@@ -275,50 +288,3 @@ export const updateEvent = dbAction(
 // 		.where(eq(schema.eventOrganizer.organizationId, organizationId))
 // 		.orderBy(schema.event.startsAt);
 // });
-
-export const insertVenueAllotments = dbAction(
-	async (eventId: number, allotments: { venueId: number; startsAt: string; endsAt: string }) => {
-		return await db.transaction(async (tx) => {
-			const [overlap] = await tx
-				.select({
-					venue: { id: schema.venue.id, name: schema.venue.name },
-					event: { id: schema.event.id, eventTitle: schema.event.eventTitle },
-					startsAt: schema.venueAllotment.startsAt,
-					endsAt: schema.venueAllotment.endsAt,
-				})
-				.from(schema.venueAllotment)
-				.innerJoin(schema.venue, eq(schema.venueAllotment.venueId, schema.venue.id))
-				.innerJoin(schema.event, eq(schema.venueAllotment.eventId, schema.event.id))
-				.where(
-					and(
-						eq(schema.venueAllotment.venueId, allotments.venueId),
-						lt(schema.venueAllotment.startsAt, allotments.endsAt),
-						gt(schema.venueAllotment.endsAt, allotments.startsAt),
-						or(eq(schema.venueAllotment.eventId, eventId), eq(schema.event.status, "completed")),
-						isNull(schema.venueAllotment.deletedAt),
-					),
-				);
-
-			if (overlap)
-				return {
-					success: false as const,
-					conflict: overlap,
-				};
-
-			const [created] = await tx
-				.insert(schema.venueAllotment)
-				.values({
-					eventId: eventId,
-					venueId: allotments.venueId,
-					startsAt: allotments.startsAt,
-					endsAt: allotments.endsAt,
-				})
-				.returning({ id: schema.venueAllotment.id });
-			if (created == null) unreachable();
-			return {
-				success: true as const,
-				id: created.id,
-			};
-		});
-	},
-);

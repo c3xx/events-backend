@@ -6,23 +6,4 @@ export const roleScopedSchema = z
 	})
 	.strict();
 
-export const setRolePermissionsSchema = z
-	.object({
-		permissionIds: z.array(
-			z.coerce.number({ error: "Invalid permission ID" }).int({ error: "Invalid permission ID" }),
-			{ error: "Invalid set of permission IDs" },
-		),
-	})
-	.strict();
-
-export const rolePermissionScopedSchema = roleScopedSchema
-	.extend({
-		permissionId: z.coerce
-			.number({ error: "Invalid permission ID" })
-			.int({ error: "Invalid permission ID" }),
-	})
-	.strict();
-
 export type RoleScopedSchema = z.output<typeof roleScopedSchema>;
-export type SetRolePermissionSchema = z.output<typeof setRolePermissionsSchema>;
-export type RolePermissionScopedSchema = z.output<typeof rolePermissionScopedSchema>;

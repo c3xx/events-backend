@@ -1,8 +1,8 @@
 import { hashPassword } from "@/lib/argon2.js";
 import * as repository from "./repository.js";
-import type { CreateUserSchema } from "./schema.js";
+import type * as schemas from "./schema.js";
 
-export async function createUser(input: CreateUserSchema) {
+export async function createUser(input: schemas.CreateUserSchema) {
 	return await repository.insertUser({
 		email: input.email,
 		fullName: input.fullName,

@@ -3,16 +3,19 @@ import { styleText } from "node:util";
 import cookieParser from "cookie-parser";
 import express from "express";
 import { nanoid } from "nanoid";
+import { IS_PROD } from "@/lib/constants.js";
 import { quickEnv } from "@/lib/helpers.js";
 import { authenticateToken, cors, errorHandler } from "@/middlewares/index.js";
-import { IS_PROD } from "./lib/constants.js";
 import { prepare } from "./prepare.js";
+
 // end of normal imports, and router imports follow:
 
 import authRouter from "@/modules/auth/routes.js";
 import eventRouter from "@/modules/event/routes.js";
+import eventCategoriesRouter from "@/modules/event-category/routes.js";
 import eventTypesRouter from "@/modules/event-type/routes.js";
 import facilitiesRouter from "@/modules/facility/routes.js";
+import meRouter from "@/modules/me/routes.js";
 import organizationRouter from "@/modules/organization/routes.js";
 import organizationTypesRouter from "@/modules/organization-type/routes.js";
 import permissionsRouter from "@/modules/permission/routes.js";
@@ -85,6 +88,8 @@ app.get("/", (_req, res) => res.status(200).json({ status: "active" }));
 app.use("/auth", authRouter);
 
 app.use(authenticateToken);
+
+app.use("/me", meRouter);
 app.use("/users", usersRouter);
 app.use("/permissions", permissionsRouter);
 app.use("/roles", rolesRouter);
@@ -94,7 +99,8 @@ app.use("/venues", venuesRouter);
 app.use("/venue-types", venueTypesRouter);
 app.use("/facilities", facilitiesRouter);
 app.use("/event-types", eventTypesRouter);
-app.use("/event", eventRouter);
+app.use("/event-categories", eventCategoriesRouter);
+app.use("/events", eventRouter);
 
 app.use(errorHandler);
 

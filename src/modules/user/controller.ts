@@ -1,11 +1,11 @@
 import { ok } from "@/lib/helpers.js";
-import { createUserSchema } from "./schema.js";
+import * as schemas from "./schema.js";
 import * as service from "./service.js";
 
 export const createUser: ApiRequestHandler<{
 	id: number;
 }> = async (req, res) => {
-	const body = createUserSchema.parse(req.body);
+	const body = schemas.createUserSchema.parse(req.body);
 	const result = await service.createUser(body);
 	return ok(res, result);
 };

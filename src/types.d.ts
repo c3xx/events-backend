@@ -1,8 +1,8 @@
 import type * as express from "express";
 import type { JWTPayload } from "jose";
-import type { schema } from "./db/index.ts";
-import type { PERMISSION } from "./lib/constants.ts";
-import type { ErrorCode } from "./lib/errors.ts";
+import type { schema } from "@/db/index.ts";
+import type { PERMISSION } from "@/lib/constants.ts";
+import type { ErrorCode } from "@/lib/errors.ts";
 
 declare global {
 	// schema types
@@ -16,6 +16,10 @@ declare global {
 	export type EventOrganizerRole = (typeof schema.eventOrganizerRoleEnum.enumValues)[number];
 	export type EventOrganizerInvitationStatus =
 		(typeof schema.eventOrganizerInvitationStatusEnum.enumValues)[number];
+
+	export type EventTypeVenuePolicy = (typeof schema.eventTypeVenuePolicyEnum.enumValues)[number];
+	export type EventTypeCollaborationPolicy =
+		(typeof schema.eventTypeCollaborationPolicyEnum.enumValues)[number];
 
 	// system types
 	export type PermissionScope = keyof typeof PERMISSION;
