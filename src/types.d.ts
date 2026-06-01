@@ -12,12 +12,17 @@ declare global {
 	export type Role = typeof schema.role.$inferSelect;
 	export type Permission = typeof schema.permission.$inferSelect;
 	export type VenueAccessLevel = (typeof schema.venueAccessLevelEnum.enumValues)[number];
+
+	// -- events
 	export type EventStatus = (typeof schema.eventStatusEnum.enumValues)[number];
 	export type EventOrganizerRole = (typeof schema.eventOrganizerRoleEnum.enumValues)[number];
-
 	export type EventTypeVenuePolicy = (typeof schema.eventTypeVenuePolicyEnum.enumValues)[number];
 	export type EventTypeCollaborationPolicy =
 		(typeof schema.eventTypeCollaborationPolicyEnum.enumValues)[number];
+
+	// -- workflows
+	export type WorkflowTargetGroupApprovalCriteria =
+		(typeof schema.workflowTargetGroupApprovalCriteriaEnum.enumValues)[number];
 
 	// system types
 	export type PermissionScope = keyof typeof PERMISSION;
@@ -62,6 +67,22 @@ declare global {
 	export type ApiRequestHandler<T = unknown, P = unknown, B = unknown> = express.RequestHandler<
 		P,
 		ApiSuccess<T> | ApiError,
-		B
+		B,
+		express.core.ParsedQs,
+		never
 	>;
+
+	export type ScopedApiRequestHandler<
+		S extends Record<string, unknown>,
+		T = unknown,
+		P = express.core.ParamsDictionary,
+		B = unknown,
+	> = express.RequestHandler<P, ApiSuccess<T> | ApiError, B, express.core.ParsedQs, S>;
+
+	export type ApiRequestParamsHandler<T, S extends Record<string, unknown>> = (
+		req: express.Request,
+		res: express.Response<unknown, S>,
+		next: express.NextFunction,
+		value: T,
+	) => void | Promise<void>;
 }
