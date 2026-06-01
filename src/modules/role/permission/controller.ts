@@ -8,8 +8,7 @@ export const getRolePermissions: ApiRequestHandler<
 		id: number;
 		code: PermissionCode;
 		description: string;
-	}[],
-	{ id: string }
+	}[]
 > = async (req, res) => {
 	const params = roleScopedSchema.parse(req.params);
 	const result = await service.getRolePermissions(params.id);
