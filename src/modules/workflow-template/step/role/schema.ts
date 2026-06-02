@@ -8,12 +8,14 @@ export const stepRoleScopedSchema = z
 	})
 	.strict();
 
-export const assignRoleToWorkflowTemplateStepSchema = z.object({
-	roleId: z.coerce.number({ error: "Invalid role ID" }).int({ error: "Invalid role ID" }),
-	targetGroupApprovalCriteria: z.enum(WORKFLOW_TARGET_GROUP_APPROVAL_CRITERIA, {
-		error: "Invalid target group approval criteria",
-	}),
-});
+export const assignRoleToWorkflowTemplateStepSchema = z
+	.object({
+		roleId: idLike("Invalid role ID"),
+		targetGroupApprovalCriteria: z.enum(WORKFLOW_TARGET_GROUP_APPROVAL_CRITERIA, {
+			error: "Invalid target group approval criteria",
+		}),
+	})
+	.strict();
 
 export type AssignRoleToWorkflowTemplateStepSchema = z.output<
 	typeof assignRoleToWorkflowTemplateStepSchema

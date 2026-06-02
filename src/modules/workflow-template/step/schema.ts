@@ -1,4 +1,5 @@
 import z from "zod";
+import { idLike } from "@/lib/helpers.js";
 
 export const createWorkflowTemplateStepSchema = z
 	.object({
@@ -7,10 +8,7 @@ export const createWorkflowTemplateStepSchema = z
 			.trim()
 			.min(3, { error: "Invalid workflow template step name" })
 			.max(256, { error: "Invalid workflow template step name" }),
-		previousStepId: z.coerce
-			.number({ error: "Invalid previous workflow template step ID" })
-			.int({ error: "Invalid previous workflow template step ID" })
-			.nullish(),
+		previousStepId: idLike("Invalid previous workflow template step ID").nullish(),
 	})
 	.strict();
 
