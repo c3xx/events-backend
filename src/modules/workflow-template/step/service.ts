@@ -15,9 +15,10 @@ export async function createWorkflowTemplateStep(
 	template: WorkflowTemplateScope["template"],
 	input: schemas.CreateWorkflowTemplateStepSchema,
 ) {
-	const templateWithTheSameName = template.steps.find(
-		(step) => step.name.toLowerCase() === input.name.toLowerCase(),
-	);
+	const templateNameLowercased = input.name.toLowerCase();
+	const templateWithTheSameName = template.steps.find((step) => {
+		return step.name.toLowerCase() === templateNameLowercased;
+	});
 	if (templateWithTheSameName != null) {
 		throw new ConflictError(
 			"There is a step in the template with the same name",
