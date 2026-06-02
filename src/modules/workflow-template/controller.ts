@@ -8,7 +8,7 @@ export const getAllWorkflowTemplates: ApiRequestHandler<
 		id: number;
 		name: string;
 	}[]
-> = async (_, res) => {
+> = async (_req, res) => {
 	const result = await service.getAllWorkflowTemplates();
 	return ok(res, result);
 };
@@ -23,7 +23,7 @@ export const getWorkflowTemplate: ScopedApiRequestHandler<
 			name: string;
 		}[];
 	}
-> = async (_, res) => {
+> = async (_req, res) => {
 	const result = await service.getWorkflowTemplate(res.locals.template);
 	return ok(res, result);
 };

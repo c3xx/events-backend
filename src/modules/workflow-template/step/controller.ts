@@ -17,7 +17,7 @@ export const getWorkflowTemplateStep: ScopedApiRequestHandler<
 			};
 		}[];
 	}
-> = async (_, res) => {
+> = async (_req, res) => {
 	const result = await service.getWorkflowTemplateStep(res.locals.templateStep);
 	return ok(res, result);
 };
@@ -29,7 +29,7 @@ export const getAllWorkflowTemplateSteps: ScopedApiRequestHandler<
 		name: string;
 		nextStepId: number | null;
 	}[]
-> = async (_, res) => {
+> = async (_req, res) => {
 	const result = await service.getAllWorkflowTemplateSteps(res.locals.template);
 	return ok(res, result);
 };

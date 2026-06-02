@@ -12,7 +12,7 @@ export const getAllWorkflowTemplateStepRoles: ScopedApiRequestHandler<
 		};
 		targetGroupApprovalCriteria: WorkflowTargetGroupApprovalCriteria;
 	}[]
-> = async (_, res) => {
+> = async (_req, res) => {
 	const result = await service.getAllWorkflowTemplateStepRoles(res.locals.templateStep);
 	return ok(res, result);
 };
