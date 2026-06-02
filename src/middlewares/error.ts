@@ -4,6 +4,7 @@ import { AppError, ERROR_CODES, UnreachableError } from "@/lib/errors.js";
 
 export const errorHandler: ErrorRequestHandler = (error: Error, _req, res: ApiResponse, _next) => {
 	if (error instanceof ZodError) {
+		console.error(error);
 		return res.status(422).json({
 			success: false,
 			code: ERROR_CODES.validation_error,
