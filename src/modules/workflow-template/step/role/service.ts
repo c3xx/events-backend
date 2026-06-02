@@ -1,7 +1,7 @@
+import { ConflictError } from "@/lib/errors.js";
 import type { WorkflowTemplateStepScope } from "@/modules/workflow-template/scopes.js";
 import * as repository from "./repository.js";
 import type * as schemas from "./schema.js";
-import { ConflictError } from "@/lib/errors.js";
 
 export async function getAllWorkflowTemplateStepRoles(
 	templateStep: WorkflowTemplateStepScope["templateStep"],
