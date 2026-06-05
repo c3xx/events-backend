@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
-import { DAY } from "@/lib/constants.js";
 import { dbAction } from "@/lib/helpers.js";
+import { PASSWORD_TOKEN_EXPIRY } from "@/lib/constants.js";
 
 export const findUserByEmail = dbAction(async (email: string) => {
 	return await db.query.user.findFirst({
@@ -54,7 +54,6 @@ export const getUserWithPermissions = dbAction(async (id: number) => {
 });
 
 export const findActivePasswordToken = dbAction(async (tokenHash: string) => {
-	const PASSWORD_TOKEN_EXPIRY = 1 * DAY; //todo: change as needed
 	return await db.query.userPasswordToken.findFirst({
 		where: and(
 			eq(schema.userPasswordToken.tokenHash, tokenHash),
@@ -87,6 +86,28 @@ export const applyPasswordChange = dbAction(
 					usedAt: sql`now()`,
 				})
 				.where(eq(schema.userPasswordToken.id, params.tokenId));
+		});
+	},
+);
+
+export const invalidateActiveTokensForUser = dbAction(async (userId: number) => {
+	await db
+		.update(schema.userPasswordToken)
+		.set({ usedAt: sql`now()` })
+		.where(
+			and(
+				eq(schema.userPasswordToken.userId, userId),
+				isNull(schema.userPasswordToken.usedAt),
+			),
+		);
+});
+
+export const insertPasswordToken = dbAction(
+	async (params: { userId: number; tokenHash: string; type: "SET_PASSWORD" | "RESET_PASSWORD" }) => {
+		await db.insert(schema.userPasswordToken).values({
+			userId: params.userId,
+			tokenHash: params.tokenHash,
+			type: params.type,
 		});
 	},
 );

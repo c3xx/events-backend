@@ -24,3 +24,16 @@ export const resetPasswordSchema = z
 	.strict();
 
 export type ResetPasswordSchema = z.output<typeof resetPasswordSchema>;
+
+export const requestPasswordTokenSchema = z
+	.object({
+		email: z
+			.email({ error: "Invalid email format" })
+			.endsWith(INSTITUTION_DOMAIN, { error: "Expected institution domain email" }),
+		type: z.enum(["SET_PASSWORD", "RESET_PASSWORD"], {
+			error: "type must be SET_PASSWORD or RESET_PASSWORD",
+		}),
+	})
+	.strict();
+
+export type RequestPasswordTokenSchema = z.output<typeof requestPasswordTokenSchema>;

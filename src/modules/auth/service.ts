@@ -1,15 +1,22 @@
 import { jwtVerify } from "jose";
 import { hashPassword, verifyPassword } from "@/lib/argon2.js";
 import { sendEmail } from "@/lib/email.js";
-import { getPasswordUpdatedContent } from "@/lib/email-templates.js";
-import { NotFoundError, UnauthorizedError } from "@/lib/errors.js";
-import { hexSha256, quickEnv } from "@/lib/helpers.js";
+import {
+	getPasswordChangedContent,
+	getPasswordSetContent,
+	getPasswordSetupTokenContent,
+	getResetPasswordContent,
+} from "@/lib/email-templates.js";
+import { ForbiddenError, NotFoundError, UnauthorizedError } from "@/lib/errors.js";
+import { generateSecureString, hexSha256, quickEnv } from "@/lib/helpers.js";
 import {
 	generateAccessToken,
 	generateRefreshToken,
 	JWT_REFRESH_SECRET_SIGN_KEY,
 } from "@/lib/jwt.js";
 import * as repository from "./repository.js";
+
+const frontendUrl = quickEnv("FRONTEND_ORIGIN", true);
 
 export async function login(
 	email: string,
@@ -77,7 +84,37 @@ export async function createNewTokens(refreshToken: string) {
 	};
 }
 
-const frontendUrl = quickEnv("FRONTEND_ORIGIN", true);
+export async function generatePasswordToken(
+	email: string,
+	type: "SET_PASSWORD" | "RESET_PASSWORD",
+) {
+	const user = await repository.findUserByEmail(email);
+
+	if (user == null) {
+		throw new NotFoundError("No account found with that email address");
+	}
+
+	if (type === "RESET_PASSWORD" && !user.isActive) {
+		throw new ForbiddenError("Account is not active");
+	}
+
+	await repository.invalidateActiveTokensForUser(user.id);
+
+	const token = generateSecureString();
+	const tokenHash = hexSha256(token);
+	await repository.insertPasswordToken({ userId: user.id, tokenHash, type });
+
+	const tokenUrl = `${frontendUrl}/new-password?token=${token}`;
+
+	if (type === "SET_PASSWORD") {
+		const html = getPasswordSetupTokenContent(tokenUrl);
+		await sendEmail(user.email, "Set up your account password", html);
+	} else {
+		const html = getResetPasswordContent(tokenUrl);
+		await sendEmail(user.email, "Reset your password", html);
+	}
+}
+
 export async function resetPassword(token: string, newPassword: string) {
 	const tokenHash = hexSha256(token);
 	const tokenRecord = await repository.findActivePasswordToken(tokenHash);
@@ -98,11 +135,13 @@ export async function resetPassword(token: string, newPassword: string) {
 		newPasswordHash,
 	});
 
-	try {
-		const loginUrl = `${frontendUrl}/login`; //todo: change the url as needed
-		const html = getPasswordUpdatedContent(loginUrl);
-		await sendEmail(tokenRecord.user.email, "Password Updated Successfully", html);
-	} catch (error) {
-		throw error;
+	const loginUrl = `${frontendUrl}/login`;
+
+	if (tokenRecord.type === "SET_PASSWORD") {
+		const html = getPasswordSetContent(loginUrl);
+		await sendEmail(tokenRecord.user.email, "Your password has been set successfully", html);
+	} else {
+		const html = getPasswordChangedContent(loginUrl);
+		await sendEmail(tokenRecord.user.email, "Your password has been changed successfully", html);
 	}
 }

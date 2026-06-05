@@ -9,6 +9,7 @@ router.post("/refresh", authController.refresh);
 router.post("/logout", authController.logout);
 
 router.post("/reset-password", authController.resetPassword);
+router.post("/generate-password-token", authController.generatePasswordToken);
 
 router.use(authenticateToken);
 router.get("/me", authController.userDetails);

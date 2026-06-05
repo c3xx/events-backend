@@ -20,6 +20,7 @@ import {
 	INSTITUTION_DOMAIN,
 	MANAGED_ENTITY_TYPES,
 	PASSWORD_TOKEN_EXPIRY,
+	PASSWORD_TOKEN_TYPES,
 	USER_TYPES,
 	VENUE_ACCESS_LEVELS,
 	WORKFLOW_INSTANCE_STATUS,
@@ -32,6 +33,7 @@ import { buildCheck } from "./checks.js";
 // === Enums
 export const userTypeEnum = pgEnum("user_type", USER_TYPES);
 export const managedEntityTypeEnum = pgEnum("managed_entity_type", MANAGED_ENTITY_TYPES);
+export const passwordTokenTypeEnum = pgEnum("password_token_type", PASSWORD_TOKEN_TYPES);
 export const venueAccessLevelEnum = pgEnum("venue_access_level", VENUE_ACCESS_LEVELS);
 export const eventStatusEnum = pgEnum("event_status", EVENT_STATUS);
 export const eventOrganizerRoleEnum = pgEnum("event_organizer_role", EVENT_ORGANIZER_ROLES);
@@ -158,6 +160,7 @@ export const userPasswordToken = pgTable(
 			.references(() => user.id, { onDelete: "cascade" })
 			.notNull(),
 		tokenHash: text().notNull(),
+		type: passwordTokenTypeEnum().notNull(),
 		usedAt: timestamp({ mode: "string", withTimezone: true }),
 		...fields("common"),
 	},
