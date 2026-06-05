@@ -5,34 +5,22 @@ import { dbAction, unreachable } from "@/lib/helpers.js";
 export const insertUser = dbAction(
 	async (
 		userData: { email: string; passwordHash: string; fullName: string },
-		tokenData: {
-			tokenHash: string;
-		},
 	) => {
-		return await db.transaction(async (tx) => {
-			//transaction because to maintain db consistency (Both user and token should be inserted or neither should be).
-			const [user] = await tx
-				.insert(schema.user)
-				.values({
-					type: "end_user",
-					email: userData.email,
-					passwordHash: userData.passwordHash,
-					fullName: userData.fullName,
-					isActive: false,
-				})
-				.returning({
-					id: schema.user.id,
-				});
-
-			if (user == null) unreachable();
-
-			await tx.insert(schema.userPasswordToken).values({
-				userId: user.id,
-				tokenHash: tokenData.tokenHash,
+		const [user] = await db
+			.insert(schema.user)
+			.values({
+				type: "end_user",
+				email: userData.email,
+				passwordHash: userData.passwordHash,
+				fullName: userData.fullName,
+				isActive: false,
+			})
+			.returning({
+				id: schema.user.id,
 			});
 
-			return user;
-		});
+		if (user == null) unreachable();
+		return user;
 	},
 );
 
@@ -60,12 +48,6 @@ export const getUsers = dbAction(async () => {
 	});
 });
 
-export const rollbackUserCreation = dbAction(async (userId: number) => {
-	await db.transaction(async (tx) => {
-		await tx.delete(schema.userPasswordToken).where(eq(schema.userPasswordToken.userId, userId));
-		await tx.delete(schema.user).where(eq(schema.user.id, userId));
-	});
-});
 
 export const findUserById = dbAction(async (id: number) => {
 	return await db.query.user.findFirst({

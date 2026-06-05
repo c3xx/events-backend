@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
-import { PASSWORD_TOKEN_EXPIRY } from "@/lib/constants.js";
+import { DAY } from "@/lib/constants.js";
 import { dbAction } from "@/lib/helpers.js";
 
 export const findUserByEmail = dbAction(async (email: string) => {
@@ -54,6 +54,7 @@ export const getUserWithPermissions = dbAction(async (id: number) => {
 });
 
 export const findActivePasswordToken = dbAction(async (tokenHash: string) => {
+	const PASSWORD_TOKEN_EXPIRY = 1 * DAY; //todo: change as needed
 	return await db.query.userPasswordToken.findFirst({
 		where: and(
 			eq(schema.userPasswordToken.tokenHash, tokenHash),

@@ -77,6 +77,7 @@ export async function createNewTokens(refreshToken: string) {
 	};
 }
 
+const frontendUrl = quickEnv("FRONTEND_ORIGIN", true);
 export async function resetPassword(token: string, newPassword: string) {
 	const tokenHash = hexSha256(token);
 	const tokenRecord = await repository.findActivePasswordToken(tokenHash);
@@ -98,11 +99,10 @@ export async function resetPassword(token: string, newPassword: string) {
 	});
 
 	try {
-		const frontendUrl = quickEnv("FRONTEND_ORIGIN", true);
 		const loginUrl = `${frontendUrl}/login`; //todo: change the url as needed
 		const html = getPasswordUpdatedContent(loginUrl);
 		await sendEmail(tokenRecord.user.email, "Password Updated Successfully", html);
 	} catch (error) {
-		return error;
+		throw error;
 	}
 }

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { DrizzleQueryError } from "drizzle-orm/errors";
-import { customAlphabet, nanoid } from "nanoid";
-import { defaultAlphabet, FLATTENED_PERMISSIONS, PERMISSION_SCOPES } from "@/lib/constants.js";
+import { customAlphabet } from "nanoid";
+import { FLATTENED_PERMISSIONS, PERMISSION_SCOPES } from "@/lib/constants.js";
 import { handleDbError, UnauthorizedError, UnreachableError } from "./errors.js";
 
 export function unreachable(): never {
@@ -66,9 +66,13 @@ export function snakeToNormalCase(s: string) {
 	return r[0]?.toUpperCase() + r.slice(1);
 }
 
-export function generateSecureString(length: number = 12) {
-	return customAlphabet(defaultAlphabet, length)();
-}
+const PASSWORD_GENERATION_CUSTOM_ALPHABET_SET =
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+
+export const generateSecureString = customAlphabet(
+	PASSWORD_GENERATION_CUSTOM_ALPHABET_SET,
+	12,
+);
 
 export function hexSha256(token: string) {
 	return createHash("sha256").update(token).digest("hex");

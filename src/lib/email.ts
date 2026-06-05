@@ -2,9 +2,9 @@ import nodemailer from "nodemailer";
 import { AppError, ERROR_CODES } from "./errors.js";
 import { quickEnv } from "./helpers.js";
 
-const SMTP_USER = quickEnv("SMTP_USER", true); // todo: add our gmail
-const SMTP_PASS = quickEnv("SMTP_PASS", true); // todo: add gmail app password(16 chars)
-const SMTP_FROM = `TKMCE Clubs Portal <${SMTP_USER}>`; // todo: change the name as i dont know what it will be called
+const SMTP_USER = quickEnv("SMTP_USER", true); 
+const SMTP_PASS = quickEnv("SMTP_PASS", true); 
+const SMTP_FROM = `TKMCE Events <${SMTP_USER}>`;
 
 const transporter = nodemailer.createTransport({
 	service: "gmail",
