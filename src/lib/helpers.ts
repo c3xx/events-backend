@@ -69,10 +69,7 @@ export function snakeToNormalCase(s: string) {
 const PASSWORD_GENERATION_CUSTOM_ALPHABET_SET =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
 
-export const generateSecureString = customAlphabet(
-	PASSWORD_GENERATION_CUSTOM_ALPHABET_SET,
-	12,
-);
+export const generateSecureString = customAlphabet(PASSWORD_GENERATION_CUSTOM_ALPHABET_SET, 12);
 
 export function hexSha256(token: string) {
 	return createHash("sha256").update(token).digest("hex");

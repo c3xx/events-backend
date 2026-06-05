@@ -3,9 +3,7 @@ import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
 export const insertUser = dbAction(
-	async (
-		userData: { email: string; passwordHash: string; fullName: string },
-	) => {
+	async (userData: { email: string; passwordHash: string; fullName: string }) => {
 		const [user] = await db
 			.insert(schema.user)
 			.values({
@@ -47,7 +45,6 @@ export const getUsers = dbAction(async () => {
 		},
 	});
 });
-
 
 export const findUserById = dbAction(async (id: number) => {
 	return await db.query.user.findFirst({

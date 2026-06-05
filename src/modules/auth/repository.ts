@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
-import { dbAction } from "@/lib/helpers.js";
 import { PASSWORD_TOKEN_EXPIRY } from "@/lib/constants.js";
+import { dbAction } from "@/lib/helpers.js";
 
 export const findUserByEmail = dbAction(async (email: string) => {
 	return await db.query.user.findFirst({
@@ -95,15 +95,16 @@ export const invalidateActiveTokensForUser = dbAction(async (userId: number) => 
 		.update(schema.userPasswordToken)
 		.set({ usedAt: sql`now()` })
 		.where(
-			and(
-				eq(schema.userPasswordToken.userId, userId),
-				isNull(schema.userPasswordToken.usedAt),
-			),
+			and(eq(schema.userPasswordToken.userId, userId), isNull(schema.userPasswordToken.usedAt)),
 		);
 });
 
 export const insertPasswordToken = dbAction(
-	async (params: { userId: number; tokenHash: string; type: "SET_PASSWORD" | "RESET_PASSWORD" }) => {
+	async (params: {
+		userId: number;
+		tokenHash: string;
+		type: "SET_PASSWORD" | "RESET_PASSWORD";
+	}) => {
 		await db.insert(schema.userPasswordToken).values({
 			userId: params.userId,
 			tokenHash: params.tokenHash,

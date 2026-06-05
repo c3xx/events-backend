@@ -98,6 +98,10 @@ export async function generatePasswordToken(
 		throw new ForbiddenError("Account is not active");
 	}
 
+	if (type === "SET_PASSWORD" && user.isActive) {
+		throw new ForbiddenError("Account is already active");
+	}
+
 	await repository.invalidateActiveTokensForUser(user.id);
 
 	const token = generateSecureString();
