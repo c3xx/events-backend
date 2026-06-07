@@ -16,13 +16,13 @@ export function getPasswordSetupTokenContent(tokenUrl: string) {
 	return `
 Hello,
 
-You have been invited to set up your account password.
+You requested a link to set up your account password.
 
 Please click the link below to create your password. This link will expire in 15 minutes.
 
 ${tokenUrl}
 
-If you did not expect this email, please ignore it or contact your system administrator.
+If you did not request this, please ignore this email or contact your system administrator.
 
 This is an automated message. Please do not reply.
 `;

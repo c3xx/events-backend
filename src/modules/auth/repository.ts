@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
+import { and, eq, exists, inArray, isNull, lt, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { PASSWORD_TOKEN_EXPIRY } from "@/lib/constants.js";
 import { dbAction } from "@/lib/helpers.js";
@@ -62,6 +62,17 @@ export const findActivePasswordToken = dbAction(async (tokenHash: string) => {
 				sql`now()`,
 				sql`${schema.userPasswordToken.createdAt} + (${PASSWORD_TOKEN_EXPIRY} * interval '1 millisecond')`,
 			),
+			exists(
+				db
+					.select({ _: sql`1` })
+					.from(schema.user)
+					.where(
+						and(
+							eq(schema.user.id, schema.userPasswordToken.userId),
+							isNull(schema.user.deletedAt),
+						),
+					),
+				),
 		),
 		with: {
 			user: true,

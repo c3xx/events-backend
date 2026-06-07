@@ -84,7 +84,7 @@ export async function createNewTokens(refreshToken: string) {
 	};
 }
 
-export async function generatePasswordToken(
+export async function requestPasswordToken(
 	email: string,
 	type: "SET_PASSWORD" | "RESET_PASSWORD",
 ) {
@@ -125,10 +125,6 @@ export async function resetPassword(token: string, newPassword: string) {
 
 	if (tokenRecord == null) {
 		throw new UnauthorizedError("Invalid, expired, or already used token");
-	}
-
-	if (tokenRecord.user.deletedAt !== null) {
-		throw new NotFoundError("Associated account not found");
 	}
 
 	const newPasswordHash = await hashPassword(newPassword);
