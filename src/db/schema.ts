@@ -710,6 +710,7 @@ export const workflowTemplateStepRelations = relations(workflowTemplateStep, (r)
 	template: r.one(workflowTemplate, {
 		fields: [workflowTemplateStep.templateId],
 		references: [workflowTemplate.id],
+		relationName: "steps",
 	}),
 	nextStep: r.one(workflowTemplateStep, {
 		fields: [workflowTemplateStep.nextStepId],
@@ -792,7 +793,7 @@ export const workflowInstanceRelations = relations(workflowInstance, (r) => ({
 		references: [workflowInstanceStep.id],
 		relationName: "initial_step",
 	}),
-	steps: r.many(workflowInstanceStep),
+	steps: r.many(workflowInstanceStep, { relationName: "steps" }),
 }));
 
 export const workflowInstanceStep = pgTable(
@@ -822,6 +823,7 @@ export const workflowInstanceStepRelations = relations(workflowInstanceStep, (r)
 	instance: r.one(workflowInstance, {
 		fields: [workflowInstanceStep.instanceId],
 		references: [workflowInstance.id],
+		relationName: "steps",
 	}),
 	nextStep: r.one(workflowInstanceStep, {
 		fields: [workflowInstanceStep.nextStepId],
