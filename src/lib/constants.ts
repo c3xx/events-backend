@@ -19,7 +19,7 @@ export const VENUE_ACCESS_LEVELS = ["public", "private"] as const;
 export const EVENT_TYPE_VENUE_POLICY = ["required", "optional", "forbidden"] as const;
 export const EVENT_TYPE_COLLABORATION_POLICY = ["required", "optional", "forbidden"] as const;
 export const EVENT_STATUS = ["draft", "pending", "approved", "cancelled", "overridden"] as const; // todo: an event should not get overridden by changing its status
-export const EVENT_ORGANIZER_ROLES = ["host", "co_host"] as const;
+export const EVENT_ORGANIZER_ROLES = ["host", "co_host", "resource_provider"] as const;
 export const EVENT_ORGANIZER_INVITATION_STATUS = [
 	"pending",
 	"accepted",
