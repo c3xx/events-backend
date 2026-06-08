@@ -3,6 +3,7 @@ import * as schemas from "./schema.js";
 import type { eventScope } from "./scopes.js";
 import * as service from "./service.js";
 import type { eventScope } from "./scopes.js";
+import * as service from "./service.js";
 
 export const createEvent: ApiRequestHandler<{
 	id: number;
