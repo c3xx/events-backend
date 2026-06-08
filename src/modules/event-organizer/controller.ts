@@ -1,4 +1,3 @@
-import type { EVENT_ORGANIZER_ROLES } from "@/lib/constants.js";
 import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
 import {
 	addEventOrganizerSchema,
@@ -11,7 +10,7 @@ import * as service from "./service.js";
 export const getEventOrganizers: ApiRequestHandler<
 	{
 		id: number;
-		role: (typeof EVENT_ORGANIZER_ROLES)[number];
+		role: EventOrganizerRole;
 		organization: {
 			id: number;
 			name: string;
