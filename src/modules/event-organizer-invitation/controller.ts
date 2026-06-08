@@ -36,16 +36,6 @@ export const getEventInvitations: ApiRequestHandler<
 	return ok(res, result);
 };
 
-export const sendInvitation: ApiRequestHandler<{
-	id: number;
-}> = async (req, res) => {
-	const user = getAuthenticatedUser(req);
-	const params = invitationScopedSchema.parse(req.params);
-	const body = sendInvitationSchema.parse(req.body);
-	const result = await service.sendInvitation(params.eventId, body, user);
-	return ok(res, result, 201);
-};
-
 export const respondToInvitation: ApiRequestHandler<{
 	id: number;
 	status: EventOrganizerInvitationStatus;

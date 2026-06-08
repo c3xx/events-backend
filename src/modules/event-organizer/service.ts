@@ -22,6 +22,7 @@ export async function addEventOrganizer(
 	if (event.status !== "draft") {
 		throw new ForbiddenError("Organizers can be added only at draft stage");
 	}
+
 	const eventOrganizer = await invitationRepository.findEventOrganizerUser(
 		eventId,
 		user.id,
@@ -40,6 +41,11 @@ export async function addEventOrganizer(
 	if (!canAdd) {
 		throw new ForbiddenError("You do not have permission to add an organizer");
 	}
+
+	if (eventOrganizer.organizationId === input.organizationId) {
+		throw new ConflictError("Cannot add your own organization as organizer");
+	}
+
 	const existing = await repository.findEventOrganizersByOrganizationId(
 		eventId,
 		input.organizationId,
@@ -48,9 +54,26 @@ export async function addEventOrganizer(
 		throw new ConflictError("Organization is already an organizer of the event");
 	}
 
-	return await repository.addResourceProvider({
+	if (input.type === "co_host") {
+		const existingPendingInvite = await invitationRepository.findPendingInvitation(
+			eventId,
+			input.organizationId,
+		);
+		if (existingPendingInvite != null) {
+			throw new ConflictError("There is a pending invitation for this organization");
+		}
+		return await invitationRepository.sendInvitation({
+			eventId,
+			invitedByUserId: eventOrganizer.userRoleId,
+			senderOrganizationId: eventOrganizer.organizationId,
+			recipientOrganizationId: input.organizationId,
+		});
+	}
+
+	return await repository.insertEventOrganizer({
 		eventId,
 		organizationId: input.organizationId,
+		role: "resource_provider",
 	});
 }
 
@@ -67,7 +90,7 @@ export async function removeEventOrganizer(
 		throw new ForbiddenError("Organizers can only be removed during draft stage");
 	}
 
-	const organizer = await repository.findEventOrganizer(organizerId);
+	const organizer = await repository.findEventOrganizer(organizerId, eventId);
 	if (organizer == null) {
 		throw new NotFoundError("Organizer not found");
 	}

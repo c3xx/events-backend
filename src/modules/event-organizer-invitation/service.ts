@@ -11,57 +11,6 @@ export async function getEventInvitations(eventId: number) {
 	return await repository.getEventInvitations(eventId);
 }
 
-export async function sendInvitation(
-	eventId: number,
-	input: SendInvitationSchema,
-	user: { id: number; type: UserType },
-) {
-	const event = await eventRepository.findEventById(eventId);
-	if (event == null) throw new NotFoundError("Event not found");
-
-	if (event.status !== "draft") {
-		throw new ForbiddenError("Invitations can only be sent while the event is in Draft status");
-	}
-
-	const eventOrganizer = await repository.findEventOrganizerUser(
-		eventId,
-		user.id,
-		input.userRoleId,
-	);
-	if (eventOrganizer == null) {
-		throw new ForbiddenError("Your organization not an organizer of the event");
-	}
-
-	const canSend = await hasPermissionInManagedEntity(
-		user,
-		"organization",
-		[eventOrganizer.organizationId],
-		"event_organizer_invitation:send",
-	);
-	if (!canSend) {
-		throw new ForbiddenError("You do not have permission to send invitation");
-	}
-
-	if (eventOrganizer.organizationId === input.recipientOrganizationId) {
-		throw new ConflictError("Cannot send invite to your own organization");
-	}
-
-	const existingPendingInvite = await repository.findPendingInvitation(
-		eventId,
-		input.recipientOrganizationId,
-	);
-	if (existingPendingInvite != null) {
-		throw new ConflictError("There is already a pending invitation for the recipient organization");
-	}
-
-	return await repository.sendInvitation({
-		eventId,
-		invitedByUserId: eventOrganizer.userRoleId,
-		senderOrganizationId: eventOrganizer.organizationId,
-		recipientOrganizationId: input.recipientOrganizationId,
-	});
-}
-
 export async function respondToInvitation(
 	eventId: number,
 	invitationId: number,

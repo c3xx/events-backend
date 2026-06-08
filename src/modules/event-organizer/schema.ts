@@ -24,6 +24,10 @@ export const addEventOrganizerSchema = z
 		organizationId: z.coerce
 			.number({ error: "Invalid organization ID" })
 			.int({ error: "Invalid organization ID" }),
+
+		type: z.enum(["co_host", "resource_provider"], {
+			error: "Type must be either co_host or resource_provider",
+		}),
 	})
 	.strict();
 

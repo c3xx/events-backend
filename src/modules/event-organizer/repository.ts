@@ -1,6 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
+import { organization } from "@/db/schema.js";
 
 export const getEventOrganizers = dbAction(async (eventId: number) => {
 	return await db.query.eventOrganizer.findMany({
@@ -20,7 +21,7 @@ export const getEventOrganizers = dbAction(async (eventId: number) => {
 	});
 });
 
-export const findEventOrganizer = dbAction(async (organizerId: number) => {
+export const findEventOrganizer = dbAction(async (organizerId: number, eventId: number) => {
 	const [organizer] = await db
 		.select({
 			id: schema.eventOrganizer.id,
@@ -31,6 +32,7 @@ export const findEventOrganizer = dbAction(async (organizerId: number) => {
 		.where(
 			and(
 				eq(schema.eventOrganizer.id, organizerId),
+				eq(schema.eventOrganizer.eventId, eventId),
 				isNull(schema.eventOrganizer.deletedAt),
 			),
 		)
@@ -55,12 +57,13 @@ export const findEventOrganizersByOrganizationId = dbAction(
 	},
 );
 
-export const addResourceProvider = dbAction(
-	async (data: { eventId: number; organizationId: number }) => {
-		const [inserted] = await db
-			.insert(schema.eventOrganizer)
-			.values({ ...data, role: "resource_provider" })
-			.returning({ id: schema.eventOrganizer.id });
+export const insertEventOrganizer = dbAction(
+	async (data: { eventId: number; organizationId: number; role: EventOrganizerRole }) => {
+		const [inserted] = await db.insert(schema.eventOrganizer).values(data).returning({
+			id: schema.eventOrganizer.id,
+			role: schema.eventOrganizer.role,
+			organizationId: schema.eventOrganizer.organizationId,
+		});
 		if (inserted == null) unreachable();
 		return inserted;
 	},

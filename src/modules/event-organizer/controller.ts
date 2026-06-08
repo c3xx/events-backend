@@ -22,9 +22,9 @@ export const getEventOrganizers: ApiRequestHandler<
 	return ok(res, result);
 };
 
-export const addEventOrganizer: ApiRequestHandler<{
-	id: number;
-}> = async (req, res) => {
+export const addEventOrganizer: ApiRequestHandler<
+	{ id: number } | { id: number; role: EventOrganizerRole; organizationId: number }
+> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
 	const params = eventScopedSchema.parse(req.params);
 	const body = addEventOrganizerSchema.parse(req.body);
