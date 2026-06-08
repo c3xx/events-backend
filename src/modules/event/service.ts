@@ -1,15 +1,15 @@
 import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
+import { orderWorkflowSteps } from "@/lib/helpers.js";
 import * as eventTypeRepository from "@/modules/event-type/repository.js";
 import * as organizationRepository from "@/modules/organization/repository.js";
 import * as permissionRepository from "@/modules/permission/repository.js";
+import * as roleRepository from "@/modules/role/repository.js";
 import * as userRepository from "@/modules/user/repository.js";
+import * as workflowTemplateRepository from "@/modules/workflow-template/repository.js";
 import * as repository from "./repository.js";
 import type * as schemas from "./schema.js";
 import type { eventScope } from "./scopes.js";
 import * as workflowInstanceRepository from "./workflow-instances/repository.js";
-import * as workflowTemplateRepository from "@/modules/workflow-template/repository.js";
-import { orderWorkflowSteps } from "@/lib/helpers.js";
-import * as roleRepository from "@/modules/role/repository.js";
 
 export async function createEvent(
 	user: { id: number; type: UserType; permissions: PermissionCode[] },
