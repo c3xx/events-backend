@@ -1,6 +1,7 @@
 import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
 import * as schemas from "./schema.js";
 import * as service from "./service.js";
+import type { eventScope } from "./scopes.js";
 
 export const createEvent: ApiRequestHandler<{
 	id: number;
@@ -76,5 +77,16 @@ export const updateEvent: ApiRequestHandler<{
 	const user = getAuthenticatedUser(req);
 	const body = schemas.updateEventSchema.parse(req.body);
 	const result = await service.updateEvent(user, id, body);
+	return ok(res, result);
+};
+
+export const createWorkflowInstance: ScopedApiRequestHandler<
+	eventScope,
+	{
+		id: number;
+	}
+> = async (_req, res) => {
+	const user = getAuthenticatedUser(_req);
+	const result = await service.createWorkflowInstance(user, res.locals.event);
 	return ok(res, result);
 };
