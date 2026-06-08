@@ -30,6 +30,10 @@ export async function login(
 		throw new NotFoundError("Invalid credentials");
 	}
 
+	if (user.passwordHash == null) {
+		throw new ForbiddenError("Account password not set. Please complete your account password setup first.");
+	}
+
 	const isValid = await verifyPassword(user.passwordHash, password);
 	if (!isValid) {
 		throw new NotFoundError("Invalid credentials");
@@ -91,15 +95,19 @@ export async function requestPasswordToken(
 	const user = await repository.findUserByEmail(email);
 
 	if (user == null) {
-		throw new NotFoundError("No account found with that email address");
+		throw new NotFoundError("No account found with that email address.");
+	}
+
+	if (type === "RESET_PASSWORD" && user.passwordHash == null) {
+		throw new ForbiddenError("No password set on this account. Please complete your account password setup first.");
 	}
 
 	if (type === "RESET_PASSWORD" && !user.isActive) {
-		throw new ForbiddenError("Account is not active");
+		throw new ForbiddenError("Your Account is not active.");
 	}
 
-	if (type === "SET_PASSWORD" && user.isActive) {
-		throw new ForbiddenError("Account is already active");
+	if (type === "SET_PASSWORD" && user.passwordHash != null) {
+		throw new ForbiddenError("Your account password is already set.");
 	}
 
 	await repository.invalidateActiveTokensForUser(user.id);
@@ -125,6 +133,10 @@ export async function resetPassword(token: string, newPassword: string) {
 
 	if (tokenRecord == null) {
 		throw new UnauthorizedError("Invalid, expired, or already used token");
+	}
+
+	if (tokenRecord.type === "RESET_PASSWORD" && !tokenRecord.user.isActive) {
+		throw new ForbiddenError("Your account is not active. Password change is not allowed.");
 	}
 
 	const newPasswordHash = await hashPassword(newPassword);

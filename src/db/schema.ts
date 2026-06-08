@@ -74,7 +74,7 @@ export const user = pgTable(
 		type: userTypeEnum().notNull(),
 		fullName: text().notNull(),
 		email: text().notNull(),
-		passwordHash: text().notNull(),
+		passwordHash: text(),
 		isActive: boolean().notNull().default(true),
 		...fields("common", "soft-delete"),
 	},
