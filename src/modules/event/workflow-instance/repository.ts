@@ -283,3 +283,155 @@ export const getLatestWorkflowInstance = dbAction(async (eventId: number) => {
 		},
 	});
 });
+
+export const getAllWorkflowInstances = dbAction(async (eventId: number) => {
+	return await db.query.workflowInstance.findMany({
+		where: and(
+			eq(schema.workflowInstance.eventId, eventId),
+			isNull(schema.workflowInstance.deletedAt),
+		),
+		orderBy: (t, { desc }) => [desc(t.createdAt)],
+		columns: {
+			id: true,
+			createdAt: true,
+			initialStepId: true,
+			status: true,
+			completedAt: true,
+			eventId: true,
+			submittedBy: true,
+		},
+		with: {
+			steps: {
+				columns: {
+					id: true,
+					name: true,
+					status: true,
+					nextStepId: true,
+				},
+				with: {
+					stepRoles: {
+						columns: {
+							id: true,
+							roleId: true,
+							targetGroupApprovalCriteria: true,
+						},
+						with: {
+							targetGroups: {
+								columns: {
+									id: true,
+									managedEntityId: true,
+								},
+								with: {
+									assignments: {
+										columns: {
+											id: true,
+											status: true,
+											completedAt: true,
+										},
+										with: {
+											userRole: {
+												columns: {
+													id: true,
+												},
+												with: {
+													role: {
+														columns: {
+															id: true,
+															name: true,
+														},
+													},
+													user: {
+														columns: {
+															id: true,
+															fullName: true,
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	});
+});
+
+export const getWorkflowInstance = dbAction(async (eventId: number, workflowInstanceId: number) => {
+	return await db.query.workflowInstance.findFirst({
+		where: and(
+			eq(schema.workflowInstance.eventId, eventId),
+			eq(schema.workflowInstance.id, workflowInstanceId),
+			isNull(schema.workflowInstance.deletedAt),
+		),
+		columns: {
+			id: true,
+			createdAt: true,
+			initialStepId: true,
+			status: true,
+			completedAt: true,
+			eventId: true,
+			submittedBy: true,
+		},
+		with: {
+			steps: {
+				columns: {
+					id: true,
+					name: true,
+					status: true,
+					nextStepId: true,
+				},
+				with: {
+					stepRoles: {
+						columns: {
+							id: true,
+							roleId: true,
+							targetGroupApprovalCriteria: true,
+						},
+						with: {
+							targetGroups: {
+								columns: {
+									id: true,
+									managedEntityId: true,
+								},
+								with: {
+									assignments: {
+										columns: {
+											id: true,
+											status: true,
+											completedAt: true,
+										},
+										with: {
+											userRole: {
+												columns: {
+													id: true,
+												},
+												with: {
+													role: {
+														columns: {
+															id: true,
+															name: true,
+														},
+													},
+													user: {
+														columns: {
+															id: true,
+															fullName: true,
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	});
+});

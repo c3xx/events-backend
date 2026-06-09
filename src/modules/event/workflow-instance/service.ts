@@ -28,3 +28,55 @@ export async function getLatestWorkflowInstance(
 
 	return instance;
 }
+
+export async function getAllWorkflowInstances(
+	user: { id: number; type: UserType; permissions: PermissionCode[] },
+	event: eventScope["event"],
+) {
+	const organizationIds = event.organizers.map((org) => org.organization.id);
+	const hasPermission = await hasPermissionInManagedEntity(
+		user,
+		"organization",
+		organizationIds,
+		"event:view_own",
+	);
+	if (!hasPermission) {
+		throw new ForbiddenError("You do not have any required permission for this");
+	}
+	const instances = await repository.getAllWorkflowInstances(event.id);
+
+	if (!instances?.length) {
+		throw new NotFoundError("No workflow instance found");
+	}
+	const orderedInstances = instances.map((ins) => ({
+		...ins,
+		steps: orderWorkflowSteps(ins.steps, ins.initialStepId),
+	}));
+	return orderedInstances;
+}
+
+export async function getWorkflowInstance(
+	user: { id: number; type: UserType; permissions: PermissionCode[] },
+	event: eventScope["event"],
+	workflowInstanceId: number,
+) {
+	const organizationIds = event.organizers.map((org) => org.organization.id);
+	const hasPermission = await hasPermissionInManagedEntity(
+		user,
+		"organization",
+		organizationIds,
+		"event:view_own",
+	);
+	if (!hasPermission) {
+		throw new ForbiddenError("You do not have any required permission for this");
+	}
+	const instance = await repository.getWorkflowInstance(event.id, workflowInstanceId);
+
+	if (instance == null) {
+		throw new NotFoundError("No workflow instance found");
+	}
+
+	instance.steps = orderWorkflowSteps(instance.steps, instance.initialStepId);
+
+	return instance;
+}

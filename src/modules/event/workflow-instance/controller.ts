@@ -1,5 +1,6 @@
 import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
 import type { eventScope } from "../scopes.js";
+import * as schema from "./schema.js";
 import * as service from "./service.js";
 
 export const getLatestWorkflowInstance: ScopedApiRequestHandler<
@@ -11,6 +12,28 @@ export const getLatestWorkflowInstance: ScopedApiRequestHandler<
 	return ok(res, result);
 };
 
+export const getAllWorkflowInstances: ScopedApiRequestHandler<
+	eventScope,
+	workflowInstance[]
+> = async (req, res) => {
+	const user = getAuthenticatedUser(req);
+	const result = await service.getAllWorkflowInstances(user, res.locals.event);
+	return ok(res, result);
+};
+
+export const getWorkflowInstance: ScopedApiRequestHandler<eventScope, workflowInstance> = async (
+	req,
+	res,
+) => {
+	const user = getAuthenticatedUser(req);
+	const param = schema.workflowScopedSchema.parse(req.params);
+	const result = await service.getWorkflowInstance(
+		user,
+		res.locals.event,
+		param.workflowInstanceId,
+	);
+	return ok(res, result);
+};
 type workflowInstance = {
 	id: number;
 	createdAt: string;
