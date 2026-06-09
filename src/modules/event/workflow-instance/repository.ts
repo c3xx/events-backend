@@ -207,3 +207,79 @@ export const insertWorkflowInstance = dbAction(
 		});
 	},
 );
+
+export const getLatestWorkflowInstance = dbAction(async (eventId: number) => {
+	return await db.query.workflowInstance.findFirst({
+		where: and(
+			eq(schema.workflowInstance.eventId, eventId),
+			isNull(schema.workflowInstance.deletedAt),
+		),
+		orderBy: (t, { desc }) => [desc(t.createdAt)],
+		columns: {
+			id: true,
+			createdAt: true,
+			initialStepId: true,
+			status: true,
+			completedAt: true,
+			eventId: true,
+			submittedBy: true,
+		},
+		with: {
+			steps: {
+				columns: {
+					id: true,
+					name: true,
+					status: true,
+					nextStepId: true,
+				},
+				with: {
+					stepRoles: {
+						columns: {
+							id: true,
+							roleId: true,
+							targetGroupApprovalCriteria: true,
+						},
+						with: {
+							targetGroups: {
+								columns: {
+									id: true,
+									managedEntityId: true,
+								},
+								with: {
+									assignments: {
+										columns: {
+											id: true,
+											status: true,
+											completedAt: true,
+										},
+										with: {
+											userRole: {
+												columns: {
+													id: true,
+												},
+												with: {
+													role: {
+														columns: {
+															id: true,
+															name: true,
+														},
+													},
+													user: {
+														columns: {
+															id: true,
+															fullName: true,
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	});
+});

@@ -9,7 +9,7 @@ import * as workflowTemplateRepository from "@/modules/workflow-template/reposit
 import * as repository from "./repository.js";
 import type * as schemas from "./schema.js";
 import type { eventScope } from "./scopes.js";
-import * as workflowInstanceRepository from "./workflow-instances/repository.js";
+import * as workflowInstanceRepository from "./workflow-instance/repository.js";
 
 export async function createEvent(
 	user: { id: number; type: UserType; permissions: PermissionCode[] },
@@ -161,7 +161,7 @@ export async function getEvents(
 	});
 }
 
-export type InstanceInsertData = {
+type InstanceInsertData = {
 	eventId: number;
 	submittedBy: number;
 	steps: {
@@ -301,10 +301,6 @@ export async function createWorkflowInstance(
 		submittedBy: user.id,
 		steps,
 	});
-
-	if (!result) {
-		throw new ConflictError("Failed to create workflow instance");
-	}
 
 	return result;
 }

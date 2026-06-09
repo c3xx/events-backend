@@ -23,6 +23,12 @@ declare global {
 	// -- workflows
 	export type WorkflowTargetGroupApprovalCriteria =
 		(typeof schema.workflowTargetGroupApprovalCriteriaEnum.enumValues)[number];
+	export type WorkflowInstanceStatus =
+		(typeof schema.workflowInstanceStatusEnum.enumValues)[number];
+	export type WorkflowInstanceStepStatus =
+		(typeof schema.workflowInstanceStepStatusEnum.enumValues)[number];
+	export type WorkflowInstanceStepAssignmentStatus =
+		(typeof schema.workflowInstanceStepAssignmentStatusEnum.enumValues)[number];
 
 	// system types
 	export type PermissionScope = keyof typeof PERMISSION;

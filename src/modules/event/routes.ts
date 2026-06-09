@@ -3,6 +3,7 @@ import { requirePermissions } from "@/middlewares/require-permissions.js";
 import * as controller from "./controller.js";
 import { eventIdParamHandler } from "./scopes.js";
 import venueAllotmentRouter from "./venue-allotment/routes.js";
+import workflowInstanceRouter from "./workflow-instance/routes.js";
 
 const router: Router = Router();
 
@@ -16,5 +17,6 @@ router.use("/:id/venue-allotments", venueAllotmentRouter);
 
 router.param("eventId", eventIdParamHandler);
 router.post("/:eventId/submit", controller.createWorkflowInstance);
+router.get("/:eventId", workflowInstanceRouter);
 
 export default router;
