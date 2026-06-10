@@ -1,5 +1,5 @@
-import { requirePermissions } from "@/middlewares/require-permissions.js";
 import { Router } from "express";
+import { requirePermissions } from "@/middlewares/require-permissions.js";
 import * as controller from "./controller.js";
 
 import venueAllotmentRouter from "./venue-allotment/routes.js";

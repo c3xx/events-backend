@@ -2,7 +2,7 @@ import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
 import * as eventRepository from "@/modules/event/repository.js";
 import { hasPermissionInManagedEntity } from "@/modules/permission/repository.js";
 import * as repository from "./repository.js";
-import type { RespondToInvitationSchema, SendInvitationSchema } from "./schema.js";
+import type { RespondToInvitationSchema } from "./schema.js";
 
 export async function getEventInvitations(eventId: number) {
 	const event = await eventRepository.findEventById(eventId);

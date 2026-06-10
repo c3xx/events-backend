@@ -1,6 +1,6 @@
 import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
-import * as eventRepository from "@/modules/event/repository.js"; //expected in event!
-import * as invitationRepository from "@/modules/event-organizer-invitation/repository.js";
+import * as invitationRepository from "@/modules/event/organizer-invitation/repository.js";
+import * as eventRepository from "@/modules/event/repository.js";
 import { hasPermissionInManagedEntity } from "@/modules/permission/repository.js";
 import * as repository from "./repository.js";
 import type { AddEventOrganizerSchema, RemoveEventOrganizerSchema } from "./schema.js";

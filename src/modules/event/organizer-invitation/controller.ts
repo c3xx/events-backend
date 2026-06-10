@@ -3,7 +3,6 @@ import {
 	invitationItemScopedSchema,
 	invitationScopedSchema,
 	respondToInvitationSchema,
-	sendInvitationSchema,
 	revokeInvitationSchema,
 } from "./schema.js";
 import * as service from "./service.js";

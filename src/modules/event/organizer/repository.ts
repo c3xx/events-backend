@@ -1,7 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
-import { organization } from "@/db/schema.js";
 
 export const getEventOrganizers = dbAction(async (eventId: number) => {
 	return await db.query.eventOrganizer.findMany({
