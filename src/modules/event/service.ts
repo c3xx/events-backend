@@ -1,5 +1,5 @@
 import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
-import { orderWorkflowSteps } from "@/lib/helpers.js";
+import { orderWorkflowSteps, unreachable } from "@/lib/helpers.js";
 import * as eventTypeRepository from "@/modules/event-type/repository.js";
 import * as organizationRepository from "@/modules/organization/repository.js";
 import * as permissionRepository from "@/modules/permission/repository.js";
@@ -8,7 +8,7 @@ import * as userRepository from "@/modules/user/repository.js";
 import * as workflowTemplateRepository from "@/modules/workflow-template/repository.js";
 import * as repository from "./repository.js";
 import type * as schemas from "./schema.js";
-import type { eventScope } from "./scopes.js";
+import type { EventScope } from "./scopes.js";
 import * as workflowInstanceRepository from "./workflow-instance/repository.js";
 
 export async function createEvent(
@@ -179,10 +179,9 @@ type InstanceInsertData = {
 
 export async function createWorkflowInstance(
 	user: { id: number; type: UserType; permissions: PermissionCode[] },
-	event: eventScope["event"],
+	event: EventScope["event"],
 ) {
 	const host = event.organizers.find((o) => o.role === "host");
-
 	if (!host) {
 		throw new NotFoundError("Host organizer not found");
 	}
@@ -193,29 +192,24 @@ export async function createWorkflowInstance(
 		[host.organization.id],
 		"event:manage",
 	);
-
 	if (!hasPermission) {
 		throw new ForbiddenError("You do not have any required permission for this");
 	}
 
 	const existing = await workflowInstanceRepository.findActiveInstance(event.id);
-
 	if (existing) {
 		throw new ConflictError("An active workflow instance already exists for this event");
 	}
 
 	const eventType = await eventTypeRepository.getEventType(event.type.id);
-
 	if (!eventType) {
 		throw new NotFoundError("Event type not found");
 	}
 
 	const template = await workflowTemplateRepository.findByIdWithRoles(eventType.workflowTemplateId);
-
 	if (!template) {
 		throw new NotFoundError("Workflow template not found");
 	}
-
 	if (template.initialStepId == null || template.steps.length === 0) {
 		throw new ConflictError("Workflow template has no steps configured");
 	}
@@ -223,36 +217,34 @@ export async function createWorkflowInstance(
 	const orderedSteps = orderWorkflowSteps(template.steps, template.initialStepId);
 
 	const organizerOrgIds = event.organizers.map((o) => o.organization.id);
-
-	const orgManagedEntityIds =
-		await workflowInstanceRepository.findAncestorOrganizationManagedEntities(organizerOrgIds);
-
 	const venueIds = event.venueAllotments.map((va) => va.venue.id);
 
-	const venueManagedEntityIds =
-		await workflowInstanceRepository.findVenueManagedEntityIds(venueIds);
+	const [orgManagedEntities, venueManagedEntities] = await Promise.all([
+		workflowInstanceRepository.findAncestorOrganizationManagedEntities(organizerOrgIds),
+		workflowInstanceRepository.findVenueManagedEntityIds(venueIds),
+	]);
 
-	const allManagedEntityIds = [...new Set([...orgManagedEntityIds, ...venueManagedEntityIds])];
+	const allManagedEntities = [...orgManagedEntities, ...venueManagedEntities];
+	const allManagedEntityIds = allManagedEntities.map((e) => e.managedEntityId);
 
 	const roleIds = [
 		...new Set(orderedSteps.flatMap((step) => step.stepRoles.map((stepRole) => stepRole.role.id))),
 	];
 
-	const [managedEntities, assignments] = await Promise.all([
-		workflowInstanceRepository.findManagedEntityMetadata(allManagedEntityIds),
-		roleRepository.findAssignmentsForRoles(roleIds, allManagedEntityIds),
-	]);
+	const assignments = await roleRepository.findAssignmentsForRoles(roleIds, allManagedEntityIds);
 
 	const entitiesByTypeAndKind = new Map<string, number[]>();
 
-	for (const entity of managedEntities) {
+	for (const entity of allManagedEntities) {
 		const key = `${entity.managedEntityType}:${entity.typeRefId}`;
 
-		const existing = entitiesByTypeAndKind.get(key) ?? [];
+		if (!entitiesByTypeAndKind.has(key)) {
+			entitiesByTypeAndKind.set(key, []);
+		}
 
-		existing.push(entity.managedEntityId);
-
-		entitiesByTypeAndKind.set(key, existing);
+		const managedEntityIds = entitiesByTypeAndKind.get(key);
+		if (managedEntityIds == null) unreachable();
+		managedEntityIds.push(entity.managedEntityId);
 	}
 
 	const assignmentMap = new Map<string, number[]>();
@@ -260,11 +252,13 @@ export async function createWorkflowInstance(
 	for (const assignment of assignments) {
 		const key = `${assignment.roleId}:${assignment.managedEntityId}`;
 
-		const existing = assignmentMap.get(key) ?? [];
+		if (!assignmentMap.has(key)) {
+			assignmentMap.set(key, []);
+		}
 
-		existing.push(assignment.userRoleId);
-
-		assignmentMap.set(key, existing);
+		const userRoleIds = assignmentMap.get(key);
+		if (userRoleIds == null) unreachable();
+		userRoleIds.push(assignment.userRoleId);
 	}
 
 	const steps: InstanceInsertData["steps"] = [];

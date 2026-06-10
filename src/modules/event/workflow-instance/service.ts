@@ -1,12 +1,12 @@
 import { ForbiddenError, NotFoundError } from "@/lib/errors.js";
 import { orderWorkflowSteps } from "@/lib/helpers.js";
 import { hasPermissionInManagedEntity } from "@/modules/permission/repository.js";
-import type { eventScope } from "../scopes.js";
+import type { EventScope } from "../scopes.js";
 import * as repository from "./repository.js";
 
 export async function getLatestWorkflowInstance(
 	user: { id: number; type: UserType; permissions: PermissionCode[] },
-	event: eventScope["event"],
+	event: EventScope["event"],
 ) {
 	const organizationIds = event.organizers.map((org) => org.organization.id);
 	const hasPermission = await hasPermissionInManagedEntity(
@@ -16,7 +16,7 @@ export async function getLatestWorkflowInstance(
 		"event:view_own",
 	);
 	if (!hasPermission) {
-		throw new ForbiddenError("You do not have any required permission for this");
+		throw new ForbiddenError("You don't have permission to view this");
 	}
 	const instance = await repository.getLatestWorkflowInstance(event.id);
 
@@ -31,7 +31,7 @@ export async function getLatestWorkflowInstance(
 
 export async function getAllWorkflowInstances(
 	user: { id: number; type: UserType; permissions: PermissionCode[] },
-	event: eventScope["event"],
+	event: EventScope["event"],
 ) {
 	const organizationIds = event.organizers.map((org) => org.organization.id);
 	const hasPermission = await hasPermissionInManagedEntity(
@@ -41,23 +41,20 @@ export async function getAllWorkflowInstances(
 		"event:view_own",
 	);
 	if (!hasPermission) {
-		throw new ForbiddenError("You do not have any required permission for this");
+		throw new ForbiddenError("You don't have permission to view this");
 	}
 	const instances = await repository.getAllWorkflowInstances(event.id);
 
 	if (!instances?.length) {
 		throw new NotFoundError("No workflow instance found");
 	}
-	const orderedInstances = instances.map((ins) => ({
-		...ins,
-		steps: orderWorkflowSteps(ins.steps, ins.initialStepId),
-	}));
-	return orderedInstances;
+
+	return instances;
 }
 
 export async function getWorkflowInstance(
 	user: { id: number; type: UserType; permissions: PermissionCode[] },
-	event: eventScope["event"],
+	event: EventScope["event"],
 	workflowInstanceId: number,
 ) {
 	const organizationIds = event.organizers.map((org) => org.organization.id);
@@ -68,7 +65,7 @@ export async function getWorkflowInstance(
 		"event:view_own",
 	);
 	if (!hasPermission) {
-		throw new ForbiddenError("You do not have any required permission for this");
+		throw new ForbiddenError("You don't have permission to view this");
 	}
 	const instance = await repository.getWorkflowInstance(event.id, workflowInstanceId);
 

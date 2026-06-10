@@ -18,7 +18,7 @@ router.use("/:eventId/organizers", organizerRouter);
 router.use("/:eventId/organizer-invitations", organizerInvitationRouter);
 
 router.param("eventId", eventIdParamHandler);
-router.post("/:eventId/submit", controller.createWorkflowInstance);
-router.get("/:eventId", workflowInstanceRouter);
+router.post("/:eventId/submit", controller.submitEvent);
+router.get("/:eventId/workflows", workflowInstanceRouter);
 
 export default router;

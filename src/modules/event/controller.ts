@@ -1,6 +1,6 @@
 import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
 import * as schemas from "./schema.js";
-import type { eventScope } from "./scopes.js";
+import type { EventScope } from "./scopes.js";
 import * as service from "./service.js";
 import type { eventScope } from "./scopes.js";
 import * as service from "./service.js";
@@ -82,8 +82,8 @@ export const updateEvent: ApiRequestHandler<{
 	return ok(res, result);
 };
 
-export const createWorkflowInstance: ScopedApiRequestHandler<
-	eventScope,
+export const submitEvent: ScopedApiRequestHandler<
+	EventScope,
 	{
 		id: number;
 	}

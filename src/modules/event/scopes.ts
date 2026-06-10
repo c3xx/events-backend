@@ -2,7 +2,7 @@ import { NotFoundError } from "@/lib/errors.js";
 import { idLike, scopedParamHandler, unreachable } from "@/lib/helpers.js";
 import * as eventRepository from "@/modules/event/repository.js";
 
-export type eventScope = {
+export type EventScope = {
 	event: {
 		id: number;
 		title: string;
@@ -51,7 +51,7 @@ export type eventScope = {
 	};
 };
 
-export const eventIdParamHandler = scopedParamHandler<eventScope, number>(
+export const eventIdParamHandler = scopedParamHandler<EventScope, number>(
 	idLike("Invalid event ID"),
 	async (_req, res, _next, eventId) => {
 		if (res.locals.event == null) unreachable();

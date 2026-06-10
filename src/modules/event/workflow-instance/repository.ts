@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
@@ -17,20 +17,23 @@ export const findAncestorOrganizationManagedEntities = dbAction(
 	async (organizationIds: number[]) => {
 		if (organizationIds.length === 0) return [];
 
-		const rows = await db.execute<{ managed_entity_id: number }>(
+		const rows = await db.execute<{
+			managed_entity_id: number;
+			type_ref_id: number;
+		}>(
 			sql`
                 WITH RECURSIVE ancestors AS (
-                    SELECT id, parent_organization_id
+                    SELECT id, parent_organization_id, organization_type_id
                     FROM organization
                     WHERE id = ANY(${organizationIds})
                       AND deleted_at IS NULL
                     UNION ALL
-                    SELECT o.id, o.parent_organization_id
+                    SELECT o.id, o.parent_organization_id, o.organization_type_id
                     FROM organization o
                     INNER JOIN ancestors a ON o.id = a.parent_organization_id
                     WHERE o.deleted_at IS NULL
                 )
-                SELECT me.id AS managed_entity_id
+                SELECT me.id AS managed_entity_id, anc.organization_type_id AS type_ref_id
                 FROM ancestors anc
                 INNER JOIN managed_entity me
                   ON me.ref_id = anc.id
@@ -39,50 +42,19 @@ export const findAncestorOrganizationManagedEntities = dbAction(
             `,
 		);
 
-		return rows.rows.map((r) => r.managed_entity_id);
+		return rows.rows.map((r) => ({
+			managedEntityId: r.managed_entity_id,
+			managedEntityType: "organization" as const,
+			typeRefId: r.type_ref_id,
+		}));
 	},
 );
 
 export const findVenueManagedEntityIds = dbAction(async (venueIds: number[]) => {
 	if (venueIds.length === 0) return [];
 	const rows = await db
-		.select({ id: schema.managedEntity.id })
-		.from(schema.managedEntity)
-		.where(
-			and(
-				eq(schema.managedEntity.managedEntityType, "venue"),
-				inArray(schema.managedEntity.refId, venueIds),
-				isNull(schema.managedEntity.deletedAt),
-			),
-		);
-	return rows.map((r) => r.id);
-});
-
-export const findManagedEntityMetadata = dbAction(async (managedEntityIds: number[]) => {
-	if (!managedEntityIds.length) {
-		return [];
-	}
-
-	const organizationRows = await db
 		.select({
-			managedEntityId: schema.managedEntity.id,
-			managedEntityType: schema.managedEntity.managedEntityType,
-			typeRefId: schema.organization.organizationTypeId,
-		})
-		.from(schema.managedEntity)
-		.innerJoin(schema.organization, eq(schema.managedEntity.refId, schema.organization.id))
-		.where(
-			and(
-				eq(schema.managedEntity.managedEntityType, "organization"),
-				inArray(schema.managedEntity.id, managedEntityIds),
-				isNull(schema.managedEntity.deletedAt),
-			),
-		);
-
-	const venueRows = await db
-		.select({
-			managedEntityId: schema.managedEntity.id,
-			managedEntityType: schema.managedEntity.managedEntityType,
+			id: schema.managedEntity.id,
 			typeRefId: schema.venue.venueTypeId,
 		})
 		.from(schema.managedEntity)
@@ -90,12 +62,15 @@ export const findManagedEntityMetadata = dbAction(async (managedEntityIds: numbe
 		.where(
 			and(
 				eq(schema.managedEntity.managedEntityType, "venue"),
-				inArray(schema.managedEntity.id, managedEntityIds),
+				inArray(schema.managedEntity.refId, venueIds),
 				isNull(schema.managedEntity.deletedAt),
 			),
 		);
-
-	return [...organizationRows, ...venueRows];
+	return rows.map((r) => ({
+		managedEntityId: r.id,
+		managedEntityType: "venue" as const,
+		typeRefId: r.typeRefId,
+	}));
 });
 
 export const insertWorkflowInstance = dbAction(
@@ -125,8 +100,6 @@ export const insertWorkflowInstance = dbAction(
 				.returning({ id: schema.workflowInstance.id });
 			if (instance == null) unreachable();
 
-			if (data.steps.length === 0) return { id: instance.id };
-
 			const insertedSteps = await tx
 				.insert(schema.workflowInstanceStep)
 				.values(
@@ -141,31 +114,65 @@ export const insertWorkflowInstance = dbAction(
 
 			if (insertedSteps.length !== data.steps.length) return unreachable();
 
-			for (let i = 0; i < insertedSteps.length - 1; i++) {
-				const current = insertedSteps[i];
-				const next = insertedSteps[i + 1];
-				if (current == null || next == null) unreachable();
+			if (insertedSteps.length > 1) {
+				const sqlChunks: SQL[] = [];
+				const ids: number[] = [];
+
+				sqlChunks.push(sql`(case`);
+
+				for (let i = 0; i < insertedSteps.length - 1; i++) {
+					const current = insertedSteps[i];
+					const next = insertedSteps[i + 1];
+					if (current == null || next == null) unreachable();
+					sqlChunks.push(
+						sql`when ${schema.workflowInstanceStep.id} = ${current.id} then ${next.id}`,
+					);
+					ids.push(current.id);
+				}
+
+				sqlChunks.push(sql`end)`);
+
 				await tx
 					.update(schema.workflowInstanceStep)
-					.set({ nextStepId: next.id })
-					.where(eq(schema.workflowInstanceStep.id, current.id));
+					.set({ nextStepId: sql.join(sqlChunks, sql.raw(" ")) })
+					.where(inArray(schema.workflowInstanceStep.id, ids));
 			}
+
+			const firstStep = insertedSteps[0];
+			if (firstStep == null) return unreachable();
+
+			await tx
+				.update(schema.workflowInstance)
+				.set({ initialStepId: firstStep.id })
+				.where(eq(schema.workflowInstance.id, instance.id));
+
+			await tx
+				.update(schema.workflowInstanceStep)
+				.set({ status: "active" })
+				.where(eq(schema.workflowInstanceStep.id, firstStep.id));
 
 			for (let i = 0; i < data.steps.length; i++) {
 				const step = data.steps[i];
 				const insertedStep = insertedSteps[i];
 				if (step == null || insertedStep == null) return unreachable();
 
-				for (const role of step.roles) {
-					const [insertedRole] = await tx
-						.insert(schema.workflowInstanceStepRole)
-						.values({
+				const insertedRoles = await tx
+					.insert(schema.workflowInstanceStepRole)
+					.values(
+						step.roles.map((role) => ({
 							stepId: insertedStep.id,
 							roleId: role.roleId,
 							targetGroupApprovalCriteria: role.targetGroupApprovalCriteria,
-						})
-						.returning({ id: schema.workflowInstanceStepRole.id });
-					if (insertedRole == null) return unreachable();
+						})),
+					)
+					.returning({ id: schema.workflowInstanceStepRole.id });
+
+				if (insertedRoles.length !== step.roles.length) return unreachable();
+
+				for (let j = 0; j < step.roles.length; j++) {
+					const role = step.roles[j];
+					const insertedRole = insertedRoles[j];
+					if (role == null || insertedRole == null) return unreachable();
 
 					for (const group of role.targetGroups) {
 						const [insertedGroup] = await tx
@@ -190,19 +197,6 @@ export const insertWorkflowInstance = dbAction(
 				}
 			}
 
-			const firstStep = insertedSteps[0];
-			if (firstStep == null) return unreachable();
-
-			await tx
-				.update(schema.workflowInstance)
-				.set({ initialStepId: firstStep.id })
-				.where(eq(schema.workflowInstance.id, instance.id));
-
-			await tx
-				.update(schema.workflowInstanceStep)
-				.set({ status: "active" })
-				.where(eq(schema.workflowInstanceStep.id, firstStep.id));
-
 			return { id: instance.id };
 		});
 	},
@@ -224,63 +218,7 @@ export const getLatestWorkflowInstance = dbAction(async (eventId: number) => {
 			eventId: true,
 			submittedBy: true,
 		},
-		with: {
-			steps: {
-				columns: {
-					id: true,
-					name: true,
-					status: true,
-					nextStepId: true,
-				},
-				with: {
-					stepRoles: {
-						columns: {
-							id: true,
-							roleId: true,
-							targetGroupApprovalCriteria: true,
-						},
-						with: {
-							targetGroups: {
-								columns: {
-									id: true,
-									managedEntityId: true,
-								},
-								with: {
-									assignments: {
-										columns: {
-											id: true,
-											status: true,
-											completedAt: true,
-										},
-										with: {
-											userRole: {
-												columns: {
-													id: true,
-												},
-												with: {
-													role: {
-														columns: {
-															id: true,
-															name: true,
-														},
-													},
-													user: {
-														columns: {
-															id: true,
-															fullName: true,
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
+		with: workflowInstanceWith,
 	});
 });
 
@@ -299,63 +237,6 @@ export const getAllWorkflowInstances = dbAction(async (eventId: number) => {
 			completedAt: true,
 			eventId: true,
 			submittedBy: true,
-		},
-		with: {
-			steps: {
-				columns: {
-					id: true,
-					name: true,
-					status: true,
-					nextStepId: true,
-				},
-				with: {
-					stepRoles: {
-						columns: {
-							id: true,
-							roleId: true,
-							targetGroupApprovalCriteria: true,
-						},
-						with: {
-							targetGroups: {
-								columns: {
-									id: true,
-									managedEntityId: true,
-								},
-								with: {
-									assignments: {
-										columns: {
-											id: true,
-											status: true,
-											completedAt: true,
-										},
-										with: {
-											userRole: {
-												columns: {
-													id: true,
-												},
-												with: {
-													role: {
-														columns: {
-															id: true,
-															name: true,
-														},
-													},
-													user: {
-														columns: {
-															id: true,
-															fullName: true,
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
 		},
 	});
 });
@@ -376,52 +257,54 @@ export const getWorkflowInstance = dbAction(async (eventId: number, workflowInst
 			eventId: true,
 			submittedBy: true,
 		},
+		with: workflowInstanceWith,
+	});
+});
+
+const workflowInstanceWith = {
+	steps: {
+		columns: {
+			id: true,
+			name: true,
+			status: true,
+			nextStepId: true,
+		},
 		with: {
-			steps: {
+			stepRoles: {
 				columns: {
 					id: true,
-					name: true,
-					status: true,
-					nextStepId: true,
+					roleId: true,
+					targetGroupApprovalCriteria: true,
 				},
 				with: {
-					stepRoles: {
+					targetGroups: {
 						columns: {
 							id: true,
-							roleId: true,
-							targetGroupApprovalCriteria: true,
+							managedEntityId: true,
 						},
 						with: {
-							targetGroups: {
+							assignments: {
 								columns: {
 									id: true,
-									managedEntityId: true,
+									status: true,
+									completedAt: true,
 								},
 								with: {
-									assignments: {
+									userRole: {
 										columns: {
 											id: true,
-											status: true,
-											completedAt: true,
 										},
 										with: {
-											userRole: {
+											role: {
 												columns: {
 													id: true,
+													name: true,
 												},
-												with: {
-													role: {
-														columns: {
-															id: true,
-															name: true,
-														},
-													},
-													user: {
-														columns: {
-															id: true,
-															fullName: true,
-														},
-													},
+											},
+											user: {
+												columns: {
+													id: true,
+													fullName: true,
 												},
 											},
 										},
@@ -433,5 +316,5 @@ export const getWorkflowInstance = dbAction(async (eventId: number, workflowInst
 				},
 			},
 		},
-	});
-});
+	},
+} as const;
