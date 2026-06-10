@@ -7,7 +7,7 @@ const router: Router = Router({ mergeParams: true });
 router.get("/", controller.getEventInvitations);
 
 router.patch(
-	"/:invitationId/respond",
+	"/:invitationId",
 	requirePermissions(["event_organizer_invitation:respond"]),
 	controller.respondToInvitation,
 );

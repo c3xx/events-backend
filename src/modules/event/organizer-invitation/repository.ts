@@ -138,10 +138,17 @@ export const sendInvitation = dbAction(
 		invitedByUserId: number;
 		senderOrganizationId: number;
 		recipientOrganizationId: number;
+		intendedRole: "co_host";
 	}) => {
 		const [inserted] = await db
 			.insert(schema.eventOrganizerInvitation)
-			.values(data)
+			.values({
+				eventId: data.eventId,
+				invitedByUserId: data.invitedByUserId,
+				senderOrganizationId: data.senderOrganizationId,
+				intendedRole: data.intendedRole,
+				recipientOrganizationId: data.recipientOrganizationId,
+			})
 			.returning({ id: schema.eventOrganizerInvitation.id });
 
 		if (inserted == null) unreachable();

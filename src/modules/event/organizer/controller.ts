@@ -1,7 +1,7 @@
 import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
+import { eventScopedSchema } from "@/modules/event/schema.js";
 import {
 	addEventOrganizerSchema,
-	eventScopedSchema,
 	organizerScopedSchema,
 	removeEventOrganizerSchema,
 } from "./schema.js";
@@ -18,7 +18,7 @@ export const getEventOrganizers: ApiRequestHandler<
 	}[]
 > = async (req, res) => {
 	const params = eventScopedSchema.parse(req.params);
-	const result = await service.getEventOrganizers(params.eventId);
+	const result = await service.getEventOrganizers(params.id);
 	return ok(res, result);
 };
 
@@ -28,7 +28,7 @@ export const addEventOrganizer: ApiRequestHandler<
 	const user = getAuthenticatedUser(req);
 	const params = eventScopedSchema.parse(req.params);
 	const body = addEventOrganizerSchema.parse(req.body);
-	const result = await service.addEventOrganizer(params.eventId, body, user);
+	const result = await service.addEventOrganizer(params.id, body, user);
 	return ok(res, result, 201);
 };
 

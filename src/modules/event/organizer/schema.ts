@@ -1,11 +1,5 @@
 import z from "zod";
 
-export const eventScopedSchema = z
-	.object({
-		eventId: z.coerce.number({ error: "Invalid event ID" }).int({ error: "Invalid event ID" }),
-	})
-	.strict();
-
 export const organizerScopedSchema = z
 	.object({
 		eventId: z.coerce.number({ error: "Invalid event ID" }).int({ error: "Invalid event ID" }),
@@ -33,13 +27,12 @@ export const addEventOrganizerSchema = z
 
 export const removeEventOrganizerSchema = z
 	.object({
-		userRoleId: z.coerce // CHANGED: added
+		userRoleId: z.coerce
 			.number({ error: "Invalid user role ID" })
 			.int({ error: "Invalid user role ID" }),
 	})
 	.strict();
 
-export type EventOrganizerScopedSchema = z.output<typeof eventScopedSchema>;
 export type OrganizerScopedSchema = z.output<typeof organizerScopedSchema>;
 export type AddEventOrganizerSchema = z.output<typeof addEventOrganizerSchema>;
 export type RemoveEventOrganizerSchema = z.output<typeof removeEventOrganizerSchema>;

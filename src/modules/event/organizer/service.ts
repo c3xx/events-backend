@@ -67,6 +67,7 @@ export async function addEventOrganizer(
 			invitedByUserId: eventOrganizer.userRoleId,
 			senderOrganizationId: eventOrganizer.organizationId,
 			recipientOrganizationId: input.organizationId,
+			intendedRole: input.type,
 		});
 	}
 
