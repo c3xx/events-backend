@@ -22,7 +22,6 @@ import {
 	EVENT_TYPE_VENUE_POLICY,
 	INSTITUTION_DOMAIN,
 	MANAGED_ENTITY_TYPES,
-	PASSWORD_TOKEN_EXPIRY,
 	PASSWORD_TOKEN_TYPES,
 	USER_TYPES,
 	VENUE_ACCESS_LEVELS,
@@ -189,11 +188,7 @@ export const userPasswordToken = pgTable(
 	},
 	(t) => [
 		uniqueIndex().on(t.tokenHash),
-		uniqueIndex()
-			.on(t.userId)
-			.where(
-				sql`${t.usedAt} IS NULL AND now() < ${t.createdAt} + (${sql.raw(PASSWORD_TOKEN_EXPIRY.toString())} * interval '1 millisecond')`,
-			),
+		uniqueIndex().on(t.userId).where(sql`${t.usedAt} IS NULL`),
 	],
 );
 
