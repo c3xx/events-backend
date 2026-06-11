@@ -11,7 +11,7 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    SELECT workflow_template_id INTO next_step_workflow_template_id
+    SELECT template_id INTO next_step_workflow_template_id
     FROM workflow_template_step
     WHERE id = NEW.next_step_id;
 
@@ -21,12 +21,12 @@ BEGIN
             NEW.next_step_id;
     END IF;
 
-    IF next_step_workflow_template_id != NEW.workflow_template_id THEN
+    IF next_step_workflow_template_id != NEW.template_id THEN
         RAISE EXCEPTION
             'workflow_template_step: next_step % belongs to workflow_template %, not workflow_template %',
             NEW.next_step_id,
             next_step_workflow_template_id,
-            NEW.workflow_template_id;
+            NEW.template_id;
     END IF;
 
     RETURN NEW;
