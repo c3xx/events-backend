@@ -17,33 +17,28 @@ export const findAncestorOrganizationManagedEntities = dbAction(
 	async (organizationIds: number[]) => {
 		if (organizationIds.length === 0) return [];
 
-		const rows = await db.execute<{
-			managed_entity_id: number;
-			type_ref_id: number;
-		}>(
-			sql`
-                WITH RECURSIVE ancestors AS (
-                    SELECT id, parent_organization_id, organization_type_id
-                    FROM organization
-                    WHERE id = ANY(${organizationIds})
-                      AND deleted_at IS NULL
-                    UNION ALL
-                    SELECT o.id, o.parent_organization_id, o.organization_type_id
-                    FROM organization o
-                    INNER JOIN ancestors a ON o.id = a.parent_organization_id
-                    WHERE o.deleted_at IS NULL
-                )
-                SELECT me.id AS managed_entity_id, anc.organization_type_id AS type_ref_id
-                FROM ancestors anc
-                INNER JOIN managed_entity me
-                  ON me.ref_id = anc.id
-                 AND me.managed_entity_type = 'organization'
-                 AND me.deleted_at IS NULL
-            `,
-		);
+		const rows = await db.execute<{ managed_entity_id: string; type_ref_id: number }>(sql`
+			WITH RECURSIVE ancestors AS (
+				SELECT id, parent_organization_id, organization_type_id
+				FROM organization
+				WHERE id = ANY(${`{${organizationIds.join(",")}}`}::int[])
+				  AND deleted_at IS NULL
+				UNION ALL
+				SELECT o.id, o.parent_organization_id, o.organization_type_id
+				FROM organization o
+				INNER JOIN ancestors a ON o.id = a.parent_organization_id
+				WHERE o.deleted_at IS NULL
+			)
+			SELECT me.id AS managed_entity_id, anc.organization_type_id AS type_ref_id
+			FROM ancestors anc
+			INNER JOIN managed_entity me
+			  ON me.ref_id = anc.id
+			 AND me.managed_entity_type = 'organization'
+			 AND me.deleted_at IS NULL
+		`);
 
 		return rows.rows.map((r) => ({
-			managedEntityId: r.managed_entity_id,
+			managedEntityId: Number(r.managed_entity_id),
 			managedEntityType: "organization" as const,
 			typeRefId: r.type_ref_id,
 		}));
