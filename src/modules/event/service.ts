@@ -220,7 +220,7 @@ export async function createWorkflowInstance(
 	const venueIds = event.venueAllotments.map((va) => va.venue.id);
 
 	const [orgManagedEntities, venueManagedEntities] = await Promise.all([
-		workflowInstanceRepository.findAncestorOrganizationManagedEntities(organizerOrgIds),// get all managed entity related to event organizers
+		workflowInstanceRepository.findAncestorOrganizationManagedEntities(organizerOrgIds), // get all managed entity related to event organizers
 		workflowInstanceRepository.findVenueManagedEntityIds(venueIds), // get all managed entity related to the venues
 	]);
 
@@ -231,11 +231,11 @@ export async function createWorkflowInstance(
 		...new Set(orderedSteps.flatMap((step) => step.stepRoles.map((stepRole) => stepRole.role.id))),
 	];
 
-	const assignments = await roleRepository.findAssignmentsForRoles(roleIds, allManagedEntityIds);// Find the userRole of all roles in the related managed entities
+	const assignments = await roleRepository.findAssignmentsForRoles(roleIds, allManagedEntityIds); // Find the userRole of all roles in the related managed entities
 
-    const entitiesByTypeAndKind = new Map<string, number[]>();
-    // create a map for storing (enityType,typeRef)=>managedEnitityIds[]
-    // e.g (Organization, club)=>[CodingClub, CSI]
+	const entitiesByTypeAndKind = new Map<string, number[]>();
+	// create a map for storing (enityType,typeRef)=>managedEnitityIds[]
+	// e.g (Organization, club)=>[CodingClub, CSI]
 
 	for (const entity of allManagedEntities) {
 		const key = `${entity.managedEntityType}:${entity.typeRefId}`;
@@ -249,8 +249,8 @@ export async function createWorkflowInstance(
 		managedEntityIds.push(entity.managedEntityId);
 	}
 
-    const assignmentMap = new Map<string, number[]>();
-    //create a map for storing (roleId,enityId)=>userRoleIds[]
+	const assignmentMap = new Map<string, number[]>();
+	//create a map for storing (roleId,enityId)=>userRoleIds[]
 	// e.g (clubHead, CodingClub)=>[userRole A,userRole B]
 	for (const assignment of assignments) {
 		const key = `${assignment.roleId}:${assignment.managedEntityId}`;
@@ -269,7 +269,8 @@ export async function createWorkflowInstance(
 	for (const step of orderedSteps) {
 		const resolvedRoles: InstanceInsertData["steps"][number]["roles"] = [];
 
-		for (const stepRole of step.stepRoles) { //A step can have multiple roles
+		for (const stepRole of step.stepRoles) {
+			//A step can have multiple roles
 			const role = stepRole.role;
 
 			const matchingEntityIds =
