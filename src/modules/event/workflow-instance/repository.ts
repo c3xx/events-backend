@@ -12,7 +12,7 @@ export const findActiveInstance = dbAction(async (eventId: number) => {
 		columns: { id: true },
 	});
 });
-
+//Recursively find all managed entities related to given organizations.
 export const findAncestorOrganizationManagedEntities = dbAction(
 	async (organizationIds: number[]) => {
 		if (organizationIds.length === 0) return [];
