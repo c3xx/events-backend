@@ -9,11 +9,13 @@ const router: Router = Router();
 
 router.post("/", controller.createEvent);
 router.get("/", controller.getEvents);
-router.patch("/:id", requirePermissions(["event:manage"]), controller.updateEvent);
+router.patch("/:eventId", requirePermissions(["event:manage"]), controller.updateEvent);
 
-router.get("/:id", controller.getEvent);
+router.get("/:eventId", controller.getEvent);
 
-router.use("/:id/venue-allotments", venueAllotmentRouter);
+router.use("/:eventId/venue-allotments", venueAllotmentRouter);
+router.use("/:eventId/organizers", organizerRouter);
+router.use("/:eventId/organizer-invitations", organizerInvitationRouter);
 
 router.param("eventId", eventIdParamHandler);
 router.post("/:eventId/submit", controller.createWorkflowInstance);
