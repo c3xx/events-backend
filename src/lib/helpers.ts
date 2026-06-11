@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import { DrizzleQueryError } from "drizzle-orm/errors";
 import { customAlphabet } from "nanoid";
+import type * as express from "express";
+import z from "zod";
+import type { $ZodType } from "zod/v4/core";
 import { FLATTENED_PERMISSIONS, PERMISSION_SCOPES } from "@/lib/constants.js";
 import { handleDbError, UnauthorizedError, UnreachableError } from "./errors.js";
 
@@ -61,7 +64,7 @@ export function dbAction<T extends unknown[], R>(
 	};
 }
 
-export function snakeToNormalCase(s: string) {
+export function snakeToNormalCase(s: string): string {
 	const r = s.split("_").join(" ").replace(/\s+/g, " ");
 	return r[0]?.toUpperCase() + r.slice(1);
 }
@@ -74,3 +77,49 @@ export const generateSecureString = customAlphabet(PASSWORD_GENERATION_CUSTOM_AL
 export function hexSha256(token: string) {
 	return createHash("sha256").update(token).digest("hex");
 }
+/**
+ * Orders the workflow template/instance steps in correct order despite the given order.
+ * @param stepMap A map, which points (step id -> next step id)
+ * @param initialStepId The initial step to start the ordering from.
+ * @returns An array of step IDs in order
+ */
+export function orderWorkflowSteps<T extends { id: number; nextStepId: number | null }>(
+	unorderedSteps: T[],
+	initialStepId: number | null,
+): T[] {
+	if (unorderedSteps.length === 0 || initialStepId == null) return []; // they should technically be asserted. no steps = no initial
+
+	const stepMap = new Map(unorderedSteps.map((s) => [s.id, s]));
+
+	const seenIds = new Set<number>();
+	const ordered: T[] = [];
+	let currentStepId: number | null = initialStepId;
+	while (currentStepId != null) {
+		const currentStep = stepMap.get(currentStepId);
+		if (currentStep == null) unreachable(); // should be there
+		if (seenIds.has(currentStepId)) unreachable(); // loops! bad
+
+		seenIds.add(currentStepId);
+		ordered.push(currentStep);
+		currentStepId = currentStep.nextStepId;
+	}
+
+	return ordered;
+}
+
+export const scopedParamHandler = <S extends Record<string, unknown>, T>(
+	zodSchema: $ZodType<T>,
+	handler: ApiRequestParamsHandler<T, S>,
+): express.RequestParamHandler => {
+	return async (req, res, next, value) => {
+		try {
+			const parsed = z.parse(zodSchema, value);
+			await handler(req, res as express.Response<unknown, S>, next, parsed);
+			next();
+		} catch (err) {
+			next(err);
+		}
+	};
+};
+
+export const idLike = (error: string) => z.coerce.number({ error }).int({ error });

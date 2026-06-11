@@ -18,31 +18,50 @@ export const PASSWORD_TOKEN_EXPIRY = 15 * MINUTE;
 export const PASSWORD_TOKEN_TYPES = ["SET_PASSWORD", "RESET_PASSWORD"] as const;
 
 // === System Level
+
+// Users & organizations
 export const USER_TYPES = ["admin", "end_user"] as const;
 export const MANAGED_ENTITY_TYPES = ["organization", "venue"] as const;
 export const VENUE_ACCESS_LEVELS = ["public", "private"] as const;
-export const EVENT_STATUS = [
-	"draft",
-	"awaiting_approval",
-	"cancelled",
-	"overridden",
-	"completed",
-] as const;
-export const EVENT_ORGANIZER_ROLES = ["host", "co_host"] as const;
+
+// Events
+export const EVENT_TYPE_VENUE_POLICY = ["required", "optional", "forbidden"] as const;
+export const EVENT_TYPE_COLLABORATION_POLICY = ["required", "optional", "forbidden"] as const;
+export const EVENT_STATUS = ["draft", "pending", "approved", "cancelled", "overridden"] as const; // todo: an event should not get overridden by changing its status
+export const EVENT_ORGANIZER_ROLES = ["host", "co_host", "resource_provider"] as const; // note: keep in sync with EVENT_ORGANIZER_INVITABLE_ROLES
+export const EVENT_ORGANIZER_INVITATION_ROLES = ["co_host"] as const; // note: keep in sync with EVENT_ORGANIZER_ROLES
 export const EVENT_ORGANIZER_INVITATION_STATUS = [
 	"pending",
 	"accepted",
 	"rejected",
-	"revoked",
+	"revoked", // withdrawn
 	"expired",
 ] as const;
-export const WORKFLOW_INSTANCE_STATUS = ["pending", "approved", "rejected", "revoked"] as const;
-export const WORKFLOW_INSTANCE_STEP_STATUS = [
-	"approved",
-	"rejected",
-	"skipped",
-	"pending",
+
+// Workflows
+export const WORKFLOW_INSTANCE_STATUS = [
+	"active", // is running
+	"completed", // completed successfully
+	"denied", // denied somewhere, so stopped
+	"aborted", // cancelled by the host
+	"overridden", // overridden by higher authority
 ] as const;
+export const WORKFLOW_INSTANCE_STEP_STATUS = [
+	"pending", // yet to execute
+	"active", // step is currently active & awaiting response
+	"completed", // step completed!
+	"skipped", // step was skipped because no such target groups can be created
+	"blocked", // step cannot be skipped, because there are target groups, but at least one had no assignments
+	"denied", // someone denied, so, the outcome is rejected.
+	"overridden", // overridden by higher authority
+] as const;
+export const WORKFLOW_INSTANCE_STEP_ASSIGNMENT_STATUS = [
+	"pending", // still waiting for response
+	"approved", // approved!
+	"denied", // denied
+	"skipped", // if the criterias were met by someone else's approval, and yours got skipped
+] as const;
+export const WORKFLOW_TARGET_GROUP_APPROVAL_CRITERIA = ["all", "any"] as const;
 
 // note: keep it sorted like the schema:
 export const PERMISSION = {
@@ -73,6 +92,28 @@ export const PERMISSION = {
 	venue_type: {
 		create: "Create venue types",
 		create_role: "Create roles under venue types",
+	},
+	event_type: {
+		create: "Create event types",
+		delete: "Delete event types",
+		modify_hierarchy: "Modify hierarchy of event types",
+	},
+	event_category: {
+		create: "Create event categories",
+	},
+	event: {
+		manage: "Manage events",
+		view_own: "View own organization's events of all statuses",
+		view_all_confirmed: "View all confirmed and upcoming events",
+		view_all: "View all events of all statuses",
+		view_all_non_draft: "View all events except drafts",
+		allot_venue: "Allot and remove venues for events",
+	},
+	event_organizer: {
+		manage: "Manage organizers of an event",
+	},
+	event_organizer_invitation: {
+		respond: "Accept or reject an organizer invitation",
 	},
 } as const;
 

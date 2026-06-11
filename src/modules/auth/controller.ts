@@ -1,14 +1,14 @@
 import { IS_PROD, REFRESH_TOKEN_COOKIE_NAME } from "@/lib/constants.js";
 import { UnauthorizedError } from "@/lib/errors.js";
-import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
+import { ok } from "@/lib/helpers.js";
 import { JWT_REFRESH_TOKEN_EXPIRY } from "@/lib/jwt.js";
-import { loginSchema, requestPasswordTokenSchema, resetPasswordSchema } from "./schema.js";
+import * as schemas from "./schema.js";
 import * as service from "./service.js";
 
 export const login: ApiRequestHandler<{
 	accessToken: string;
 }> = async (req, res) => {
-	const body = loginSchema.parse(req.body);
+	const body = schemas.loginSchema.parse(req.body);
 	const result = await service.login(body.email, body.password);
 
 	res.cookie(REFRESH_TOKEN_COOKIE_NAME, result.refreshToken, {
@@ -30,12 +30,6 @@ export const logout: ApiRequestHandler = (_req, res) => {
 		sameSite: "lax",
 	});
 	return res.sendStatus(200);
-};
-
-export const userDetails: ApiRequestHandler<Frontend.AuthenticatedUser> = async (req, res) => {
-	const user = getAuthenticatedUser(req);
-	const result = await service.getUserDetails(user.id);
-	return ok(res, result);
 };
 
 export const refresh: ApiRequestHandler<{
@@ -61,13 +55,13 @@ export const refresh: ApiRequestHandler<{
 };
 
 export const requestPasswordToken: ApiRequestHandler = async (req, res) => {
-	const body = requestPasswordTokenSchema.parse(req.body);
+	const body = schemas.requestPasswordTokenSchema.parse(req.body);
 	await service.requestPasswordToken(body.email, body.type);
 	return ok(res, null);
 };
 
 export const resetPassword: ApiRequestHandler = async (req, res) => {
-	const body = resetPasswordSchema.parse(req.body);
+	const body = schemas.resetPasswordSchema.parse(req.body);
 	const result = await service.resetPassword(body.token, body.password);
 	return ok(res, result);
 };

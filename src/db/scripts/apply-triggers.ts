@@ -55,6 +55,7 @@ for (const triggerFile of triggerFiles) {
 		console.log("  *", util.styleText("dim", previewText));
 
 		commandsCount++;
+
 		await db.execute(sql.raw(command));
 	}
 }

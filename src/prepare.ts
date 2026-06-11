@@ -1,6 +1,6 @@
 import { styleText } from "node:util";
-import { db, schema } from "./db/index.js";
-import { FLATTENED_PERMISSIONS, IS_PROD } from "./lib/constants.js";
+import { db, schema } from "@/db/index.js";
+import { FLATTENED_PERMISSIONS, IS_PROD } from "@/lib/constants.js";
 
 export async function prepare() {
 	if (!IS_PROD) {

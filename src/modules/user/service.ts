@@ -2,11 +2,11 @@ import { sendEmail } from "@/lib/email.js";
 import { getAccountCreatedContent } from "@/lib/email-templates.js";
 import { quickEnv } from "@/lib/helpers.js";
 import * as repository from "./repository.js";
-import type { CreateUserSchema } from "./schema.js";
+import type * as schemas from "./schema.js";
 
 const frontendUrl = quickEnv("FRONTEND_ORIGIN", true);
 
-export async function createUser(input: CreateUserSchema) {
+export async function createUser(input: schemas.CreateUserSchema) {
 	const user = await repository.insertUser({
 		email: input.email,
 		fullName: input.fullName,

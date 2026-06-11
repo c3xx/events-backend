@@ -2,6 +2,9 @@ import { Router } from "express";
 import { requirePermissions } from "@/middlewares/index.js";
 import * as controller from "./controller.js";
 
+import facilitiesRouter from "./facility/routes.js";
+import membersRouter from "./member/routes.js";
+
 const router: Router = Router();
 
 router.get("/", controller.getVenues);
@@ -9,26 +12,8 @@ router.post("/", requirePermissions(["venue:create"]), controller.createVenue);
 
 router.get("/:id", controller.getVenue);
 
-router.get("/:id/members", controller.getVenueMembers);
-router.post("/:id/members", requirePermissions(["venue:add_member"]), controller.addMemberToVenue);
-router.put(
-	"/:id/members/:userId",
-	requirePermissions(["venue:add_member"]),
-	controller.updateVenueMemberRoles,
-);
-router.delete(
-	"/:id/members/:userId",
-	requirePermissions(["venue:add_member"]),
-	controller.deleteVenueMember,
-);
+router.use("/:id/members", membersRouter);
 
-router.get("/:id/facilities", controller.getVenueFacilities);
-router.put(
-	"/:id/facilities",
-	requirePermissions(["venue:modify_facilities"]),
-	controller.setVenueFacilities,
-);
-
-// todo: [un]assign single facility to venue
+router.use("/:id/facilities", facilitiesRouter);
 
 export default router;

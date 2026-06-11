@@ -1,14 +1,8 @@
 import { Router } from "express";
-import { requirePermissions } from "@/middlewares/require-permissions.js";
-import * as controller from "./controller.js";
+import permissionsRouter from "./permission/routes.js";
 
 const router: Router = Router();
 
-router.get("/:id/permissions", controller.getRolePermissions);
-router.put(
-	"/:id/permissions",
-	requirePermissions(["role:modify_permissions"]),
-	controller.setRolePermissions,
-);
+router.use("/:id/permissions", permissionsRouter);
 
 export default router;

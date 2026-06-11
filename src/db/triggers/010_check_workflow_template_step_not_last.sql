@@ -1,5 +1,7 @@
 -- 010_check_workflow_template_step_not_last.sql
 --
+-- todo: this needs to be fixed
+--
 -- prevent deletion of the last remaining step in a workflow_template
 -- that is assigned to an event_type
 
@@ -18,7 +20,7 @@ BEGIN
     AND NOT EXISTS (
         SELECT 1
         FROM workflow_template_step
-        WHERE workflow_template_id = OLD.workflow_template_id
+        WHERE template_id = OLD.template_id
         AND next_step_id = OLD.id
     ) THEN
         RAISE EXCEPTION

@@ -11,7 +11,7 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    SELECT workflow_template_id INTO step_workflow_template_id
+    SELECT template_id INTO step_workflow_template_id
     FROM workflow_template_step
     WHERE id = NEW.initial_step_id;
 
