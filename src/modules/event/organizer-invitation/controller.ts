@@ -1,7 +1,7 @@
 import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
+import { eventScopedSchema } from "@/modules/event/schema.js";
 import {
 	invitationItemScopedSchema,
-	invitationScopedSchema,
 	respondToInvitationSchema,
 	revokeInvitationSchema,
 } from "./schema.js";
@@ -30,19 +30,18 @@ export const getEventInvitations: ApiRequestHandler<
 		};
 	}[]
 > = async (req, res) => {
-	const params = invitationScopedSchema.parse(req.params);
-	const result = await service.getEventInvitations(params.eventId);
+	const params = eventScopedSchema.parse(req.params);
+	const result = await service.getEventInvitations(params.id);
 	return ok(res, result);
 };
 
 export const respondToInvitation: ApiRequestHandler<{
 	id: number;
-	status: EventOrganizerInvitationStatus;
 }> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
 	const params = invitationItemScopedSchema.parse(req.params);
 	const body = respondToInvitationSchema.parse(req.body);
-	const result = await service.respondToInvitation(params.eventId, params.invitationId, body, user);
+	const result = await service.respondToInvitation(params.id, params.invitationId, body, user);
 	return ok(res, result);
 };
 
@@ -50,6 +49,6 @@ export const revokeInvitation: ApiRequestHandler<null> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
 	const params = invitationItemScopedSchema.parse(req.params);
 	const body = revokeInvitationSchema.parse(req.body);
-	await service.revokeInvitation(params.eventId, params.invitationId, body.userRoleId, user);
+	await service.revokeInvitation(params.id, params.invitationId, body, user);
 	return ok(res, null);
 };

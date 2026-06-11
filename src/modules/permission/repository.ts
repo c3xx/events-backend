@@ -31,9 +31,10 @@ export const hasPermissionInManagedEntity = dbAction(
 			id: number;
 			type: UserType;
 		},
-		managedEntity: ManagedEntityType,
+		managedEntityType: ManagedEntityType,
 		refId: number[],
 		permission: PermissionCode,
+		userRoleId?: number,
 	) => {
 		if (user.type === "admin") return true;
 		const [found] = await db
@@ -44,9 +45,10 @@ export const hasPermissionInManagedEntity = dbAction(
 			.innerJoin(schema.permission, eq(schema.permission.id, schema.rolePermission.permissionId))
 			.where(
 				and(
+					...(userRoleId != null ? [eq(schema.userRole.id, userRoleId)] : []),
 					eq(schema.userRole.userId, user.id),
 					inArray(schema.managedEntity.refId, refId),
-					eq(schema.managedEntity.managedEntityType, managedEntity),
+					eq(schema.managedEntity.managedEntityType, managedEntityType),
 					eq(schema.permission.code, permission),
 					isNull(schema.userRole.deletedAt),
 				),

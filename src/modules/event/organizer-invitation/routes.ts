@@ -1,21 +1,12 @@
 import { Router } from "express";
-import { requirePermissions } from "@/middlewares/index.js";
 import * as controller from "./controller.js";
 
 const router: Router = Router({ mergeParams: true });
 
 router.get("/", controller.getEventInvitations);
 
-router.patch(
-	"/:invitationId",
-	requirePermissions(["event_organizer_invitation:respond"]),
-	controller.respondToInvitation,
-);
+router.patch("/:invitationId", controller.respondToInvitation);
 
-router.delete(
-	"/:invitationId",
-	requirePermissions(["event_organizer_invitation:send"]),
-	controller.revokeInvitation,
-);
+router.delete("/:invitationId", controller.revokeInvitation);
 
 export default router;

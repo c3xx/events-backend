@@ -1,10 +1,6 @@
 import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
 import { eventScopedSchema } from "@/modules/event/schema.js";
-import {
-	addEventOrganizerSchema,
-	organizerScopedSchema,
-	removeEventOrganizerSchema,
-} from "./schema.js";
+import { addEventOrganizerSchema, organizerScopedSchema } from "./schema.js";
 import * as service from "./service.js";
 
 export const getEventOrganizers: ApiRequestHandler<
@@ -32,12 +28,9 @@ export const addEventOrganizer: ApiRequestHandler<
 	return ok(res, result, 201);
 };
 
-export const removeEventOrganizer: ApiRequestHandler<{
-	id: number;
-}> = async (req, res) => {
+export const removeEventOrganizer: ApiRequestHandler<true> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
 	const params = organizerScopedSchema.parse(req.params);
-	const body = removeEventOrganizerSchema.parse(req.body);
-	const result = await service.removeEventOrganizer(params.eventId, params.organizerId, body, user);
-	return ok(res, result);
+	await service.removeEventOrganizer(params.eventId, params.organizerId, user);
+	return ok(res, true);
 };

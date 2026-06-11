@@ -1,14 +1,8 @@
 import z from "zod";
 
-export const invitationScopedSchema = z
-	.object({
-		eventId: z.coerce.number({ error: "Invalid event ID" }).int({ error: "Invalid event ID" }),
-	})
-	.strict();
-
 export const invitationItemScopedSchema = z
 	.object({
-		eventId: z.coerce.number({ error: "Invalid event ID" }).int({ error: "Invalid event ID" }),
+		id: z.coerce.number({ error: "Invalid event ID" }).int({ error: "Invalid event ID" }),
 		invitationId: z.coerce
 			.number({ error: "Invalid invitation ID" })
 			.int({ error: "Invalid invitation ID" }),
@@ -34,7 +28,6 @@ export const revokeInvitationSchema = z
 	})
 	.strict();
 
-export type InvitationScopedSchema = z.output<typeof invitationScopedSchema>;
 export type InvitationItemScopedSchema = z.output<typeof invitationItemScopedSchema>;
 export type RespondToInvitationSchema = z.output<typeof respondToInvitationSchema>;
 export type RevokeInvitationSchema = z.output<typeof revokeInvitationSchema>;

@@ -101,13 +101,10 @@ export const PERMISSION = {
 		allot_venue: "Allot and remove venues for events",
 	},
 	event_organizer: {
-		add: "Add organizer to event",
-		remove: "Remove organizer from event",
+		manage: "Manage organizers of an event",
 	},
 	event_organizer_invitation: {
-		send: "Send co_host invitation to another organization",
-		respond: "Accept or reject a co_host invitation",
-		view: "View organizer invitations for an event", //or can everyone view this?
+		respond: "Accept or reject an organizer invitation",
 	},
 } as const;
 
