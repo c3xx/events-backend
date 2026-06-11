@@ -8,7 +8,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1
         FROM workflow_template_step
-        WHERE workflow_template_id = NEW.workflow_template_id
+        WHERE template_id = NEW.workflow_template_id
     ) THEN
         RAISE EXCEPTION
             'workflow_template % must have at least one step before being assigned to an event type',

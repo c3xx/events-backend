@@ -17,7 +17,7 @@ BEGIN
             NEW.id;
     END IF;
 
-    SELECT event_type_id INTO parent_event_type_id
+    SELECT type_id INTO parent_event_type_id
     FROM event
     WHERE id=NEW.parent_event_id
     AND deleted_at IS NULL;
@@ -31,12 +31,12 @@ BEGIN
     IF NOT EXISTS(
         SELECT 1
         FROM event_type_allowed_parent
-        WHERE child_type_id=NEW.event_type_id
+        WHERE child_type_id=NEW.type_id
         AND parent_type_id=parent_event_type_id
     ) THEN
         RAISE EXCEPTION
             'event: type % is not allowed to be placed under type %',
-            NEW.event_type_id,
+            NEW.type_id,
             parent_event_type_id;
     END IF;
 
@@ -49,6 +49,6 @@ DROP TRIGGER IF EXISTS trg_check_event_parent_type ON event;
 
 ---split---
 CREATE TRIGGER trg_check_event_parent_type
-BEFORE INSERT OR UPDATE OF event_type_id, parent_event_id
+BEFORE INSERT OR UPDATE OF type_id, parent_event_id
 ON event
 FOR EACH ROW EXECUTE FUNCTION check_event_parent_type();
