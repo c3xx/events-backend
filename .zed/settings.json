@@ -21,9 +21,7 @@
 			}
 		},
 		"JSON": {
-			"language_servers": [
-				"json-language-server"
-			],
+			"language_servers": ["json-language-server"],
 			"formatter": {
 				"language_server": {
 					"name": "biome"
@@ -31,9 +29,7 @@
 			}
 		},
 		"JSONC": {
-			"language_servers": [
-				"json-language-server"
-			],
+			"language_servers": ["json-language-server"],
 			"formatter": {
 				"language_server": {
 					"name": "biome"
