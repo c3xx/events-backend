@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { requirePermissions } from "@/middlewares/require-permissions.js";
 import * as controller from "./controller.js";
+import organizerRouter from "./organizer/routes.js";
+import organizerInvitationRouter from "./organizer-invitation/routes.js";
 import { eventIdParamHandler } from "./scopes.js";
 import venueAllotmentRouter from "./venue-allotment/routes.js";
 import workflowInstanceRouter from "./workflow-instance/routes.js";
