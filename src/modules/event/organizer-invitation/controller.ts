@@ -31,7 +31,7 @@ export const getEventInvitations: ApiRequestHandler<
 	}[]
 > = async (req, res) => {
 	const params = eventScopedSchema.parse(req.params);
-	const result = await service.getEventInvitations(params.id);
+	const result = await service.getEventInvitations(params.eventId);
 	return ok(res, result);
 };
 
@@ -41,7 +41,7 @@ export const respondToInvitation: ApiRequestHandler<{
 	const user = getAuthenticatedUser(req);
 	const params = invitationItemScopedSchema.parse(req.params);
 	const body = respondToInvitationSchema.parse(req.body);
-	const result = await service.respondToInvitation(params.id, params.invitationId, body, user);
+	const result = await service.respondToInvitation(params.eventId, params.invitationId, body, user);
 	return ok(res, result);
 };
 
@@ -49,6 +49,6 @@ export const revokeInvitation: ApiRequestHandler<null> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
 	const params = invitationItemScopedSchema.parse(req.params);
 	const body = revokeInvitationSchema.parse(req.body);
-	await service.revokeInvitation(params.id, params.invitationId, body, user);
+	await service.revokeInvitation(params.eventId, params.invitationId, body, user);
 	return ok(res, null);
 };

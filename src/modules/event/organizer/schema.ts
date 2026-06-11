@@ -1,9 +1,9 @@
 import z from "zod";
 import { idLike } from "@/lib/helpers.js";
+import { eventScopedSchema } from "@/modules/event/schema.js";
 
-export const organizerScopedSchema = z
-	.object({
-		eventId: idLike("Invalid event ID"),
+export const organizerScopedSchema = eventScopedSchema
+	.extend({
 		organizerId: idLike("Invalid organizer ID"),
 	})
 	.strict();

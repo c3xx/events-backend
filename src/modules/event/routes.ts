@@ -10,12 +10,12 @@ const router: Router = Router();
 
 router.post("/", controller.createEvent);
 router.get("/", controller.getEvents);
-router.patch("/:id", requirePermissions(["event:manage"]), controller.updateEvent);
+router.patch("/:eventId", requirePermissions(["event:manage"]), controller.updateEvent);
 
-router.get("/:id", controller.getEvent);
+router.get("/:eventId", controller.getEvent);
 
-router.use("/:id/venue-allotments", venueAllotmentRouter);
-router.use("/:id/organizers", organizerRouter);
-router.use("/:id/organizer-invitations", organizerInvitationRouter);
+router.use("/:eventId/venue-allotments", venueAllotmentRouter);
+router.use("/:eventId/organizers", organizerRouter);
+router.use("/:eventId/organizer-invitations", organizerInvitationRouter);
 
 export default router;

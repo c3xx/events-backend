@@ -14,7 +14,7 @@ export const getEventOrganizers: ApiRequestHandler<
 	}[]
 > = async (req, res) => {
 	const params = eventScopedSchema.parse(req.params);
-	const result = await service.getEventOrganizers(params.id);
+	const result = await service.getEventOrganizers(params.eventId);
 	return ok(res, result);
 };
 
@@ -24,7 +24,7 @@ export const addEventOrganizer: ApiRequestHandler<
 	const user = getAuthenticatedUser(req);
 	const params = eventScopedSchema.parse(req.params);
 	const body = addEventOrganizerSchema.parse(req.body);
-	const result = await service.addEventOrganizer(params.id, body, user);
+	const result = await service.addEventOrganizer(params.eventId, body, user);
 	return ok(res, result, 201);
 };
 
