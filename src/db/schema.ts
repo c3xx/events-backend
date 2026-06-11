@@ -192,13 +192,7 @@ export const userPasswordToken = pgTable(
 		uniqueIndex()
 			.on(t.userId)
 			.where(
-				and(
-					isNull(t.usedAt),
-					lt(
-						sql`now()`,
-						sql`${t.createdAt} + (${PASSWORD_TOKEN_EXPIRY} * interval '1 millisecond')`,
-					),
-				)!,
+				sql`${t.usedAt} IS NULL AND now() < ${t.createdAt} + (${sql.raw(PASSWORD_TOKEN_EXPIRY.toString())} * interval '1 millisecond')`,
 			),
 	],
 );

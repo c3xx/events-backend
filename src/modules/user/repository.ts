@@ -2,24 +2,22 @@ import { and, eq, inArray, isNull, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
-export const insertUser = dbAction(
-	async (userData: { email: string; fullName: string }) => {
-		const [user] = await db
-			.insert(schema.user)
-			.values({
-				type: "end_user",
-				email: userData.email,
-				fullName: userData.fullName,
-				isActive: false,
-			})
-			.returning({
-				id: schema.user.id,
-			});
+export const insertUser = dbAction(async (userData: { email: string; fullName: string }) => {
+	const [user] = await db
+		.insert(schema.user)
+		.values({
+			type: "end_user",
+			email: userData.email,
+			fullName: userData.fullName,
+			isActive: false,
+		})
+		.returning({
+			id: schema.user.id,
+		});
 
-		if (user == null) unreachable();
-		return user;
-	},
-);
+	if (user == null) unreachable();
+	return user;
+});
 
 export const getUsers = dbAction(async () => {
 	return await db.query.user.findMany({

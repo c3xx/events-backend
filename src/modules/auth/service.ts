@@ -15,6 +15,7 @@ import {
 	JWT_REFRESH_SECRET_SIGN_KEY,
 } from "@/lib/jwt.js";
 import * as userRepository from "@/modules/user/repository.js";
+import * as repository from "./repository.js";
 
 const frontendUrl = quickEnv("FRONTEND_ORIGIN", true);
 
@@ -31,7 +32,9 @@ export async function login(
 	}
 
 	if (user.passwordHash == null) {
-		throw new ForbiddenError("Account password not set. Please complete your account password setup first.");
+		throw new ForbiddenError(
+			"Account password not set. Please complete your account password setup first.",
+		);
 	}
 
 	const isValid = await verifyPassword(user.passwordHash, password);
@@ -82,18 +85,17 @@ export async function createNewTokens(refreshToken: string) {
 	};
 }
 
-export async function requestPasswordToken(
-	email: string,
-	type: "SET_PASSWORD" | "RESET_PASSWORD",
-) {
-	const user = await repository.findUserByEmail(email);
+export async function requestPasswordToken(email: string, type: "SET_PASSWORD" | "RESET_PASSWORD") {
+	const user = await userRepository.findUserByEmail(email);
 
 	if (user == null) {
 		throw new NotFoundError("No account found with that email address.");
 	}
 
 	if (type === "RESET_PASSWORD" && user.passwordHash == null) {
-		throw new ForbiddenError("No password set on this account. Please complete your account password setup first.");
+		throw new ForbiddenError(
+			"No password set on this account. Please complete your account password setup first.",
+		);
 	}
 
 	if (type === "RESET_PASSWORD" && !user.isActive) {
