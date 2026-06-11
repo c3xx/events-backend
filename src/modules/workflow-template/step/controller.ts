@@ -10,10 +10,15 @@ export const getWorkflowTemplateStep: ScopedApiRequestHandler<
 		name: string;
 		nextStepId: number | null;
 		stepRoles: {
-			targetGroupApprovalCriteria: WorkflowTargetGroupApprovalCriteria;
+			targetGroupApprovalCriteria: "all" | "any";
 			role: {
 				id: number;
 				name: string;
+				scope: {
+					type: "organization" | "venue";
+					kindId: number;
+					kindName: string;
+				};
 			};
 		}[];
 	}
@@ -28,6 +33,18 @@ export const getAllWorkflowTemplateSteps: ScopedApiRequestHandler<
 		id: number;
 		name: string;
 		nextStepId: number | null;
+		stepRoles: {
+			targetGroupApprovalCriteria: "all" | "any";
+			role: {
+				id: number;
+				name: string;
+				scope: {
+					type: "organization" | "venue";
+					kindId: number;
+					kindName: string;
+				};
+			};
+		}[];
 	}[]
 > = async (_req, res) => {
 	const result = await service.getAllWorkflowTemplateSteps(res.locals.template);

@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
@@ -124,6 +124,26 @@ export const findById = dbAction(async (templateId: number, stepId: number) => {
 						columns: {
 							id: true,
 							name: true,
+						},
+						extras: {
+							scope: sql<{
+								// note: null intentionally not handled because, critical system change
+								type: "organization" | "venue";
+								kindId: number;
+								kindName: string;
+							}>`case
+								when ${schema.role.managedEntityType} = 'organization'
+								then (
+									select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', ot.id, 'kindName', ot.name)
+									from organization_type ot where ot.id = ${schema.role.typeRefId} limit 1
+								)
+								when ${schema.role.managedEntityType} = 'venue'
+								then (
+									select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', vt.id, 'kindName', vt.name)
+									from venue_type vt where vt.id = ${schema.role.typeRefId} limit 1
+								)
+								else null
+							end`.as("scope"),
 						},
 					},
 				},
