@@ -1,19 +1,16 @@
 import z from "zod";
+import { idLike } from "@/lib/helpers.js";
 
 export const invitationItemScopedSchema = z
 	.object({
-		id: z.coerce.number({ error: "Invalid event ID" }).int({ error: "Invalid event ID" }),
-		invitationId: z.coerce
-			.number({ error: "Invalid invitation ID" })
-			.int({ error: "Invalid invitation ID" }),
+		id: idLike("Invalid event ID"),
+		invitationId: idLike("Invalid invitation ID"),
 	})
 	.strict();
 
 export const respondToInvitationSchema = z
 	.object({
-		userRoleId: z.coerce
-			.number({ error: "Invalid user role id" })
-			.int({ error: "Invalid user role id" }),
+		userRoleId: idLike("Invalid user role id"),
 		status: z.enum(["accepted", "rejected"], {
 			error: "Status must be either accepted or rejected",
 		}),
@@ -22,9 +19,7 @@ export const respondToInvitationSchema = z
 
 export const revokeInvitationSchema = z
 	.object({
-		userRoleId: z.coerce
-			.number({ error: "Invalid user role ID" })
-			.int({ error: "Invalid user role ID" }),
+		userRoleId: idLike("Invalid user role ID"),
 	})
 	.strict();
 
