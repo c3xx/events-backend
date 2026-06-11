@@ -169,25 +169,30 @@ export const insertWorkflowInstance = dbAction(
 					const insertedRole = insertedRoles[j];
 					if (role == null || insertedRole == null) return unreachable();
 
-					for (const group of role.targetGroups) {
-						const [insertedGroup] = await tx
-							.insert(schema.workflowInstanceStepTargetGroup)
-							.values({
+					const insertedGroups = await tx
+						.insert(schema.workflowInstanceStepTargetGroup)
+						.values(
+							role.targetGroups.map((group) => ({
 								stepRoleId: insertedRole.id,
 								managedEntityId: group.managedEntityId,
-							})
-							.returning({ id: schema.workflowInstanceStepTargetGroup.id });
-						if (insertedGroup == null) return unreachable();
+							})),
+						)
+						.returning({ id: schema.workflowInstanceStepTargetGroup.id });
 
-						if (group.userRoleIds.length > 0) {
-							await tx.insert(schema.workflowInstanceStepAssignment).values(
-								group.userRoleIds.map((userRoleId) => ({
-									targetGroupId: insertedGroup.id,
-									userRoleId,
-									status: "pending" as const,
-								})),
-							);
-						}
+					if (insertedGroups.length !== role.targetGroups.length) return unreachable();
+
+					const allAssignments = role.targetGroups.flatMap((group, i) => {
+						const insertedGroup = insertedGroups[i];
+						if (insertedGroup == null) return unreachable();
+						return group.userRoleIds.map((userRoleId) => ({
+							targetGroupId: insertedGroup.id,
+							userRoleId,
+							status: "pending" as const,
+						}));
+					});
+
+					if (allAssignments.length > 0) {
+						await tx.insert(schema.workflowInstanceStepAssignment).values(allAssignments);
 					}
 				}
 			}

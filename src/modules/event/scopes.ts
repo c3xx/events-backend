@@ -1,6 +1,7 @@
-import { NotFoundError } from "@/lib/errors.js";
-import { idLike, scopedParamHandler, unreachable } from "@/lib/helpers.js";
+import { ForbiddenError, NotFoundError } from "@/lib/errors.js";
+import { getAuthenticatedUser, idLike, scopedParamHandler } from "@/lib/helpers.js";
 import * as eventRepository from "@/modules/event/repository.js";
+import { hasPermissionInManagedEntity } from "../permission/repository.js";
 
 export type EventScope = {
 	event: {
@@ -54,9 +55,19 @@ export type EventScope = {
 export const eventIdParamHandler = scopedParamHandler<EventScope, number>(
 	idLike("Invalid event ID"),
 	async (_req, res, _next, eventId) => {
-		if (res.locals.event == null) unreachable();
+		const user = getAuthenticatedUser(_req);
 		const event = await eventRepository.findEventById(eventId);
 		if (event == null) throw new NotFoundError("Could not find the event");
+		const organizationIds = event.organizers.map((org) => org.organization.id);
+		const hasPermission = await hasPermissionInManagedEntity(
+			user,
+			"organization",
+			organizationIds,
+			"event:view_own",
+		);
+		if (!hasPermission) {
+			throw new ForbiddenError("You don't have permission to view this");
+		}
 		res.locals.event = event;
 	},
 );

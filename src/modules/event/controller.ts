@@ -87,6 +87,6 @@ export const submitEvent: ScopedApiRequestHandler<
 	}
 > = async (_req, res) => {
 	const user = getAuthenticatedUser(_req);
-	const result = await service.createWorkflowInstance(user, res.locals.event);
+	const result = await service.submitEvent(user, res.locals.event);
 	return ok(res, result);
 };

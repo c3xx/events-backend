@@ -177,7 +177,7 @@ type InstanceInsertData = {
 	}[];
 };
 
-export async function createWorkflowInstance(
+export async function submitEvent(
 	user: { id: number; type: UserType; permissions: PermissionCode[] },
 	event: EventScope["event"],
 ) {
@@ -185,7 +185,7 @@ export async function createWorkflowInstance(
 	if (!host) {
 		throw new NotFoundError("Host organizer not found");
 	}
-
+	//Only host organization can submit event
 	const hasPermission = await permissionRepository.hasPermissionInManagedEntity(
 		user,
 		"organization",
