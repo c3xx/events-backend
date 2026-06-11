@@ -1,4 +1,4 @@
-import { and, type HasDefault, isNull, lt, type NotNull, relations, sql } from "drizzle-orm";
+import { type HasDefault, isNull, type NotNull, relations, sql } from "drizzle-orm";
 import {
 	type AnyPgColumn,
 	bigint,
