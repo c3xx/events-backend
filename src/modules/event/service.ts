@@ -1,10 +1,15 @@
 import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
+import { orderWorkflowSteps, unreachable } from "@/lib/helpers.js";
 import * as eventTypeRepository from "@/modules/event-type/repository.js";
 import * as organizationRepository from "@/modules/organization/repository.js";
 import * as permissionRepository from "@/modules/permission/repository.js";
+import * as roleRepository from "@/modules/role/repository.js";
 import * as userRepository from "@/modules/user/repository.js";
+import * as workflowTemplateRepository from "@/modules/workflow-template/repository.js";
 import * as repository from "./repository.js";
 import type * as schemas from "./schema.js";
+import type { EventScope } from "./scopes.js";
+import * as workflowInstanceRepository from "./workflow-instance/repository.js";
 
 export async function createEvent(
 	user: { id: number; type: UserType; permissions: PermissionCode[] },
@@ -154,4 +159,146 @@ export async function getEvents(
 		viewAllConfirmed: !grants.viewAll && !grants.viewAllNonDraft && grants.viewAllConfirmed,
 		orgIds,
 	});
+}
+
+type InstanceInsertData = {
+	eventId: number;
+	submittedBy: number;
+	steps: {
+		name: string;
+		roles: {
+			roleId: number;
+			targetGroupApprovalCriteria: WorkflowTargetGroupApprovalCriteria;
+			targetGroups: {
+				managedEntityId: number;
+				userRoleIds: number[];
+			}[];
+		}[];
+	}[];
+};
+
+export async function submitEvent(
+	user: { id: number; type: UserType; permissions: PermissionCode[] },
+	event: EventScope["event"],
+) {
+	const host = event.organizers.find((o) => o.role === "host");
+	if (!host) {
+		throw new NotFoundError("Host organizer not found");
+	}
+	//Only host organization can submit event
+	const hasPermission = await permissionRepository.hasPermissionInManagedEntity(
+		user,
+		"organization",
+		[host.organization.id],
+		"event:manage",
+	);
+	if (!hasPermission) {
+		throw new ForbiddenError("You do not have any required permission for this");
+	}
+
+	const existing = await workflowInstanceRepository.findActiveInstance(event.id);
+	if (existing) {
+		throw new ConflictError("An active workflow instance already exists for this event");
+	}
+
+	const eventType = await eventTypeRepository.getEventType(event.type.id);
+	if (!eventType) {
+		throw new NotFoundError("Event type not found");
+	}
+
+	const template = await workflowTemplateRepository.findByIdWithRoles(eventType.workflowTemplateId);
+	if (!template) {
+		throw new NotFoundError("Workflow template not found");
+	}
+	if (template.initialStepId == null || template.steps.length === 0) {
+		throw new ConflictError("Workflow template has no steps configured");
+	}
+
+	const orderedSteps = orderWorkflowSteps(template.steps, template.initialStepId);
+
+	const organizerOrgIds = event.organizers.map((o) => o.organization.id);
+	const venueIds = event.venueAllotments.map((va) => va.venue.id);
+
+	const [orgManagedEntities, venueManagedEntities] = await Promise.all([
+		workflowInstanceRepository.findAncestorOrganizationManagedEntities(organizerOrgIds), // get all managed entity related to event organizers
+		workflowInstanceRepository.findVenueManagedEntityIds(venueIds), // get all managed entity related to the venues
+	]);
+
+	const allManagedEntities = [...orgManagedEntities, ...venueManagedEntities];
+	const allManagedEntityIds = allManagedEntities.map((e) => e.managedEntityId);
+
+	const roleIds = [
+		...new Set(orderedSteps.flatMap((step) => step.stepRoles.map((stepRole) => stepRole.role.id))),
+	];
+
+	const assignments = await roleRepository.findAssignmentsForRoles(roleIds, allManagedEntityIds); // Find the userRole of all roles in the related managed entities
+
+	const entitiesByTypeAndKind = new Map<string, number[]>();
+	// create a map for storing (enityType,typeRef)=>managedEnitityIds[]
+	// e.g (Organization, club)=>[CodingClub, CSI]
+
+	for (const entity of allManagedEntities) {
+		const key = `${entity.managedEntityType}:${entity.typeRefId}`;
+
+		if (!entitiesByTypeAndKind.has(key)) {
+			entitiesByTypeAndKind.set(key, []);
+		}
+
+		const managedEntityIds = entitiesByTypeAndKind.get(key);
+		if (managedEntityIds == null) unreachable();
+		managedEntityIds.push(entity.managedEntityId);
+	}
+
+	const assignmentMap = new Map<string, number[]>();
+	//create a map for storing (roleId,enityId)=>userRoleIds[]
+	// e.g (clubHead, CodingClub)=>[userRole A,userRole B]
+	for (const assignment of assignments) {
+		const key = `${assignment.roleId}:${assignment.managedEntityId}`;
+
+		if (!assignmentMap.has(key)) {
+			assignmentMap.set(key, []);
+		}
+
+		const userRoleIds = assignmentMap.get(key);
+		if (userRoleIds == null) unreachable();
+		userRoleIds.push(assignment.userRoleId);
+	}
+
+	const steps: InstanceInsertData["steps"] = [];
+
+	for (const step of orderedSteps) {
+		const resolvedRoles: InstanceInsertData["steps"][number]["roles"] = [];
+
+		for (const stepRole of step.stepRoles) {
+			//A step can have multiple roles
+			const role = stepRole.role;
+
+			const matchingEntityIds =
+				entitiesByTypeAndKind.get(`${role.managedEntityType}:${role.typeRefId}`) ?? []; //get enities which has the given role
+
+			const targetGroups = matchingEntityIds.map((managedEntityId) => ({
+				managedEntityId,
+				userRoleIds: assignmentMap.get(`${role.id}:${managedEntityId}`) ?? [], //get userRole with the role under the given entity
+			}));
+
+			resolvedRoles.push({
+				roleId: role.id,
+				targetGroupApprovalCriteria: stepRole.targetGroupApprovalCriteria,
+				targetGroups,
+			});
+		}
+
+		steps.push({
+			name: step.name,
+			roles: resolvedRoles,
+		});
+	}
+
+	const result = await workflowInstanceRepository.insertWorkflowInstance({
+		eventId: event.id,
+		submittedBy: user.id,
+		steps,
+	});
+
+	return result;
 }
