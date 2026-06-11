@@ -7,6 +7,6 @@ export const createVenueAllotment: ApiRequestHandler<{ id: number }> = async (re
 	const user = getAuthenticatedUser(req);
 	const params = eventScopedSchema.parse(req.params);
 	const body = schemas.createVenueAllotmentSchema.parse(req.body);
-	const result = await service.createVenueAllotment(user, params.id, body);
+	const result = await service.createVenueAllotment(user, params.eventId, body);
 	return ok(res, result);
 };

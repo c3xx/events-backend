@@ -39,7 +39,7 @@ export const createEventSchema = z
 
 export const eventScopedSchema = z
 	.object({
-		id: z.coerce.number({ error: "Invalid event ID" }).int({ error: "Invalid event ID" }),
+		eventId: z.coerce.number({ error: "Invalid event ID" }).int({ error: "Invalid event ID" }),
 	})
 	.strict();
 

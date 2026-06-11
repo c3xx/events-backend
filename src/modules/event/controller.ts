@@ -63,18 +63,18 @@ export const getEvent: ApiRequestHandler<{
 	}[];
 	report: { id: number; details: string; submittedAt: string } | null;
 }> = async (req, res) => {
-	const { id } = schemas.eventScopedSchema.parse(req.params);
 	const user = getAuthenticatedUser(req);
-	const result = await service.getEvent(user, id);
+	const params = schemas.eventScopedSchema.parse(req.params);
+	const result = await service.getEvent(user, params.eventId);
 	return ok(res, result);
 };
 
 export const updateEvent: ApiRequestHandler<{
 	id: number;
 }> = async (req, res) => {
-	const { id } = schemas.eventScopedSchema.parse(req.params);
 	const user = getAuthenticatedUser(req);
+	const params = schemas.eventScopedSchema.parse(req.params);
 	const body = schemas.updateEventSchema.parse(req.body);
-	const result = await service.updateEvent(user, id, body);
+	const result = await service.updateEvent(user, params.eventId, body);
 	return ok(res, result);
 };

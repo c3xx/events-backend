@@ -14,6 +14,7 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import {
+	EVENT_ORGANIZER_INVITATION_ROLES,
 	EVENT_ORGANIZER_INVITATION_STATUS,
 	EVENT_ORGANIZER_ROLES,
 	EVENT_STATUS,
@@ -43,6 +44,10 @@ export const eventTypeCollaborationPolicyEnum = pgEnum(
 );
 export const eventStatusEnum = pgEnum("event_status", EVENT_STATUS);
 export const eventOrganizerRoleEnum = pgEnum("event_organizer_role", EVENT_ORGANIZER_ROLES);
+export const eventOrganizerInvitationRoleEnum = pgEnum(
+	"event_organizer_invitation_role",
+	EVENT_ORGANIZER_INVITATION_ROLES,
+);
 export const eventOrganizerInvitationStatusEnum = pgEnum(
 	"event_organizer_invitation_status",
 	EVENT_ORGANIZER_INVITATION_STATUS,
@@ -518,10 +523,10 @@ export const venueAllotment = pgTable(
 	{
 		id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
 		venueId: integer()
-			.references(() => venue.id, { onDelete: "cascade" })
+			.references(() => venue.id)
 			.notNull(),
 		eventId: bigint({ mode: "number" })
-			.references(() => event.id, { onDelete: "cascade" })
+			.references(() => event.id)
 			.notNull(),
 		startsAt: timestamp({ mode: "string", withTimezone: true }).notNull(),
 		endsAt: timestamp({ mode: "string", withTimezone: true }).notNull(),
@@ -546,12 +551,13 @@ export const eventOrganizer = pgTable(
 	{
 		id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
 		eventId: bigint({ mode: "number" })
-			.references(() => event.id, { onDelete: "cascade" })
+			.references(() => event.id)
 			.notNull(),
 		organizationId: integer()
-			.references(() => organization.id, { onDelete: "cascade" })
+			.references(() => organization.id)
 			.notNull(),
 		role: eventOrganizerRoleEnum().notNull(),
+		invitationId: bigint({ mode: "number" }).references(() => eventOrganizerInvitation.id),
 		...fields("common", "soft-delete"),
 	},
 	(t) => [uniqueIndex().on(t.eventId, t.organizationId).where(isNull(t.deletedAt))],
@@ -566,6 +572,11 @@ export const eventOrganizerRelations = relations(eventOrganizer, (r) => ({
 		fields: [eventOrganizer.organizationId],
 		references: [organization.id],
 	}),
+	invitation: r.one(eventOrganizerInvitation, {
+		fields: [eventOrganizer.invitationId],
+		references: [eventOrganizerInvitation.id],
+		relationName: "organizer_invitation",
+	}),
 }));
 
 export const eventOrganizerInvitation = pgTable(
@@ -573,21 +584,20 @@ export const eventOrganizerInvitation = pgTable(
 	{
 		id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
 		eventId: bigint({ mode: "number" })
-			.references(() => event.id, { onDelete: "cascade" })
+			.references(() => event.id)
 			.notNull(),
-		invitedAt: timestamp({ mode: "string", withTimezone: true }).defaultNow(),
+		intendedRole: eventOrganizerInvitationRoleEnum().notNull(),
+		invitedAt: timestamp({ mode: "string", withTimezone: true }).defaultNow().notNull(),
 		invitedByUserId: bigint({ mode: "number" })
-			.references(() => userRole.id, { onDelete: "cascade" })
+			.references(() => userRole.id)
 			.notNull(),
 		senderOrganizationId: integer()
-			.references(() => organization.id, { onDelete: "cascade" })
+			.references(() => organization.id)
 			.notNull(),
 		recipientOrganizationId: integer()
-			.references(() => organization.id, { onDelete: "cascade" })
+			.references(() => organization.id)
 			.notNull(),
-		respondedByUserId: bigint({ mode: "number" }).references(() => userRole.id, {
-			onDelete: "cascade",
-		}),
+		respondedByUserId: bigint({ mode: "number" }).references(() => userRole.id),
 		status: eventOrganizerInvitationStatusEnum().default("pending").notNull(),
 		closedAt: timestamp({ mode: "string", withTimezone: true }),
 		...fields("common", "soft-delete"),
@@ -638,7 +648,7 @@ export const eventReport = pgTable(
 	{
 		id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
 		eventId: bigint({ mode: "number" })
-			.references(() => event.id, { onDelete: "cascade" })
+			.references(() => event.id)
 			.notNull(),
 		details: text().notNull(),
 		submittedAt: timestamp({ mode: "string", withTimezone: true }).defaultNow().notNull(),
