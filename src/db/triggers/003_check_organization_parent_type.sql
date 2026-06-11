@@ -5,7 +5,7 @@
 CREATE OR REPLACE FUNCTION check_organization_parent_type()
 RETURNS TRIGGER AS $$
 DECLARE
-    parent_type_id SMALLINT;
+    v_parent_type_id SMALLINT;
 BEGIN
     -- No parent is fine for root types
     IF NEW.parent_organization_id IS NULL THEN
@@ -22,12 +22,12 @@ BEGIN
     END IF;
 
     -- Get the parent's organization type
-    SELECT organization_type_id INTO parent_type_id
+    SELECT organization_type_id INTO v_parent_type_id
     FROM organization
     WHERE id = NEW.parent_organization_id
     AND deleted_at IS NULL;
 
-    IF parent_type_id IS NULL THEN
+    IF v_parent_type_id IS NULL THEN
         RAISE EXCEPTION
             'organization: parent organization % does not exist or is deleted',
             NEW.parent_organization_id;
@@ -37,12 +37,12 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM organization_type_allowed_parent
         WHERE child_type_id = NEW.organization_type_id
-        AND parent_type_id = parent_type_id
+        AND parent_type_id = v_parent_type_id
     ) THEN
         RAISE EXCEPTION
             'organization: type % is not allowed to be placed under type %',
             NEW.organization_type_id,
-            parent_type_id;
+            v_parent_type_id;
     END IF;
 
     RETURN NEW;
