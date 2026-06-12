@@ -83,3 +83,40 @@ export const findById = dbAction(async (id: number) => {
 		},
 	});
 });
+
+export const findByIdWithRoles = dbAction(async (id: number) => {
+	return db.query.workflowTemplate.findFirst({
+		where: and(eq(schema.workflowTemplate.id, id), isNull(schema.workflowTemplate.deletedAt)),
+		columns: {
+			id: true,
+			initialStepId: true,
+		},
+		with: {
+			steps: {
+				columns: {
+					id: true,
+					name: true,
+					nextStepId: true,
+				},
+				where: isNull(schema.workflowTemplateStep.deletedAt),
+				with: {
+					stepRoles: {
+						columns: {
+							targetGroupApprovalCriteria: true,
+						},
+						where: isNull(schema.workflowTemplateStepRole.deletedAt),
+						with: {
+							role: {
+								columns: {
+									id: true,
+									managedEntityType: true,
+									typeRefId: true,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	});
+});

@@ -1,5 +1,6 @@
 import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
 import * as schemas from "./schema.js";
+import type { EventScope } from "./scopes.js";
 import * as service from "./service.js";
 
 export const createEvent: ApiRequestHandler<{
@@ -76,5 +77,16 @@ export const updateEvent: ApiRequestHandler<{
 	const params = schemas.eventScopedSchema.parse(req.params);
 	const body = schemas.updateEventSchema.parse(req.body);
 	const result = await service.updateEvent(user, params.eventId, body);
+	return ok(res, result);
+};
+
+export const submitEvent: ScopedApiRequestHandler<
+	EventScope,
+	{
+		id: number;
+	}
+> = async (_req, res) => {
+	const user = getAuthenticatedUser(_req);
+	const result = await service.submitEvent(user, res.locals.event);
 	return ok(res, result);
 };
