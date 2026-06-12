@@ -2,16 +2,26 @@ import { quickEnv } from "./helpers.js";
 
 // === Application Level
 export const IS_PROD = quickEnv("NODE_ENV") === "production";
+export const FRONTEND_URL = quickEnv("FRONTEND_ORIGIN", true);
 
 export const INSTITUTION_NAME = "TKMCE";
 export const INSTITUTION_DOMAIN = "tkmce.ac.in";
 
 export const REFRESH_TOKEN_COOKIE_NAME = "refresh-token";
 
+export const SECOND = 1000;
+export const MINUTE = 60 * SECOND;
+export const HOUR = 60 * MINUTE;
+export const DAY = 24 * HOUR;
+export const WEEK = 7 * DAY;
+
+export const PASSWORD_TOKEN_EXPIRY = 15 * MINUTE;
+
 // === System Level
 
 // Users & organizations
 export const USER_TYPES = ["admin", "end_user"] as const;
+export const PASSWORD_TOKEN_TYPES = ["set_password", "reset_password"] as const;
 export const MANAGED_ENTITY_TYPES = ["organization", "venue"] as const;
 export const VENUE_ACCESS_LEVELS = ["public", "private"] as const;
 

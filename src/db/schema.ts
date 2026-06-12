@@ -22,6 +22,7 @@ import {
 	EVENT_TYPE_VENUE_POLICY,
 	INSTITUTION_DOMAIN,
 	MANAGED_ENTITY_TYPES,
+	PASSWORD_TOKEN_TYPES,
 	USER_TYPES,
 	VENUE_ACCESS_LEVELS,
 	WORKFLOW_INSTANCE_STATUS,
@@ -36,6 +37,7 @@ import { buildCheck } from "./checks.js";
 // === Enums
 export const userTypeEnum = pgEnum("user_type", USER_TYPES);
 export const managedEntityTypeEnum = pgEnum("managed_entity_type", MANAGED_ENTITY_TYPES);
+export const passwordTokenTypeEnum = pgEnum("password_token_type", PASSWORD_TOKEN_TYPES);
 export const venueAccessLevelEnum = pgEnum("venue_access_level", VENUE_ACCESS_LEVELS);
 export const eventTypeVenuePolicyEnum = pgEnum("event_type_venue_policy", EVENT_TYPE_VENUE_POLICY);
 export const eventTypeCollaborationPolicyEnum = pgEnum(
@@ -93,7 +95,7 @@ export const user = pgTable(
 		type: userTypeEnum().notNull(),
 		fullName: text().notNull(),
 		email: text().notNull(),
-		passwordHash: text().notNull(),
+		passwordHash: text(),
 		isActive: boolean().notNull().default(true),
 		...fields("common", "soft-delete"),
 	},
@@ -108,6 +110,7 @@ export const user = pgTable(
 
 export const userRelations = relations(user, (r) => ({
 	roles: r.many(userRole),
+	passwordTokens: r.many(userPasswordToken),
 	createdEvents: r.many(event),
 }));
 
@@ -169,6 +172,32 @@ export const userRoleRelations = relations(userRole, (r) => ({
 		references: [managedEntity.id],
 	}),
 	workflowAssignments: r.many(workflowInstanceStepAssignment),
+}));
+
+export const userPasswordToken = pgTable(
+	"user_password_token",
+	{
+		id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+		userId: bigint({ mode: "number" })
+			.references(() => user.id, { onDelete: "cascade" })
+			.notNull(),
+		tokenHash: text().notNull(),
+		type: passwordTokenTypeEnum().notNull(),
+		usedAt: timestamp({ mode: "string", withTimezone: true }),
+		expiresAt: timestamp({ mode: "string", withTimezone: true }).notNull(),
+		...fields("common"),
+	},
+	(t) => [
+		uniqueIndex().on(t.tokenHash),
+		uniqueIndex().on(t.userId).where(sql`${t.usedAt} IS NULL`),
+	],
+);
+
+export const userPasswordTokenRelations = relations(userPasswordToken, (r) => ({
+	user: r.one(user, {
+		fields: [userPasswordToken.userId],
+		references: [user.id],
+	}),
 }));
 
 export const permission = pgTable(

@@ -6,9 +6,6 @@ export const createUserSchema = z
 		email: z.email({ error: "Invalid email" }).endsWith(INSTITUTION_DOMAIN, {
 			error: "Email must belong to the institution",
 		}),
-		password: z
-			.string({ error: "Invalid password input" })
-			.min(6, { error: "Password must be at least 6 characters long" }),
 		fullName: z
 			.string({ error: "Invalid name input" })
 			.trim()

@@ -31,7 +31,10 @@ if (existingAdminAccounts.length === 0) {
 	const account = existingAdminAccounts[0];
 	if (account == null) unreachable();
 	const emailMatch = account.email === ADMIN_LOGIN_EMAIL;
-	const passwordMatch = await verifyPassword(account.passwordHash, ADMIN_LOGIN_PASSWORD);
+	const passwordMatch =
+		account.passwordHash == null
+			? false
+			: await verifyPassword(account.passwordHash, ADMIN_LOGIN_PASSWORD);
 	if (!emailMatch || !passwordMatch) {
 		console.log("mismatched credentials for admin account, setting them to config");
 		if (

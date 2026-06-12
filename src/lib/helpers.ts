@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
 import { DrizzleQueryError } from "drizzle-orm/errors";
 import type * as express from "express";
+import { customAlphabet } from "nanoid";
 import z from "zod";
 import type { $ZodType } from "zod/v4/core";
 import { FLATTENED_PERMISSIONS, PERMISSION_SCOPES } from "@/lib/constants.js";
@@ -67,6 +69,14 @@ export function snakeToNormalCase(s: string): string {
 	return r[0]?.toUpperCase() + r.slice(1);
 }
 
+const PASSWORD_TOKEN_ALPHABET_SET =
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+
+export const generatePasswordToken = customAlphabet(PASSWORD_TOKEN_ALPHABET_SET, 12);
+
+export function hexSha256(token: string) {
+	return createHash("sha256").update(token).digest("hex");
+}
 /**
  * Orders the workflow template/instance steps in correct order despite the given order.
  * @param stepMap A map, which points (step id -> next step id)
