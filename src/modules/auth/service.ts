@@ -1,5 +1,6 @@
 import { jwtVerify } from "jose";
 import { hashPassword, verifyPassword } from "@/lib/argon2.js";
+import { FRONTEND_URL } from "@/lib/constants.js";
 import { sendEmail } from "@/lib/email.js";
 import {
 	getPasswordChangedContent,
@@ -8,7 +9,7 @@ import {
 	getResetPasswordContent,
 } from "@/lib/email-templates.js";
 import { ForbiddenError, NotFoundError, UnauthorizedError } from "@/lib/errors.js";
-import { generatePasswordToken, hexSha256, quickEnv } from "@/lib/helpers.js";
+import { generatePasswordToken, hexSha256 } from "@/lib/helpers.js";
 import {
 	generateAccessToken,
 	generateRefreshToken,
@@ -16,8 +17,7 @@ import {
 } from "@/lib/jwt.js";
 import * as userRepository from "@/modules/user/repository.js";
 import * as repository from "./repository.js";
-
-const frontendUrl = quickEnv("FRONTEND_ORIGIN", true);
+import type * as schemas from "./schema.js";
 
 export async function login(
 	email: string,
@@ -85,24 +85,24 @@ export async function createNewTokens(refreshToken: string) {
 	};
 }
 
-export async function requestPasswordToken(email: string, type: "set_password" | "reset_password") {
-	const user = await userRepository.findUserByEmail(email);
+export async function requestPasswordToken(input: schemas.RequestPasswordTokenSchema) {
+	const user = await userRepository.findUserByEmail(input.email);
 
 	if (user == null) {
 		throw new NotFoundError("No account found with that email address.");
 	}
 
-	if (type === "reset_password" && user.passwordHash == null) {
+	if (input.type === "reset_password" && user.passwordHash == null) {
 		throw new ForbiddenError(
 			"No password set on this account. Please complete your account password setup first.",
 		);
 	}
 
-	if (type === "reset_password" && !user.isActive) {
+	if (input.type === "reset_password" && !user.isActive) {
 		throw new ForbiddenError("Your Account is not active.");
 	}
 
-	if (type === "set_password" && user.passwordHash != null) {
+	if (input.type === "set_password" && user.passwordHash != null) {
 		throw new ForbiddenError("Your account password is already set.");
 	}
 
@@ -110,11 +110,15 @@ export async function requestPasswordToken(email: string, type: "set_password" |
 
 	const token = generatePasswordToken();
 	const tokenHash = hexSha256(token);
-	await repository.insertPasswordToken({ userId: user.id, tokenHash, type });
+	await repository.insertPasswordToken({
+		userId: user.id,
+		tokenHash: tokenHash,
+		type: input.type,
+	});
 
-	const tokenUrl = `${frontendUrl}/new-password?token=${token}`;
+	const tokenUrl = `${FRONTEND_URL}/new-password?token=${token}`;
 
-	if (type === "set_password") {
+	if (input.type === "set_password") {
 		const html = getPasswordSetupTokenContent(tokenUrl);
 		await sendEmail(user.email, "Set up your account password", html);
 	} else {
@@ -123,8 +127,8 @@ export async function requestPasswordToken(email: string, type: "set_password" |
 	}
 }
 
-export async function resetPassword(token: string, newPassword: string) {
-	const tokenHash = hexSha256(token);
+export async function resetPassword(input: schemas.ResetPasswordSchema) {
+	const tokenHash = hexSha256(input.token);
 	const tokenRecord = await repository.findActivePasswordToken(tokenHash);
 
 	if (tokenRecord == null) {
@@ -135,7 +139,7 @@ export async function resetPassword(token: string, newPassword: string) {
 		throw new ForbiddenError("Your account is not active. Password change is not allowed.");
 	}
 
-	const newPasswordHash = await hashPassword(newPassword);
+	const newPasswordHash = await hashPassword(input.password);
 
 	await repository.applyPasswordChange({
 		userId: tokenRecord.user.id,
@@ -143,7 +147,7 @@ export async function resetPassword(token: string, newPassword: string) {
 		newPasswordHash,
 	});
 
-	const loginUrl = `${frontendUrl}/login`;
+	const loginUrl = `${FRONTEND_URL}/login`;
 
 	if (tokenRecord.type === "set_password") {
 		const html = getPasswordSetContent(loginUrl);
