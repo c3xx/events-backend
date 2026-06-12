@@ -30,8 +30,8 @@ export const requestPasswordTokenSchema = z
 		email: z
 			.email({ error: "Invalid email format" })
 			.endsWith(INSTITUTION_DOMAIN, { error: "Expected institution domain email" }),
-		type: z.enum(["SET_PASSWORD", "RESET_PASSWORD"], {
-			error: "type must be SET_PASSWORD or RESET_PASSWORD",
+		type: z.enum(["set_password", "reset_password"], {
+			error: "type must be set_password or reset_password",
 		}),
 	})
 	.strict();

@@ -184,6 +184,7 @@ export const userPasswordToken = pgTable(
 		tokenHash: text().notNull(),
 		type: passwordTokenTypeEnum().notNull(),
 		usedAt: timestamp({ mode: "string", withTimezone: true }),
+		expiresAt: timestamp({ mode: "string", withTimezone: true }).notNull(),
 		...fields("common"),
 	},
 	(t) => [

@@ -8,7 +8,7 @@ import {
 	getResetPasswordContent,
 } from "@/lib/email-templates.js";
 import { ForbiddenError, NotFoundError, UnauthorizedError } from "@/lib/errors.js";
-import { generateSecureString, hexSha256, quickEnv } from "@/lib/helpers.js";
+import { generatePasswordToken, hexSha256, quickEnv } from "@/lib/helpers.js";
 import {
 	generateAccessToken,
 	generateRefreshToken,
@@ -85,36 +85,36 @@ export async function createNewTokens(refreshToken: string) {
 	};
 }
 
-export async function requestPasswordToken(email: string, type: "SET_PASSWORD" | "RESET_PASSWORD") {
+export async function requestPasswordToken(email: string, type: "set_password" | "reset_password") {
 	const user = await userRepository.findUserByEmail(email);
 
 	if (user == null) {
 		throw new NotFoundError("No account found with that email address.");
 	}
 
-	if (type === "RESET_PASSWORD" && user.passwordHash == null) {
+	if (type === "reset_password" && user.passwordHash == null) {
 		throw new ForbiddenError(
 			"No password set on this account. Please complete your account password setup first.",
 		);
 	}
 
-	if (type === "RESET_PASSWORD" && !user.isActive) {
+	if (type === "reset_password" && !user.isActive) {
 		throw new ForbiddenError("Your Account is not active.");
 	}
 
-	if (type === "SET_PASSWORD" && user.passwordHash != null) {
+	if (type === "set_password" && user.passwordHash != null) {
 		throw new ForbiddenError("Your account password is already set.");
 	}
 
 	await repository.invalidateActiveTokensForUser(user.id);
 
-	const token = generateSecureString();
+	const token = generatePasswordToken();
 	const tokenHash = hexSha256(token);
 	await repository.insertPasswordToken({ userId: user.id, tokenHash, type });
 
 	const tokenUrl = `${frontendUrl}/new-password?token=${token}`;
 
-	if (type === "SET_PASSWORD") {
+	if (type === "set_password") {
 		const html = getPasswordSetupTokenContent(tokenUrl);
 		await sendEmail(user.email, "Set up your account password", html);
 	} else {
@@ -131,7 +131,7 @@ export async function resetPassword(token: string, newPassword: string) {
 		throw new UnauthorizedError("Invalid, expired, or already used token");
 	}
 
-	if (tokenRecord.type === "RESET_PASSWORD" && !tokenRecord.user.isActive) {
+	if (tokenRecord.type === "reset_password" && !tokenRecord.user.isActive) {
 		throw new ForbiddenError("Your account is not active. Password change is not allowed.");
 	}
 
@@ -145,7 +145,7 @@ export async function resetPassword(token: string, newPassword: string) {
 
 	const loginUrl = `${frontendUrl}/login`;
 
-	if (tokenRecord.type === "SET_PASSWORD") {
+	if (tokenRecord.type === "set_password") {
 		const html = getPasswordSetContent(loginUrl);
 		await sendEmail(tokenRecord.user.email, "Your password has been set successfully", html);
 	} else {

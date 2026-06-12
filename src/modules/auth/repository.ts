@@ -1,4 +1,4 @@
-import { and, eq, exists, isNull, lt, sql } from "drizzle-orm";
+import { and, eq, exists, gt, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { PASSWORD_TOKEN_EXPIRY } from "@/lib/constants.js";
 import { dbAction } from "@/lib/helpers.js";
@@ -8,10 +8,7 @@ export const findActivePasswordToken = dbAction(async (tokenHash: string) => {
 		where: and(
 			eq(schema.userPasswordToken.tokenHash, tokenHash),
 			isNull(schema.userPasswordToken.usedAt),
-			lt(
-				sql`now()`,
-				sql`${schema.userPasswordToken.createdAt} + (${PASSWORD_TOKEN_EXPIRY} * interval '1 millisecond')`,
-			),
+			gt(schema.userPasswordToken.expiresAt, sql`now()`),
 			exists(
 				db
 					.select({ _: sql`1` })
@@ -61,12 +58,14 @@ export const insertPasswordToken = dbAction(
 	async (params: {
 		userId: number;
 		tokenHash: string;
-		type: "SET_PASSWORD" | "RESET_PASSWORD";
+		type: "set_password" | "reset_password";
 	}) => {
+		const expiresAt = new Date(Date.now() + PASSWORD_TOKEN_EXPIRY).toISOString();
 		await db.insert(schema.userPasswordToken).values({
 			userId: params.userId,
 			tokenHash: params.tokenHash,
 			type: params.type,
+			expiresAt,
 		});
 	},
 );

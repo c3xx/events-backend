@@ -15,7 +15,7 @@ export const DAY = 24 * HOUR;
 export const WEEK = 7 * DAY;
 
 export const PASSWORD_TOKEN_EXPIRY = 15 * MINUTE;
-export const PASSWORD_TOKEN_TYPES = ["SET_PASSWORD", "RESET_PASSWORD"] as const;
+export const PASSWORD_TOKEN_TYPES = ["set_password", "reset_password"] as const;
 
 // === System Level
 
