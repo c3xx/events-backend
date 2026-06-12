@@ -16,12 +16,12 @@ export const DAY = 24 * HOUR;
 export const WEEK = 7 * DAY;
 
 export const PASSWORD_TOKEN_EXPIRY = 15 * MINUTE;
-export const PASSWORD_TOKEN_TYPES = ["set_password", "reset_password"] as const;
 
 // === System Level
 
 // Users & organizations
 export const USER_TYPES = ["admin", "end_user"] as const;
+export const PASSWORD_TOKEN_TYPES = ["set_password", "reset_password"] as const;
 export const MANAGED_ENTITY_TYPES = ["organization", "venue"] as const;
 export const VENUE_ACCESS_LEVELS = ["public", "private"] as const;
 
