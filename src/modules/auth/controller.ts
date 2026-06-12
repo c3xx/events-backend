@@ -57,7 +57,7 @@ export const refresh: ApiRequestHandler<{
 export const requestPasswordToken: ApiRequestHandler = async (req, res) => {
 	const body = schemas.requestPasswordTokenSchema.parse(req.body);
 	await service.requestPasswordToken(body.email, body.type);
-	return ok(res, null);
+	return ok(res, true);
 };
 
 export const resetPassword: ApiRequestHandler = async (req, res) => {
