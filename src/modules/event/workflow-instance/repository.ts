@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
+import { resolveStep } from "./progression.js";
 
 export const findActiveInstance = dbAction(async (eventId: number) => {
 	return await db.query.workflowInstance.findFirst({
@@ -95,6 +96,10 @@ export const insertWorkflowInstance = dbAction(
 				.returning({ id: schema.workflowInstance.id });
 			if (instance == null) unreachable();
 
+			await tx
+				.update(schema.event)
+				.set({ status: "pending" })
+				.where(eq(schema.event.id, data.eventId));
 			const insertedSteps = await tx
 				.insert(schema.workflowInstanceStep)
 				.values(
@@ -196,6 +201,8 @@ export const insertWorkflowInstance = dbAction(
 					}
 				}
 			}
+
+			await resolveStep(tx, firstStep.id);
 
 			return { id: instance.id };
 		});
@@ -318,3 +325,50 @@ const workflowInstanceWith = {
 		},
 	},
 } as const;
+
+export const abortWorkflowInstance = dbAction(async (instanceId: number, eventId: number) => {
+	await db.transaction(async (tx) => {
+		await tx
+			.update(schema.workflowInstance)
+			.set({ status: "aborted", completedAt: sql`now()` })
+			.where(eq(schema.workflowInstance.id, instanceId));
+
+		await tx
+			.update(schema.workflowInstanceStep)
+			.set({ status: "overridden" })
+			.where(
+				and(
+					eq(schema.workflowInstanceStep.instanceId, instanceId),
+					inArray(schema.workflowInstanceStep.status, ["pending", "active", "blocked"]),
+				),
+			);
+
+		await tx
+			.update(schema.workflowInstanceStepAssignment)
+			.set({ status: "skipped" })
+			.where(
+				and(
+					eq(schema.workflowInstanceStepAssignment.status, "pending"),
+					inArray(
+						schema.workflowInstanceStepAssignment.targetGroupId,
+						tx
+							.select({ id: schema.workflowInstanceStepTargetGroup.id })
+							.from(schema.workflowInstanceStepTargetGroup)
+							.innerJoin(
+								schema.workflowInstanceStepRole,
+								eq(
+									schema.workflowInstanceStepTargetGroup.stepRoleId,
+									schema.workflowInstanceStepRole.id,
+								),
+							)
+							.innerJoin(
+								schema.workflowInstanceStep,
+								eq(schema.workflowInstanceStepRole.stepId, schema.workflowInstanceStep.id),
+							)
+							.where(eq(schema.workflowInstanceStep.instanceId, instanceId)),
+					),
+				),
+			);
+		await tx.update(schema.event).set({ status: "draft" }).where(eq(schema.event.id, eventId));
+	});
+});
