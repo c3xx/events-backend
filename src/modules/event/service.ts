@@ -128,11 +128,20 @@ export async function getEvents(
 	user: { id: number; type: UserType; permissions: PermissionCode[] },
 	filter: schemas.GetEventsQuerySchema,
 ) {
+	const parentableFor =
+		filter.parentableTypeId != null && filter.parentableOrgId != null
+			? {
+					typeId: filter.parentableTypeId,
+					orgId: filter.parentableOrgId,
+				}
+			: undefined;
+
 	if (user.type === "admin") {
 		return await repository.findEvents({
 			status: filter.status,
 			typeId: filter.typeId,
 			viewAll: true,
+			parentableFor: parentableFor,
 		});
 	}
 
@@ -154,6 +163,7 @@ export async function getEvents(
 	return await repository.findEvents({
 		status: filter.status,
 		typeId: filter.typeId,
+		parentableFor: parentableFor,
 		viewAll: grants.viewAll,
 		viewAllNonDraft: !grants.viewAll && grants.viewAllNonDraft,
 		viewAllConfirmed: !grants.viewAll && !grants.viewAllNonDraft && grants.viewAllConfirmed,
