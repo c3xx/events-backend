@@ -12,6 +12,7 @@ const router: Router = Router();
 router.post("/", controller.createEvent);
 router.get("/", controller.getEvents);
 router.patch("/:eventId", requirePermissions(["event:manage"]), controller.updateEvent);
+router.get("/parentable", controller.getParentable);
 
 router.get("/:eventId", controller.getEvent);
 

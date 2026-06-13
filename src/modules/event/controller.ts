@@ -90,3 +90,13 @@ export const submitEvent: ScopedApiRequestHandler<
 	const result = await service.submitEvent(user, res.locals.event);
 	return ok(res, result);
 };
+
+export const getParentable: ApiRequestHandler<{ id: number; title: string }[]> = async (
+	req,
+	res,
+) => {
+	const user = getAuthenticatedUser(req);
+	const param = schemas.getParentableSchema.parse(req.params);
+	const result = await service.getParentable(user, param);
+	ok(res, result);
+};
