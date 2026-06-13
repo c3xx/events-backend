@@ -1,9 +1,13 @@
-import { ConflictError, ForbiddenError } from "@/lib/errors.js";
+import { ConflictError, ForbiddenError, ValidationError } from "@/lib/errors.js";
 import * as repository from "./repository.js";
 import type { RespondToAssignmentsSchema } from "./schema.js";
 
-export async function getPendingAssignments(userId: number) {
-	return await repository.findPendingForUser(userId);
+export async function getPendingApprovalEvents(userId: number) {
+	return await repository.findPendingEventsForUser(userId);
+}
+
+export async function getEventAssignments(eventId: number) {
+	return await repository.findAssignmentsByEventId(eventId);
 }
 
 export async function respondToAssignments(userId: number, body: RespondToAssignmentsSchema) {
@@ -11,6 +15,10 @@ export async function respondToAssignments(userId: number, body: RespondToAssign
 
 	if (assignments.length !== body.assignmentIds.length) {
 		throw new ForbiddenError("You do not own all the assignments you are trying to approve");
+	}
+
+	if (body.decision === "denied" && (!body.remarks || body.remarks.trim() === "")) {
+		throw new ValidationError("Remarks are required for denying an asisgnment");
 	}
 
 	for (const a of assignments) {
@@ -26,5 +34,5 @@ export async function respondToAssignments(userId: number, body: RespondToAssign
 		remarks: body.remarks,
 	});
 
-	return { success: true as const };
+	return true;
 }

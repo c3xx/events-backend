@@ -3,7 +3,8 @@ import * as controller from "./controller.js";
 
 const router: Router = Router();
 
-router.get("/", controller.getPendingAssignments);
-router.post("/respond", controller.respondToAssignments);
+router.get("/", controller.getPendingApprovalEvents);
+router.get("/events/:eventId/assignments", controller.getEventAssignments);
+router.post("/", controller.respondToAssignments);
 
 export default router;

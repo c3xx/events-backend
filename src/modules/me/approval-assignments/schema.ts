@@ -13,4 +13,11 @@ export const respondToAssignmentsSchema = z
 	})
 	.strict();
 
+export const eventParamsSchema = z
+	.object({
+		eventId: idLike("Invalid event ID"),
+	})
+	.strict();
+
 export type RespondToAssignmentsSchema = z.output<typeof respondToAssignmentsSchema>;
+export type EventParamsSchema = z.output<typeof eventParamsSchema>;

@@ -331,15 +331,18 @@ export const abortWorkflowInstance = dbAction(async (instanceId: number, eventId
 		await tx
 			.update(schema.workflowInstance)
 			.set({ status: "aborted", completedAt: sql`now()` })
-			.where(eq(schema.workflowInstance.id, instanceId));
+			.where(
+				and(eq(schema.workflowInstance.id, instanceId), isNull(schema.workflowInstance.deletedAt)),
+			);
 
 		await tx
 			.update(schema.workflowInstanceStep)
-			.set({ status: "overridden" })
+			.set({ status: "skipped" })
 			.where(
 				and(
 					eq(schema.workflowInstanceStep.instanceId, instanceId),
 					inArray(schema.workflowInstanceStep.status, ["pending", "active", "blocked"]),
+					isNull(schema.workflowInstanceStep.deletedAt),
 				),
 			);
 
@@ -349,6 +352,7 @@ export const abortWorkflowInstance = dbAction(async (instanceId: number, eventId
 			.where(
 				and(
 					eq(schema.workflowInstanceStepAssignment.status, "pending"),
+					isNull(schema.workflowInstanceStep.deletedAt),
 					inArray(
 						schema.workflowInstanceStepAssignment.targetGroupId,
 						tx
@@ -365,10 +369,21 @@ export const abortWorkflowInstance = dbAction(async (instanceId: number, eventId
 								schema.workflowInstanceStep,
 								eq(schema.workflowInstanceStepRole.stepId, schema.workflowInstanceStep.id),
 							)
-							.where(eq(schema.workflowInstanceStep.instanceId, instanceId)),
+							.where(
+								and(
+									eq(schema.workflowInstanceStep.instanceId, instanceId),
+									isNull(schema.workflowInstanceStep.deletedAt),
+									isNull(schema.workflowInstanceStepRole.deletedAt),
+									isNull(schema.workflowInstanceStepTargetGroup.deletedAt),
+								),
+							),
 					),
 				),
 			);
-		await tx.update(schema.event).set({ status: "draft" }).where(eq(schema.event.id, eventId));
+
+		await tx
+			.update(schema.event)
+			.set({ status: "draft" })
+			.where(and(eq(schema.event.id, eventId), isNull(schema.event.deletedAt)));
 	});
 });

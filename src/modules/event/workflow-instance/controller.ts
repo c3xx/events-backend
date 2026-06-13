@@ -33,7 +33,7 @@ export const abortWorkflowInstance: ScopedApiRequestHandler<EventScope, true> = 
 	res,
 ) => {
 	const user = getAuthenticatedUser(req);
-	const param = schema.workflowInstanceItemScopedSchema.parse(req.params);
-	await service.abortWorkflowInstance(res.locals.event, param.id, user);
+	const param = schema.workflowScopedSchema.parse(req.params);
+	await service.abortWorkflowInstance(res.locals.event, param.workflowInstanceId, user);
 	return ok(res, true);
 };

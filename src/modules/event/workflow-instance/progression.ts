@@ -1,14 +1,11 @@
-import type { ExtractTablesWithRelations } from "drizzle-orm";
-import { eq, inArray, sql } from "drizzle-orm";
+import { type ExtractTablesWithRelations, eq, inArray, sql } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
-import { type db, schema } from "@/db/index.js";
+import { schema } from "@/db/index.js";
 import { unreachable } from "@/lib/helpers.js";
 
-type DbOrTx =
-	| typeof db
-	| PgTransaction<any, typeof schema, ExtractTablesWithRelations<typeof schema>>;
+type Tx = PgTransaction<any, typeof schema, ExtractTablesWithRelations<typeof schema>>;
 
-export async function resolveStep(tx: DbOrTx, stepId: number): Promise<void> {
+export async function resolveStep(tx: Tx, stepId: number): Promise<void> {
 	const step = await tx.query.workflowInstanceStep.findFirst({
 		where: eq(schema.workflowInstanceStep.id, stepId),
 		columns: { id: true, instanceId: true, nextStepId: true, status: true },
@@ -38,7 +35,7 @@ export async function resolveStep(tx: DbOrTx, stepId: number): Promise<void> {
 	const allGroups = step.stepRoles.flatMap((stepRole) => stepRole.targetGroups);
 
 	if (allGroups.length === 0) {
-		await advance(tx, step, "skipped");
+		await advanceWorkflow(tx, step, "skipped");
 		return;
 	}
 
@@ -68,62 +65,45 @@ export async function resolveStep(tx: DbOrTx, stepId: number): Promise<void> {
 			}
 		}
 	}
-
-	let anyRoleDenied = false;
-	let anyRolePending = false;
-	let anyRoleBlocked = false;
-
 	for (const stepRole of step.stepRoles) {
-		if (stepRole.targetGroups.length === 0) {
-			continue; // skipped
-		}
-
-		let roleDenied = false;
-		let rolePending = false;
-		let roleBlocked = false;
-
-		const groupStatuses = stepRole.targetGroups.map((group) => {
-			if (group.assignments.length === 0) {
-				return "empty";
-			}
-
+		if (stepRole.targetGroups.length === 0) continue;
+		for (const group of stepRole.targetGroups) {
+			if (group.assignments.length === 0) continue;
 			const statuses = group.assignments.map((a) => a.status);
-
 			if (stepRole.targetGroupApprovalCriteria === "all") {
-				if (statuses.includes("denied")) return "denied";
-				if (statuses.includes("pending")) return "pending";
-				return "approved";
+				if (statuses.includes("denied")) {
+					await advanceWorkflow(tx, step, "denied");
+					return;
+				}
 			} else {
-				if (statuses.includes("approved")) return "approved";
-				if (statuses.every((s) => s === "denied")) return "denied";
-				if (statuses.includes("pending")) return "pending";
-				return "approved"; // If no pending, no approved, and not all denied, it's resolved/skipped
+				if (statuses.every((s) => s === "denied")) {
+					await advanceWorkflow(tx, step, "denied");
+					return;
+				}
 			}
-		});
-
-		if (groupStatuses.includes("denied")) {
-			roleDenied = true;
-		} else if (groupStatuses.includes("pending")) {
-			rolePending = true;
-		} else if (groupStatuses.includes("empty")) {
-			roleBlocked = true;
-		}
-
-		if (roleDenied) {
-			anyRoleDenied = true;
-		} else if (rolePending) {
-			anyRolePending = true;
-		} else if (roleBlocked) {
-			anyRoleBlocked = true;
 		}
 	}
-
-	if (anyRoleDenied) {
-		await advance(tx, step, "denied");
-		return;
+	let hasPending = false;
+	for (const stepRole of step.stepRoles) {
+		if (stepRole.targetGroups.length === 0) continue;
+		for (const group of stepRole.targetGroups) {
+			if (group.assignments.length === 0) continue;
+			const statuses = group.assignments.map((a) => a.status);
+			if (stepRole.targetGroupApprovalCriteria === "all") {
+				if (statuses.includes("pending")) {
+					hasPending = true;
+					break;
+				}
+			} else {
+				if (!statuses.includes("approved") && statuses.includes("pending")) {
+					hasPending = true;
+					break;
+				}
+			}
+		}
+		if (hasPending) break;
 	}
-
-	if (anyRolePending) {
+	if (hasPending) {
 		if (step.status !== "active") {
 			await tx
 				.update(schema.workflowInstanceStep)
@@ -133,7 +113,18 @@ export async function resolveStep(tx: DbOrTx, stepId: number): Promise<void> {
 		return;
 	}
 
-	if (anyRoleBlocked) {
+	let hasBlocked = false;
+	for (const stepRole of step.stepRoles) {
+		if (stepRole.targetGroups.length === 0) continue;
+		for (const group of stepRole.targetGroups) {
+			if (group.assignments.length === 0) {
+				hasBlocked = true;
+				break;
+			}
+		}
+		if (hasBlocked) break;
+	}
+	if (hasBlocked) {
 		if (step.status !== "blocked") {
 			await tx
 				.update(schema.workflowInstanceStep)
@@ -143,11 +134,11 @@ export async function resolveStep(tx: DbOrTx, stepId: number): Promise<void> {
 		return;
 	}
 
-	await advance(tx, step, "completed");
+	await advanceWorkflow(tx, step, "completed");
 }
 
-async function advance(
-	tx: DbOrTx,
+async function advanceWorkflow(
+	tx: Tx,
 	step: { id: number; instanceId: number; nextStepId: number | null },
 	outcome: "completed" | "skipped" | "denied",
 ): Promise<void> {
