@@ -1,6 +1,5 @@
 import z from "zod";
 import { EVENT_STATUS } from "@/lib/constants.js";
-import { idLike } from "@/lib/helpers.js";
 
 export const createEventSchema = z
 	.object({
@@ -51,8 +50,6 @@ export const getEventsQuerySchema = z
 			.transform((val) => val.split(",").map((s) => s.trim()))
 			.pipe(z.array(z.enum(EVENT_STATUS))),
 		typeId: z.coerce.number().int({ error: "Invalid event type ID" }),
-		parentableTypeId: idLike("Invalid event type ID"),
-		parentableOrgId: idLike("Invalid organization ID"),
 	})
 	.partial();
 

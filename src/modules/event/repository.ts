@@ -1,5 +1,5 @@
 import type { SQL } from "drizzle-orm";
-import { and, eq, exists, gt, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, eq, exists, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
@@ -55,12 +55,6 @@ export const findEvents = dbAction(
 	async (filter: {
 		status?: EventStatus[] | undefined;
 		typeId?: number | undefined;
-		parentableFor?:
-			| {
-					typeId: number;
-					orgId: number;
-			  }
-			| undefined;
 		viewAll?: boolean | undefined;
 		viewAllNonDraft?: boolean | undefined;
 		viewAllConfirmed?: boolean | undefined;
@@ -68,7 +62,7 @@ export const findEvents = dbAction(
 	}) => {
 		const baseConditions: SQL[] = [isNull(schema.event.deletedAt)];
 
-		if (filter.typeId != null && filter.parentableFor == null) {
+		if (filter.typeId !== undefined) {
 			baseConditions.push(eq(schema.event.typeId, filter.typeId));
 		}
 
@@ -80,75 +74,40 @@ export const findEvents = dbAction(
 			return condition;
 		};
 
-		if (filter.parentableFor != null) {
-			const { typeId, orgId } = filter.parentableFor;
-
-			const allowedParentTypes = await db
-				.select({ parentTypeId: schema.eventTypeAllowedParent.parentTypeId })
-				.from(schema.eventTypeAllowedParent)
-				.where(eq(schema.eventTypeAllowedParent.childTypeId, typeId));
-
-			const allowedParentTypeIds = allowedParentTypes.map((r) => r.parentTypeId);
-
-			baseConditions.push(
-				and(
-					allowedParentTypeIds.length > 0
-						? inArray(schema.event.typeId, allowedParentTypeIds)
-						: sql`false`,
-					eq(schema.event.status, "approved" as const),
-					gt(schema.event.endsAt, sql`now()`),
-					exists(
-						db
-							.select({ _: sql`1` })
-							.from(schema.eventOrganizer)
-							.where(
-								and(
-									eq(schema.eventOrganizer.eventId, schema.event.id),
-									eq(schema.eventOrganizer.organizationId, orgId),
-									inArray(schema.eventOrganizer.role, ["host", "co_host"] as const),
-									isNull(schema.eventOrganizer.deletedAt),
-								),
-							),
-					),
-				) as SQL,
-			);
-		}
-
 		// Each item here is an OR branch — user sees events matching any one of these
 		const accessConditions: SQL[] = [];
-		if (filter.parentableFor == null) {
-			if (filter.viewAll && filter.status && filter.status.length > 0) {
-				// Admin-like: see all events but filtered by status
-				accessConditions.push(inArray(schema.event.status, filter.status));
-			} else if (filter.viewAllNonDraft) {
-				// Can see everything except drafts
-				accessConditions.push(withStatusFilter(ne(schema.event.status, "draft" as const)));
-			} else if (filter.viewAllConfirmed) {
-				// Can only see completed events
-				accessConditions.push(eq(schema.event.status, "approved" as const));
-			}
 
-			if (filter.orgIds && filter.orgIds.length > 0) {
-				// User's orgs: show events where their org is an organizer
-				const orgExists = exists(
-					db
-						.select({ _: sql`1` })
-						.from(schema.eventOrganizer)
-						.where(
-							and(
-								eq(schema.eventOrganizer.eventId, schema.event.id),
-								inArray(schema.eventOrganizer.organizationId, filter.orgIds),
-								isNull(schema.eventOrganizer.deletedAt),
-							),
+		if (filter.viewAll && filter.status && filter.status.length > 0) {
+			// Admin-like: see all events but filtered by status
+			accessConditions.push(inArray(schema.event.status, filter.status));
+		} else if (filter.viewAllNonDraft) {
+			// Can see everything except drafts
+			accessConditions.push(withStatusFilter(ne(schema.event.status, "draft" as const)));
+		} else if (filter.viewAllConfirmed) {
+			// Can only see completed events
+			accessConditions.push(eq(schema.event.status, "approved" as const));
+		}
+
+		if (filter.orgIds && filter.orgIds.length > 0) {
+			// User's orgs: show events where their org is an organizer
+			const orgExists = exists(
+				db
+					.select({ _: sql`1` })
+					.from(schema.eventOrganizer)
+					.where(
+						and(
+							eq(schema.eventOrganizer.eventId, schema.event.id),
+							inArray(schema.eventOrganizer.organizationId, filter.orgIds),
+							isNull(schema.eventOrganizer.deletedAt),
 						),
-				);
-				accessConditions.push(withStatusFilter(orgExists));
-			}
+					),
+			);
+			accessConditions.push(withStatusFilter(orgExists));
 		}
 
 		// Base conditions always apply; access is granted if any OR branch matches
 		const where =
-			filter.parentableFor == null && accessConditions.length > 0
+			accessConditions.length > 0
 				? and(...baseConditions, or(...accessConditions))
 				: and(...baseConditions);
 
