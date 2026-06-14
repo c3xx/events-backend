@@ -1,11 +1,8 @@
-import { type ExtractTablesWithRelations, eq, inArray, sql } from "drizzle-orm";
-import type { PgTransaction } from "drizzle-orm/pg-core";
+import { eq, inArray, sql } from "drizzle-orm";
 import { schema } from "@/db/index.js";
 import { unreachable } from "@/lib/helpers.js";
 
-type Tx = PgTransaction<any, typeof schema, ExtractTablesWithRelations<typeof schema>>;
-
-export async function resolveStep(tx: Tx, stepId: number): Promise<void> {
+export async function resolveStep(tx: DbTransaction, stepId: number): Promise<void> {
 	const step = await tx.query.workflowInstanceStep.findFirst({
 		where: eq(schema.workflowInstanceStep.id, stepId),
 		columns: { id: true, instanceId: true, nextStepId: true, status: true },
@@ -138,7 +135,7 @@ export async function resolveStep(tx: Tx, stepId: number): Promise<void> {
 }
 
 async function advanceWorkflow(
-	tx: Tx,
+	tx: DbTransaction,
 	step: { id: number; instanceId: number; nextStepId: number | null },
 	outcome: "completed" | "skipped" | "denied",
 ): Promise<void> {
