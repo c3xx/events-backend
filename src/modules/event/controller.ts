@@ -96,7 +96,7 @@ export const getParentable: ApiRequestHandler<{ id: number; title: string }[]> =
 	res,
 ) => {
 	const user = getAuthenticatedUser(req);
-	const param = schemas.getParentableSchema.parse(req.params);
-	const result = await service.getParentable(user, param);
+	const query = schemas.getParentableSchema.parse(req.query);
+	const result = await service.getParentable(user, query);
 	ok(res, result);
 };
