@@ -303,19 +303,19 @@ export async function submitEvent(
 	return result;
 }
 
-export async function getParentable(
+export async function getParentableEvents(
 	user: { id: number; type: UserType; permissions: PermissionCode[] },
-	parentableFor: { typeId: number; organizationId: number },
+	parentableFor: schemas.GetParentableEventsSchema,
 ) {
 	const hasPermission = permissionRepository.hasPermissionInManagedEntity(
 		user,
 		"organization",
 		[parentableFor.organizationId],
-		"event:view_own",
+		"event:manage",
 	);
 	if (!hasPermission) {
 		throw new ForbiddenError("You don't have permission to view this");
 	}
 
-	return repository.getParentable(parentableFor);
+	return repository.findParentableEvents(parentableFor);
 }

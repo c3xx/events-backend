@@ -270,34 +270,36 @@ export const updateEvent = dbAction(
 	},
 );
 
-export const getParentable = dbAction(async (data: { typeId: number; organizationId: number }) => {
-	return await db
-		.select({ id: schema.event.id, title: schema.event.title })
-		.from(schema.event)
-		.innerJoin(
-			schema.eventOrganizer,
-			and(
-				eq(schema.event.id, schema.eventOrganizer.eventId),
-				eq(schema.eventOrganizer.organizationId, data.organizationId),
-				inArray(schema.eventOrganizer.role, ["host", "co_host"] as const),
-				isNull(schema.eventOrganizer.deletedAt),
-			),
-		)
-		.innerJoin(
-			schema.eventTypeAllowedParent,
-			and(
-				eq(schema.eventTypeAllowedParent.parentTypeId, schema.event.typeId),
-				eq(schema.eventTypeAllowedParent.childTypeId, data.typeId),
-			),
-		)
-		.where(
-			and(
-				eq(schema.event.status, "approved" as const),
-				gt(schema.event.endsAt, sql`now()`),
-				isNull(schema.event.deletedAt),
-			),
-		);
-});
+export const findParentableEvents = dbAction(
+	async (data: { typeId: number; organizationId: number }) => {
+		return await db
+			.select({ id: schema.event.id, title: schema.event.title })
+			.from(schema.event)
+			.innerJoin(
+				schema.eventOrganizer,
+				and(
+					eq(schema.event.id, schema.eventOrganizer.eventId),
+					eq(schema.eventOrganizer.organizationId, data.organizationId),
+					inArray(schema.eventOrganizer.role, ["host", "co_host"]),
+					isNull(schema.eventOrganizer.deletedAt),
+				),
+			)
+			.innerJoin(
+				schema.eventTypeAllowedParent,
+				and(
+					eq(schema.eventTypeAllowedParent.parentTypeId, schema.event.typeId),
+					eq(schema.eventTypeAllowedParent.childTypeId, data.typeId),
+				),
+			)
+			.where(
+				and(
+					eq(schema.event.status, "approved"),
+					gt(schema.event.endsAt, sql`now()`),
+					isNull(schema.event.deletedAt),
+				),
+			);
+	},
+);
 
 // export const getOrganizationEvents = dbAction(async (organizationId: number) => {
 // 	return await db

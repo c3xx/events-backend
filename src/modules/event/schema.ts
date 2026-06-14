@@ -95,7 +95,7 @@ export const updateEventSchema = z
 		},
 	);
 
-export const getParentableSchema = z
+export const getParentableEventsSchema = z
 	.object({
 		typeId: idLike("Invalid event type ID"),
 		organizationId: idLike("Invalid organization ID"),
@@ -106,3 +106,4 @@ export type CreateEventSchema = z.output<typeof createEventSchema>;
 export type GetEventsQuerySchema = z.output<typeof getEventsQuerySchema>;
 export type UpdateEventSchema = z.output<typeof updateEventSchema>;
 export type EventScopedSchema = z.output<typeof eventScopedSchema>;
+export type GetParentableEventsSchema = z.output<typeof getParentableEventsSchema>;
