@@ -28,8 +28,9 @@ export const getEventAssignments: ApiRequestHandler<
 		step: { id: number; name: string; status: WorkflowInstanceStepStatus };
 		targetGroup: {
 			id: number;
-			managedEntityId: number;
 			type: "organization" | "venue";
+			organizationId: number | null;
+			venueId: number | null;
 			name: string;
 		};
 	}[],
@@ -40,9 +41,14 @@ export const getEventAssignments: ApiRequestHandler<
 	return ok(res, result);
 };
 
-export const respondToAssignments: ApiRequestHandler<true> = async (req, res) => {
+export const respondToAssignments: ApiRequestHandler<
+	true,
+	schemas.EventParamsSchema,
+	schemas.RespondToAssignmentsSchema
+> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
+	const params = schemas.eventParamsSchema.parse(req.params);
 	const body = schemas.respondToAssignmentsSchema.parse(req.body);
-	await service.respondToAssignments(user.id, body);
+	await service.respondToAssignments(user.id, params.eventId, body);
 	return ok(res, true);
 };

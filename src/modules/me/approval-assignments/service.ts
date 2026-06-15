@@ -1,4 +1,4 @@
-import { ConflictError, ForbiddenError, ValidationError } from "@/lib/errors.js";
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors.js";
 import * as repository from "./repository.js";
 import type { RespondToAssignmentsSchema } from "./schema.js";
 
@@ -7,18 +7,36 @@ export async function getPendingApprovalEvents(userId: number) {
 }
 
 export async function getEventAssignments(eventId: number) {
-	return await repository.findAssignmentsByEventId(eventId);
+	const eventExists = await repository.findEventById(eventId);
+	if (eventExists == null) {
+		throw new NotFoundError("Event not found");
+	}
+	const latestInstanceId = await repository.findLatestWorkflowInstanceId(eventId);
+	if (latestInstanceId == null) {
+		return [];
+	}
+	return await repository.findAssignmentsByWorkflowInstanceId(latestInstanceId);
 }
 
-export async function respondToAssignments(userId: number, body: RespondToAssignmentsSchema) {
-	const assignments = await repository.findOwnedAssignments(body.assignmentIds, userId);
-
-	if (assignments.length !== body.assignmentIds.length) {
-		throw new ForbiddenError("You do not own all the assignments you are trying to approve");
+export async function respondToAssignments(
+	userId: number,
+	eventId: number,
+	body: RespondToAssignmentsSchema,
+) {
+	if (body.decision === "denied" && (!body.remarks || body.remarks.trim() === "")) {
+		throw new ValidationError("Remarks are required to deny an assignment");
 	}
 
-	if (body.decision === "denied" && (!body.remarks || body.remarks.trim() === "")) {
-		throw new ValidationError("Remarks are required for denying an asisgnment");
+	const assignments = await repository.findOwnedAssignmentsForEvent(
+		body.assignmentIds,
+		userId,
+		eventId,
+	);
+
+	if (assignments.length !== body.assignmentIds.length) {
+		throw new ForbiddenError(
+			"You do not own all the assignments or do not belong to an active workflow of this event",
+		);
 	}
 
 	for (const a of assignments) {
@@ -27,9 +45,12 @@ export async function respondToAssignments(userId: number, body: RespondToAssign
 		}
 	}
 
-	const stepIds = [...new Set(assignments.map((a) => a.stepId))];
+	const stepId = assignments[0]?.stepId;
+	if (stepId === undefined) {
+		throw new ValidationError("No assignments found");
+	}
 
-	await repository.respondToAssignments(body.assignmentIds, stepIds, {
+	await repository.respondToAssignments(body.assignmentIds, stepId, {
 		status: body.decision,
 		remarks: body.remarks,
 	});

@@ -63,20 +63,10 @@ export async function resolveStep(tx: DbTransaction, stepId: number): Promise<vo
 		}
 	}
 	for (const stepRole of step.stepRoles) {
-		if (stepRole.targetGroups.length === 0) continue;
 		for (const group of stepRole.targetGroups) {
-			if (group.assignments.length === 0) continue;
-			const statuses = group.assignments.map((a) => a.status);
-			if (stepRole.targetGroupApprovalCriteria === "all") {
-				if (statuses.includes("denied")) {
-					await advanceWorkflow(tx, step, "denied");
-					return;
-				}
-			} else {
-				if (statuses.every((s) => s === "denied")) {
-					await advanceWorkflow(tx, step, "denied");
-					return;
-				}
+			if (group.assignments.some((a) => a.status === "denied")) {
+				await advanceWorkflow(tx, step, "denied");
+				return;
 			}
 		}
 	}

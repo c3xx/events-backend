@@ -9,7 +9,7 @@ export const respondToAssignmentsSchema = z
 		decision: z.enum(["approved", "denied"], {
 			error: "Decision must be either approved or denied",
 		}),
-		remarks: z.string({ error: "Invalid remarks" }).trim(),
+		remarks: z.string({ error: "Invalid remarks" }).trim().optional(),
 	})
 	.strict();
 
