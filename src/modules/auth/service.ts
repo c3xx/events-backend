@@ -119,9 +119,7 @@ export async function requestPasswordToken(input: schemas.RequestPasswordTokenSc
 	const tokenUrl = `${FRONTEND_URL}/new-password?token=${encodeURIComponent(token)}`;
 
 	const isSetPassword = input.type === "set_password";
-	const subject = isSetPassword
-		? "Set up your account password"
-		: "Reset your password";
+	const subject = isSetPassword ? "Set up your account password" : "Reset your password";
 	const html = isSetPassword
 		? getPasswordSetupTokenContent(tokenUrl)
 		: getResetPasswordContent(tokenUrl);
@@ -155,7 +153,7 @@ export async function resetPassword(input: schemas.ResetPasswordSchema) {
 	const subject = isSetPassword
 		? "Your password has been set successfully"
 		: "Your password has been changed successfully";
-	const html = isSetPassword	
+	const html = isSetPassword
 		? getPasswordSetContent(loginUrl)
 		: getPasswordChangedContent(loginUrl);
 
