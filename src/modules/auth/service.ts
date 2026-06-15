@@ -119,8 +119,12 @@ export async function requestPasswordToken(input: schemas.RequestPasswordTokenSc
 	const tokenUrl = `${FRONTEND_URL}/new-password?token=${encodeURIComponent(token)}`;
 
 	const isSetPassword = input.type === "set_password";
-	const subject = isSetPassword ? "Set up your account password" : "Reset your password";
-	const html = isSetPassword ? getPasswordSetupTokenContent(tokenUrl) : getResetPasswordContent(tokenUrl);
+	const subject = isSetPassword
+		? "Set up your account password"
+		: "Reset your password";
+	const html = isSetPassword
+		? getPasswordSetupTokenContent(tokenUrl)
+		: getResetPasswordContent(tokenUrl);
 
 	await sendEmail(user.email, subject, html);
 }
@@ -148,8 +152,12 @@ export async function resetPassword(input: schemas.ResetPasswordSchema) {
 	const loginUrl = `${FRONTEND_URL}/login`;
 
 	const isSetPassword = tokenRecord.type === "set_password";
-	const subject = isSetPassword ? "Your password has been set successfully": "Your password has been changed successfully";
-	const html = isSetPassword ? getPasswordSetContent(loginUrl) : getPasswordChangedContent(loginUrl);
+	const subject = isSetPassword
+		? "Your password has been set successfully"
+		: "Your password has been changed successfully";
+	const html = isSetPassword	
+		? getPasswordSetContent(loginUrl)
+		: getPasswordChangedContent(loginUrl);
 
 	await sendEmail(tokenRecord.user.email, subject, html);
 }

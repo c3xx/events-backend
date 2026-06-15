@@ -9,7 +9,7 @@ export function getAccountCreatedContent(setPasswordUrl: string) {
 }
 
 export function getPasswordSetupTokenContent(tokenUrl: string) {
-	return  `
+	return `
 <p>Hello,</p>
 <p>You requested a link to set your account password.</p>
 <p>Please use the link below to continue. This link will expire in 15 minutes.</p>
@@ -42,7 +42,7 @@ export function getPasswordSetContent(loginUrl: string) {
 }
 
 export function getPasswordChangedContent(loginUrl: string) {
-	return  `
+	return `
 <p>Hello,</p>
 <p>Your account password has been changed successfully.</p>
 <p>You can log in using your updated credentials:</p>
