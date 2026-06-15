@@ -116,15 +116,13 @@ export async function requestPasswordToken(input: schemas.RequestPasswordTokenSc
 		type: input.type,
 	});
 
-	const tokenUrl = `${FRONTEND_URL}/new-password?token=${token}`;
+	const tokenUrl = `${FRONTEND_URL}/new-password?token=${encodeURIComponent(token)}`;
 
-	if (input.type === "set_password") {
-		const html = getPasswordSetupTokenContent(tokenUrl);
-		await sendEmail(user.email, "Set up your account password", html);
-	} else {
-		const html = getResetPasswordContent(tokenUrl);
-		await sendEmail(user.email, "Reset your password", html);
-	}
+	const isSetPassword = input.type === "set_password";
+	const subject = isSetPassword ? "Set up your account password" : "Reset your password";
+	const html = isSetPassword ? getPasswordSetupTokenContent(tokenUrl) : getResetPasswordContent(tokenUrl);
+
+	await sendEmail(user.email, subject, html);
 }
 
 export async function resetPassword(input: schemas.ResetPasswordSchema) {
@@ -149,11 +147,9 @@ export async function resetPassword(input: schemas.ResetPasswordSchema) {
 
 	const loginUrl = `${FRONTEND_URL}/login`;
 
-	if (tokenRecord.type === "set_password") {
-		const html = getPasswordSetContent(loginUrl);
-		await sendEmail(tokenRecord.user.email, "Your password has been set successfully", html);
-	} else {
-		const html = getPasswordChangedContent(loginUrl);
-		await sendEmail(tokenRecord.user.email, "Your password has been changed successfully", html);
-	}
+	const isSetPassword = tokenRecord.type === "set_password";
+	const subject = isSetPassword ? "Your password has been set successfully": "Your password has been changed successfully";
+	const html = isSetPassword ? getPasswordSetContent(loginUrl) : getPasswordChangedContent(loginUrl);
+
+	await sendEmail(tokenRecord.user.email, subject, html);
 }

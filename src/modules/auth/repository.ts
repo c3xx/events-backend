@@ -4,24 +4,22 @@ import { PASSWORD_TOKEN_EXPIRY } from "@/lib/constants.js";
 import { dbAction } from "@/lib/helpers.js";
 
 export const findActivePasswordToken = dbAction(async (tokenHash: string) => {
-	return await db.query.userPasswordToken.findFirst({
+	const result = await db.query.userPasswordToken.findFirst({
 		where: and(
 			eq(schema.userPasswordToken.tokenHash, tokenHash),
 			isNull(schema.userPasswordToken.usedAt),
 			gt(schema.userPasswordToken.expiresAt, sql`now()`),
-			exists(
-				db
-					.select({ _: sql`1` })
-					.from(schema.user)
-					.where(
-						and(eq(schema.user.id, schema.userPasswordToken.userId), isNull(schema.user.deletedAt)),
-					),
-			),
 		),
 		with: {
 			user: true,
 		},
 	});
+
+	if (result == null || result.user.deletedAt != null) {
+		return null;
+	}
+
+	return result;
 });
 
 export const applyPasswordChange = dbAction(
