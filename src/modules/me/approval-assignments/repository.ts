@@ -3,6 +3,7 @@ import { db, schema } from "@/db/index.js";
 import { dbAction } from "@/lib/helpers.js";
 import { resolveStep } from "@/modules/event/workflow-instance/progression.js";
 
+// Find all events that requires approval from the user
 export const findPendingEventsForUser = dbAction(async (userId: number) => {
 	return await db
 		.select({
@@ -39,64 +40,64 @@ export const findPendingEventsForUser = dbAction(async (userId: number) => {
 		.innerJoin(schema.event, eq(schema.workflowInstance.eventId, schema.event.id))
 		.where(
 			and(
-				eq(schema.userRole.userId, userId),
-				eq(schema.userRole.isActive, true),
-				isNull(schema.userRole.deletedAt),
-				eq(schema.workflowInstanceStepAssignment.status, "pending"),
-				isNull(schema.workflowInstanceStepAssignment.deletedAt),
-				inArray(schema.workflowInstanceStep.status, ["active", "blocked"]),
+				eq(schema.userRole.userId, userId), // for the given user id
+				eq(schema.workflowInstanceStepAssignment.status, "pending"), // fetch all his pending assignments
+				eq(schema.workflowInstanceStep.status, "active"), // (only if in the current active steps (no need to show stuff in future until the first one reached))
+				eq(schema.workflowInstance.status, "active"), // from the active workflow instance
+
+				eq(schema.userRole.isActive, true), // first make sure bro is still active
+				isNull(schema.userRole.deletedAt), // and isn't deleted
 				isNull(schema.workflowInstanceStep.deletedAt),
-				eq(schema.workflowInstance.status, "active"),
+				isNull(schema.workflowInstanceStepAssignment.deletedAt),
 				isNull(schema.workflowInstance.deletedAt),
 				isNull(schema.event.deletedAt),
 			),
-		)
-		.groupBy(
-			schema.event.id,
-			schema.event.title,
-			schema.event.status,
-			schema.event.startsAt,
-			schema.event.endsAt,
-		)
-		.orderBy(schema.event.startsAt);
+		);
 });
 
-export const findEventById = dbAction(async (eventId: number) => {
+export const findEventByIdSimple = dbAction(async (eventId: number) => {
 	return await db.query.event.findFirst({
 		where: and(eq(schema.event.id, eventId), isNull(schema.event.deletedAt)),
 		columns: { id: true },
 	});
 });
 
-export const findLatestWorkflowInstanceId = dbAction(async (eventId: number) => {
-	const latestInstance = await db.query.workflowInstance.findFirst({
-		where: and(
-			eq(schema.workflowInstance.eventId, eventId),
-			isNull(schema.workflowInstance.deletedAt),
-		),
-		orderBy: (t, { desc }) => [desc(t.createdAt)],
-		columns: { id: true },
-	});
-	return latestInstance?.id ?? null;
-});
-
-export const findAssignmentsByWorkflowInstanceId = dbAction(async (instanceId: number) => {
-	const rows = await db
+export const findAssignmentsForUserInEvent = dbAction(async (userId: number, eventId: number) => {
+	return await db
 		.select({
-			assignmentId: schema.workflowInstanceStepAssignment.id,
+			id: schema.workflowInstanceStepAssignment.id,
 			status: schema.workflowInstanceStepAssignment.status,
 			remarks: schema.workflowInstanceStepAssignment.remarks,
 			completedAt: schema.workflowInstanceStepAssignment.completedAt,
-			userRoleId: schema.workflowInstanceStepAssignment.userRoleId,
-			userId: schema.user.id,
-			userFullName: schema.user.fullName,
-			roleId: schema.role.id,
-			roleName: schema.role.name,
-			stepId: schema.workflowInstanceStep.id,
-			stepName: schema.workflowInstanceStep.name,
-			stepStatus: schema.workflowInstanceStep.status,
-			targetGroupId: schema.workflowInstanceStepTargetGroup.id,
-			targetGroupDetail: sql<{
+
+			step: {
+				id: schema.workflowInstanceStep.id,
+				name: schema.workflowInstanceStep.name,
+				status: schema.workflowInstanceStep.status,
+				instanceId: schema.workflowInstance.id,
+			},
+			role: {
+				id: schema.role.id,
+				name: schema.role.name,
+				scope: sql<{
+					type: "organization" | "venue";
+					kindId: number;
+					kindName: string;
+				}>`case
+					when ${schema.role.managedEntityType} = 'organization'
+					then (
+						select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', ot.id, 'kindName', ot.name)
+						from organization_type ot where ot.id = ${schema.role.typeRefId} limit 1
+					)
+					when ${schema.role.managedEntityType} = 'venue'
+					then (
+						select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', vt.id, 'kindName', vt.name)
+						from venue_type vt where vt.id = ${schema.role.typeRefId} limit 1
+					)
+					else null
+				end`.as("scope"),
+			},
+			scope: sql<{
 				type: "organization" | "venue";
 				id: number;
 				name: string;
@@ -112,132 +113,57 @@ export const findAssignmentsByWorkflowInstanceId = dbAction(async (instanceId: n
 						from venue v where v.id = ${schema.managedEntity.refId} limit 1
 					)
 					else null
-				end`,
+				end`.as("scope"),
 		})
 		.from(schema.workflowInstanceStepAssignment)
 		.innerJoin(
+			schema.userRole,
+			eq(schema.userRole.id, schema.workflowInstanceStepAssignment.userRoleId),
+		)
+		.innerJoin(
 			schema.workflowInstanceStepTargetGroup,
 			eq(
-				schema.workflowInstanceStepAssignment.targetGroupId,
 				schema.workflowInstanceStepTargetGroup.id,
+				schema.workflowInstanceStepAssignment.targetGroupId,
 			),
+		)
+		.innerJoin(
+			schema.managedEntity,
+			eq(schema.managedEntity.id, schema.workflowInstanceStepTargetGroup.managedEntityId),
 		)
 		.innerJoin(
 			schema.workflowInstanceStepRole,
-			eq(schema.workflowInstanceStepTargetGroup.stepRoleId, schema.workflowInstanceStepRole.id),
+			eq(schema.workflowInstanceStepRole.id, schema.workflowInstanceStepTargetGroup.stepRoleId),
 		)
-		.innerJoin(schema.role, eq(schema.workflowInstanceStepRole.roleId, schema.role.id))
+		.innerJoin(schema.role, eq(schema.role.id, schema.workflowInstanceStepRole.roleId))
 		.innerJoin(
 			schema.workflowInstanceStep,
-			eq(schema.workflowInstanceStepRole.stepId, schema.workflowInstanceStep.id),
+			eq(schema.workflowInstanceStep.id, schema.workflowInstanceStepRole.stepId),
 		)
 		.innerJoin(
-			schema.userRole,
-			eq(schema.workflowInstanceStepAssignment.userRoleId, schema.userRole.id),
+			schema.workflowInstance,
+			eq(schema.workflowInstance.id, schema.workflowInstanceStep.instanceId),
 		)
-		.innerJoin(schema.user, eq(schema.userRole.userId, schema.user.id))
-		.innerJoin(
-			schema.managedEntity,
-			eq(schema.workflowInstanceStepTargetGroup.managedEntityId, schema.managedEntity.id),
-		)
+		.innerJoin(schema.event, eq(schema.event.id, schema.workflowInstance.eventId))
 		.where(
 			and(
-				eq(schema.workflowInstanceStep.instanceId, instanceId),
+				eq(schema.userRole.userId, userId), // for the given user, find all...
+				// eq(schema.workflowInstanceStepAssignment.status, "pending"), // ...pending assignments... (for now, fetch all)
+				eq(schema.workflowInstance.status, "active"), // ...under the active workflow instance...
+				eq(schema.event.id, eventId), // ...of the given event.
+
+				// and let's just make sure the variables aren't deleted yet
 				isNull(schema.workflowInstanceStepAssignment.deletedAt),
 				isNull(schema.workflowInstanceStepTargetGroup.deletedAt),
-				isNull(schema.workflowInstanceStepRole.deletedAt),
-				isNull(schema.workflowInstanceStep.deletedAt),
 				isNull(schema.userRole.deletedAt),
-				isNull(schema.user.deletedAt),
-				isNull(schema.managedEntity.deletedAt),
 			),
-		)
-		.orderBy(
-			schema.workflowInstanceStep.id,
-			schema.workflowInstanceStepTargetGroup.id,
-			schema.workflowInstanceStepAssignment.createdAt,
 		);
-	return rows.map((r) => ({
-		assignmentId: r.assignmentId,
-		status: r.status,
-		remarks: r.remarks,
-		completedAt: r.completedAt,
-		userRoleId: r.userRoleId,
-		user: {
-			id: r.userId,
-			fullName: r.userFullName,
-		},
-		role: {
-			id: r.roleId,
-			name: r.roleName,
-		},
-		step: {
-			id: r.stepId,
-			name: r.stepName,
-			status: r.stepStatus,
-		},
-		targetGroup: {
-			id: r.targetGroupId,
-			type: r.targetGroupDetail.type,
-			organizationId: r.targetGroupDetail.type === "organization" ? r.targetGroupDetail.id : null,
-			venueId: r.targetGroupDetail.type === "venue" ? r.targetGroupDetail.id : null,
-			name: r.targetGroupDetail.name,
-		},
-	}));
 });
-
-export const findOwnedAssignmentsForEvent = dbAction(
-	async (assignmentIds: number[], userId: number, eventId: number) => {
-		return await db
-			.select({
-				assignmentId: schema.workflowInstanceStepAssignment.id,
-				status: schema.workflowInstanceStepAssignment.status,
-				stepId: schema.workflowInstanceStep.id,
-			})
-			.from(schema.workflowInstanceStepAssignment)
-			.innerJoin(
-				schema.userRole,
-				eq(schema.workflowInstanceStepAssignment.userRoleId, schema.userRole.id),
-			)
-			.innerJoin(
-				schema.workflowInstanceStepTargetGroup,
-				eq(
-					schema.workflowInstanceStepAssignment.targetGroupId,
-					schema.workflowInstanceStepTargetGroup.id,
-				),
-			)
-			.innerJoin(
-				schema.workflowInstanceStepRole,
-				eq(schema.workflowInstanceStepTargetGroup.stepRoleId, schema.workflowInstanceStepRole.id),
-			)
-			.innerJoin(
-				schema.workflowInstanceStep,
-				eq(schema.workflowInstanceStepRole.stepId, schema.workflowInstanceStep.id),
-			)
-			.innerJoin(
-				schema.workflowInstance,
-				eq(schema.workflowInstanceStep.instanceId, schema.workflowInstance.id),
-			)
-			.where(
-				and(
-					inArray(schema.workflowInstanceStepAssignment.id, assignmentIds),
-					eq(schema.userRole.userId, userId),
-					eq(schema.workflowInstance.eventId, eventId),
-					eq(schema.workflowInstance.status, "active"),
-					isNull(schema.workflowInstanceStepAssignment.deletedAt),
-					isNull(schema.workflowInstanceStepTargetGroup.deletedAt),
-					isNull(schema.workflowInstanceStepRole.deletedAt),
-					isNull(schema.workflowInstanceStep.deletedAt),
-					isNull(schema.workflowInstance.deletedAt),
-				),
-			);
-	},
-);
 
 export const respondToAssignments = dbAction(
 	async (
 		assignmentIds: number[],
-		stepId: number,
+		activeStepId: number,
 		data: { status: "approved" | "denied"; remarks?: string | undefined },
 	) => {
 		await db.transaction(async (tx) => {
@@ -250,7 +176,7 @@ export const respondToAssignments = dbAction(
 				})
 				.where(inArray(schema.workflowInstanceStepAssignment.id, assignmentIds));
 
-			await resolveStep(tx, stepId);
+			await resolveStep(tx, activeStepId);
 		});
 	},
 );

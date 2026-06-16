@@ -18,26 +18,35 @@ export const getPendingApprovalEvents: ApiRequestHandler<
 
 export const getEventAssignments: ApiRequestHandler<
 	{
-		assignmentId: number;
+		id: number;
 		status: WorkflowInstanceStepAssignmentStatus;
 		remarks: string | null;
 		completedAt: string | null;
-		userRoleId: number;
-		user: { id: number; fullName: string };
-		role: { id: number; name: string };
-		step: { id: number; name: string; status: WorkflowInstanceStepStatus };
-		targetGroup: {
+		step: {
 			id: number;
+			name: string;
+			status: WorkflowInstanceStepStatus;
+		};
+		role: {
+			id: number;
+			name: string;
+			scope: {
+				type: "organization" | "venue";
+				kindId: number;
+				kindName: string;
+			};
+		};
+		scope: {
 			type: "organization" | "venue";
-			organizationId: number | null;
-			venueId: number | null;
+			id: number;
 			name: string;
 		};
 	}[],
 	schemas.EventParamsSchema
 > = async (req, res) => {
+	const user = getAuthenticatedUser(req);
 	const params = schemas.eventParamsSchema.parse(req.params);
-	const result = await service.getEventAssignments(params.eventId);
+	const result = await service.getEventAssignments(user.id, params.eventId);
 	return ok(res, result);
 };
 
