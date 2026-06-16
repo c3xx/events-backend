@@ -4,29 +4,29 @@ import { PASSWORD_TOKEN_EXPIRY } from "@/lib/constants.js";
 import { dbAction } from "@/lib/helpers.js";
 
 export const findActivePasswordToken = dbAction(async (tokenHash: string) => {
-    const [user] = await db
-        .select({
-            id: schema.userPasswordToken.id,
-            type: schema.userPasswordToken.type,
-            user: {
-                id: schema.user.id,
-                email: schema.user.email,
-                isActive: schema.user.isActive,
-            },
-        })
-        .from(schema.userPasswordToken)
-        .innerJoin(schema.user, eq(schema.userPasswordToken.userId, schema.user.id))
-        .where(
-            and(
-                eq(schema.userPasswordToken.tokenHash, tokenHash),
-                isNull(schema.userPasswordToken.usedAt),
-                gt(schema.userPasswordToken.expiresAt, sql`now()`),
-                isNull(schema.user.deletedAt),
-            ),
-        )
-        .limit(1);
+	const [user] = await db
+		.select({
+			id: schema.userPasswordToken.id,
+			type: schema.userPasswordToken.type,
+			user: {
+				id: schema.user.id,
+				email: schema.user.email,
+				isActive: schema.user.isActive,
+			},
+		})
+		.from(schema.userPasswordToken)
+		.innerJoin(schema.user, eq(schema.userPasswordToken.userId, schema.user.id))
+		.where(
+			and(
+				eq(schema.userPasswordToken.tokenHash, tokenHash),
+				isNull(schema.userPasswordToken.usedAt),
+				gt(schema.userPasswordToken.expiresAt, sql`now()`),
+				isNull(schema.user.deletedAt),
+			),
+		)
+		.limit(1);
 
-    return user;
+	return user;
 });
 
 export const applyPasswordChange = dbAction(
