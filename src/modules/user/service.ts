@@ -12,7 +12,11 @@ export async function createUser(input: schemas.CreateUserSchema) {
 
 	const setPasswordUrl = `${FRONTEND_URL}/set-password`;
 	const html = getAccountCreatedContent(setPasswordUrl);
-	await sendEmail(input.email, "Your account has been created", html);
+	await sendEmail({
+		to: [input.email],
+		subject: "Your account has been created",
+		html: html,
+	});
 
 	return user;
 }
