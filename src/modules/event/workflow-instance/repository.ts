@@ -136,7 +136,11 @@ export const insertWorkflowInstance = dbAction(
 
 				await tx
 					.update(schema.workflowInstanceStep)
-					.set({ nextStepId: sql.join(sqlChunks, sql.raw(" ")) })
+					.set({
+						nextStepId: sql`
+							(${sql.join(sqlChunks, sql.raw(" "))})::bigint
+						`,
+					})
 					.where(inArray(schema.workflowInstanceStep.id, ids));
 			}
 
