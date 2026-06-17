@@ -9,6 +9,10 @@ export const getEventTypes: ApiRequestHandler<
 		isActive: boolean;
 		venuePolicy: EventTypeVenuePolicy;
 		collaborationPolicy: EventTypeCollaborationPolicy;
+		workflowTemplate: {
+			id: number;
+			name: string;
+		};
 	}[]
 > = async (_req, res) => {
 	const result = await service.getEventTypes();
@@ -18,10 +22,13 @@ export const getEventTypes: ApiRequestHandler<
 export const getEventType: ApiRequestHandler<{
 	id: number;
 	name: string;
-	workflowTemplateId: number;
 	isActive: boolean;
 	venuePolicy: EventTypeVenuePolicy;
 	collaborationPolicy: EventTypeCollaborationPolicy;
+	workflowTemplate: {
+		id: number;
+		name: string;
+	};
 }> = async (req, res) => {
 	const params = schemas.eventTypeScopedSchema.parse(req.params);
 	const result = await service.getEventType(params.id);
