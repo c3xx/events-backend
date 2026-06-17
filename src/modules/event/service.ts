@@ -206,7 +206,9 @@ export async function submitEvent(
 		throw new NotFoundError("Event type not found");
 	}
 
-	const template = await workflowTemplateRepository.findByIdWithRoles(eventType.workflowTemplateId);
+	const template = await workflowTemplateRepository.findByIdWithRoles(
+		eventType.workflowTemplate.id,
+	);
 	if (!template) {
 		throw new NotFoundError("Workflow template not found");
 	}

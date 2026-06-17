@@ -16,6 +16,7 @@ router.get("/parentable", controller.getParentableEvents);
 
 router.get("/:eventId", controller.getEvent);
 
+// todo: adjust the following router to utilize the eventId scope handler
 router.use("/:eventId/venue-allotments", venueAllotmentRouter);
 router.use("/:eventId/organizers", organizerRouter);
 router.use("/:eventId/organizer-invitations", organizerInvitationRouter);
