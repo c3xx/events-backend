@@ -13,7 +13,8 @@ export const findActiveInstance = dbAction(async (eventId: number) => {
 		columns: { id: true },
 	});
 });
-//Recursively find all managed entities related to given organizations.
+
+// Recursively find all managed entities related to given organizations.
 export const findAncestorOrganizationManagedEntities = dbAction(
 	async (organizationIds: number[]) => {
 		if (organizationIds.length === 0) return [];
@@ -100,6 +101,7 @@ export const insertWorkflowInstance = dbAction(
 				.update(schema.event)
 				.set({ status: "pending" })
 				.where(eq(schema.event.id, data.eventId));
+
 			const insertedSteps = await tx
 				.insert(schema.workflowInstanceStep)
 				.values(
@@ -337,7 +339,7 @@ export const abortWorkflowInstance = dbAction(async (instanceId: number, eventId
 
 		await tx
 			.update(schema.workflowInstanceStep)
-			.set({ status: "skipped" })
+			.set({ status: "skipped", completedAt: sql`now()` })
 			.where(
 				and(
 					eq(schema.workflowInstanceStep.instanceId, instanceId),
@@ -348,11 +350,11 @@ export const abortWorkflowInstance = dbAction(async (instanceId: number, eventId
 
 		await tx
 			.update(schema.workflowInstanceStepAssignment)
-			.set({ status: "skipped" })
+			.set({ status: "skipped", completedAt: sql`now()` })
 			.where(
 				and(
 					eq(schema.workflowInstanceStepAssignment.status, "pending"),
-					isNull(schema.workflowInstanceStep.deletedAt),
+					isNull(schema.workflowInstanceStepAssignment.deletedAt),
 					inArray(
 						schema.workflowInstanceStepAssignment.targetGroupId,
 						tx
@@ -372,9 +374,9 @@ export const abortWorkflowInstance = dbAction(async (instanceId: number, eventId
 							.where(
 								and(
 									eq(schema.workflowInstanceStep.instanceId, instanceId),
-									isNull(schema.workflowInstanceStep.deletedAt),
-									isNull(schema.workflowInstanceStepRole.deletedAt),
 									isNull(schema.workflowInstanceStepTargetGroup.deletedAt),
+									isNull(schema.workflowInstanceStepRole.deletedAt),
+									isNull(schema.workflowInstanceStep.deletedAt),
 								),
 							),
 					),
