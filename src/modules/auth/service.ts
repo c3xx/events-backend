@@ -1,6 +1,6 @@
 import { jwtVerify } from "jose";
 import { hashPassword, verifyPassword } from "@/lib/argon2.js";
-import { FRONTEND_URL } from "@/lib/constants.js";
+import { FRONTEND_ORIGIN } from "@/lib/constants.js";
 import { sendEmail } from "@/lib/email.js";
 import {
 	getPasswordChangedContent,
@@ -116,7 +116,7 @@ export async function requestPasswordToken(input: schemas.RequestPasswordTokenSc
 		type: input.type,
 	});
 
-	const tokenUrl = `${FRONTEND_URL}/new-password?token=${encodeURIComponent(token)}`;
+	const tokenUrl = `${FRONTEND_ORIGIN}/new-password?token=${encodeURIComponent(token)}`;
 
 	const isSetPassword = input.type === "set_password";
 
@@ -149,7 +149,7 @@ export async function resetPassword(input: schemas.ResetPasswordSchema) {
 		newPasswordHash,
 	});
 
-	const loginUrl = `${FRONTEND_URL}/login`;
+	const loginUrl = `${FRONTEND_ORIGIN}/login`;
 
 	const isSetPassword = tokenRecord.type === "set_password";
 
