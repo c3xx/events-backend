@@ -16,7 +16,7 @@ export async function assignRoleToWorkflowTemplateStep(
 	const stepRoleWithRoleId = templateStep.stepRoles.find((stepRole) => {
 		return stepRole.role.id === input.roleId;
 	});
-	if (stepRoleWithRoleId == null)
+	if (stepRoleWithRoleId != null)
 		throw new ConflictError("Same role already exists in the template step", stepRoleWithRoleId);
 
 	await repository.assign(templateStep.id, {

@@ -4,6 +4,7 @@ import { CHECKS, type CustomCheckEntry, isCheckName, isTableName } from "@/db/ch
 import { snakeToNormalCase } from "./helpers.js";
 
 export const ERROR_CODES = {
+	bad_request: "BAD_REQUEST",
 	validation_error: "VALIDATION_ERROR",
 	invalid_credentials: "INVALID_CREDENTIALS",
 	not_found: "NOT_FOUND",
@@ -29,6 +30,12 @@ export class AppError extends Error {
 		message: string,
 	) {
 		super(message);
+	}
+}
+
+export class BadRequestError extends AppError {
+	constructor(message: string) {
+		super(400, ERROR_CODES.bad_request, message);
 	}
 }
 

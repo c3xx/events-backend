@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
+import { resolveStep } from "./progression.js";
 
 export const findActiveInstance = dbAction(async (eventId: number) => {
 	return await db.query.workflowInstance.findFirst({
@@ -12,7 +13,8 @@ export const findActiveInstance = dbAction(async (eventId: number) => {
 		columns: { id: true },
 	});
 });
-//Recursively find all managed entities related to given organizations.
+
+// Recursively find all managed entities related to given organizations.
 export const findAncestorOrganizationManagedEntities = dbAction(
 	async (organizationIds: number[]) => {
 		if (organizationIds.length === 0) return [];
@@ -94,6 +96,11 @@ export const insertWorkflowInstance = dbAction(
 				})
 				.returning({ id: schema.workflowInstance.id });
 			if (instance == null) unreachable();
+
+			await tx
+				.update(schema.event)
+				.set({ status: "pending" })
+				.where(eq(schema.event.id, data.eventId));
 
 			const insertedSteps = await tx
 				.insert(schema.workflowInstanceStep)
@@ -196,6 +203,8 @@ export const insertWorkflowInstance = dbAction(
 					}
 				}
 			}
+
+			await resolveStep(tx, firstStep.id);
 
 			return { id: instance.id };
 		});
@@ -318,3 +327,65 @@ const workflowInstanceWith = {
 		},
 	},
 } as const;
+
+export const abortWorkflowInstance = dbAction(async (instanceId: number, eventId: number) => {
+	await db.transaction(async (tx) => {
+		await tx
+			.update(schema.workflowInstance)
+			.set({ status: "aborted", completedAt: sql`now()` })
+			.where(
+				and(eq(schema.workflowInstance.id, instanceId), isNull(schema.workflowInstance.deletedAt)),
+			);
+
+		await tx
+			.update(schema.workflowInstanceStep)
+			.set({ status: "skipped", completedAt: sql`now()` })
+			.where(
+				and(
+					eq(schema.workflowInstanceStep.instanceId, instanceId),
+					inArray(schema.workflowInstanceStep.status, ["pending", "active", "blocked"]),
+					isNull(schema.workflowInstanceStep.deletedAt),
+				),
+			);
+
+		await tx
+			.update(schema.workflowInstanceStepAssignment)
+			.set({ status: "skipped", completedAt: sql`now()` })
+			.where(
+				and(
+					eq(schema.workflowInstanceStepAssignment.status, "pending"),
+					isNull(schema.workflowInstanceStepAssignment.deletedAt),
+					inArray(
+						schema.workflowInstanceStepAssignment.targetGroupId,
+						tx
+							.select({ id: schema.workflowInstanceStepTargetGroup.id })
+							.from(schema.workflowInstanceStepTargetGroup)
+							.innerJoin(
+								schema.workflowInstanceStepRole,
+								eq(
+									schema.workflowInstanceStepTargetGroup.stepRoleId,
+									schema.workflowInstanceStepRole.id,
+								),
+							)
+							.innerJoin(
+								schema.workflowInstanceStep,
+								eq(schema.workflowInstanceStepRole.stepId, schema.workflowInstanceStep.id),
+							)
+							.where(
+								and(
+									eq(schema.workflowInstanceStep.instanceId, instanceId),
+									isNull(schema.workflowInstanceStepTargetGroup.deletedAt),
+									isNull(schema.workflowInstanceStepRole.deletedAt),
+									isNull(schema.workflowInstanceStep.deletedAt),
+								),
+							),
+					),
+				),
+			);
+
+		await tx
+			.update(schema.event)
+			.set({ status: "draft" })
+			.where(and(eq(schema.event.id, eventId), isNull(schema.event.deletedAt)));
+	});
+});
