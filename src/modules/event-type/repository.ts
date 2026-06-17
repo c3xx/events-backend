@@ -10,8 +10,21 @@ export const getEventTypes = dbAction(async () => {
 			isActive: schema.eventType.isActive,
 			venuePolicy: schema.eventType.venuePolicy,
 			collaborationPolicy: schema.eventType.collaborationPolicy,
+			workflowTemplate: sql<{
+				id: number;
+				name: string;
+			}>`json_build_object('id', ${schema.workflowTemplate.id},'name', ${schema.workflowTemplate.name})`.as(
+				"workflowTemplate",
+			),
 		})
 		.from(schema.eventType)
+		.innerJoin(
+			schema.workflowTemplate,
+			and(
+				eq(schema.workflowTemplate.id, schema.eventType.workflowTemplateId),
+				isNull(schema.workflowTemplate.deletedAt),
+			),
+		)
 		.where(isNull(schema.eventType.deletedAt))
 		.orderBy(schema.eventType.createdAt);
 });
@@ -39,18 +52,32 @@ export const createEventType = dbAction(
 	},
 );
 
-export const getEventType = dbAction(async (id: number) => {
-	return await db.query.eventType.findFirst({
-		where: and(eq(schema.eventType.id, id), isNull(schema.eventType.deletedAt)),
-		columns: {
-			id: true,
-			name: true,
-			workflowTemplateId: true,
-			isActive: true,
-			collaborationPolicy: true,
-			venuePolicy: true,
-		},
-	});
+export const getEventType = dbAction(async (eventTypeId: number) => {
+	const [eventType] = await db
+		.select({
+			id: schema.eventType.id,
+			name: schema.eventType.name,
+			isActive: schema.eventType.isActive,
+			venuePolicy: schema.eventType.venuePolicy,
+			collaborationPolicy: schema.eventType.collaborationPolicy,
+			workflowTemplate: sql<{
+				id: number;
+				name: string;
+			}>`json_build_object('id', ${schema.workflowTemplate.id},'name', ${schema.workflowTemplate.name})`.as(
+				"workflowTemplate",
+			),
+		})
+		.from(schema.eventType)
+		.innerJoin(
+			schema.workflowTemplate,
+			and(
+				eq(schema.workflowTemplate.id, schema.eventType.workflowTemplateId),
+				isNull(schema.workflowTemplate.deletedAt),
+			),
+		)
+		.where(and(eq(schema.eventType.id, eventTypeId), isNull(schema.eventType.deletedAt)));
+
+	return eventType;
 });
 
 export const deleteEventType = dbAction(async (id: number) => {

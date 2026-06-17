@@ -66,7 +66,7 @@ export async function createNewTokens(refreshToken: string) {
 		throw new UnauthorizedError("Invalid or expired refresh token");
 	}
 
-	const user = await userRepository.getUserWithPermissions(jwtPayload.id);
+	const user = await userRepository.findUserById(jwtPayload.id);
 	if (user == null) {
 		throw new UnauthorizedError("Could not find the authenticated user");
 	}

@@ -9,6 +9,7 @@
 		"TypeScript": {
 			"language_servers": [
 				"vtsls",
+				"wakatime",
 				"biome",
 				"!deno",
 				"!tailwindcss-language-server",
