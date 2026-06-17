@@ -306,20 +306,8 @@ const workflowInstanceWith = {
 									userRole: {
 										columns: {
 											id: true,
-										},
-										with: {
-											role: {
-												columns: {
-													id: true,
-													name: true,
-												},
-											},
-											user: {
-												columns: {
-													id: true,
-													fullName: true,
-												},
-											},
+											userId: true,
+											roleId: true,
 										},
 									},
 								},
