@@ -36,6 +36,7 @@ export const refresh: ApiRequestHandler<{
 	accessToken: string;
 }> = async (req, res) => {
 	const refreshToken = req.cookies[REFRESH_TOKEN_COOKIE_NAME];
+
 	if (typeof refreshToken !== "string" || refreshToken.trim().length === 0) {
 		throw new UnauthorizedError("No refresh token");
 	}

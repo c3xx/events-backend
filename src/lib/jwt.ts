@@ -1,12 +1,9 @@
 import { SignJWT } from "jose";
+import { env } from "@/lib/env.js";
 import { MINUTE, WEEK } from "./constants.js";
-import { quickEnv } from "./helpers.js";
 
-const JWT_ACCESS_SECRET = quickEnv("JWT_ACCESS_SECRET");
-const JWT_REFRESH_SECRET = quickEnv("JWT_REFRESH_SECRET");
-
-export const JWT_ACCESS_SECRET_SIGN_KEY = new TextEncoder().encode(JWT_ACCESS_SECRET);
-export const JWT_REFRESH_SECRET_SIGN_KEY = new TextEncoder().encode(JWT_REFRESH_SECRET);
+export const JWT_ACCESS_SECRET_SIGN_KEY = new TextEncoder().encode(env.JWT_ACCESS_SECRET);
+export const JWT_REFRESH_SECRET_SIGN_KEY = new TextEncoder().encode(env.JWT_REFRESH_SECRET);
 
 export const JWT_ACCESS_TOKEN_EXPIRY = 10 * MINUTE;
 export const JWT_REFRESH_TOKEN_EXPIRY = 1 * WEEK;

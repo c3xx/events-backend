@@ -1,8 +1,7 @@
-import { quickEnv } from "./helpers.js";
+import { env } from "@/lib/env.js";
 
 // === Application Level
-export const IS_PROD = quickEnv("NODE_ENV") === "production";
-export const FRONTEND_ORIGIN = quickEnv("FRONTEND_ORIGIN", true);
+export const IS_PROD = env.NODE_ENV === "production";
 
 export const INSTITUTION_NAME = "TKMCE";
 export const INSTITUTION_DOMAIN = "tkmce.ac.in";

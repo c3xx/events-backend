@@ -12,9 +12,7 @@ const NEWLINE = "\n";
 console.log("Reading trigger directory", util.styleText("dim", TRIGGERS_PATH));
 
 const triggerFiles = await fs
-	.readdir(TRIGGERS_PATH, {
-		withFileTypes: true,
-	})
+	.readdir(TRIGGERS_PATH, { withFileTypes: true })
 	.then((entries) =>
 		entries
 			.filter((entry) => path.extname(entry.name) === ".sql")

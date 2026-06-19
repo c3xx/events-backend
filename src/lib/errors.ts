@@ -18,8 +18,8 @@ export const ERROR_CODES = {
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 
 export class UnreachableError extends Error {
-	constructor() {
-		super("Unreachable");
+	constructor(message?: string) {
+		super(`Unreachable: ${message}`);
 	}
 }
 
