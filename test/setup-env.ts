@@ -1,3 +1,4 @@
+import { lstat } from "node:fs/promises";
 import { loadEnvFile } from "node:process";
 import { inject } from "vitest";
 
@@ -7,4 +8,8 @@ if (testDatabaseUrl == null)
 
 process.env.DATABASE_URL = testDatabaseUrl;
 
-loadEnvFile("./.env.test");
+try {
+	const testEnvFilepath = "./.env.test";
+	await lstat(testEnvFilepath);
+	loadEnvFile(testEnvFilepath);
+} catch {}
