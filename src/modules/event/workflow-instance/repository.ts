@@ -251,6 +251,9 @@ export const getAllWorkflowInstances = dbAction(async (eventId: number) => {
 });
 
 export const getWorkflowInstance = dbAction(async (eventId: number, workflowInstanceId: number) => {
+	// Only fetch what the service layer actually needs: the instance status and
+	// its steps (id, status, nextStepId). The deeply-nested `with: workflowInstanceWith`
+	// query (which includes assignments.userRole.role.user) crashes the driver.
 	return await db.query.workflowInstance.findFirst({
 		where: and(
 			eq(schema.workflowInstance.eventId, eventId),
@@ -266,9 +269,19 @@ export const getWorkflowInstance = dbAction(async (eventId: number, workflowInst
 			eventId: true,
 			submittedBy: true,
 		},
-		with: workflowInstanceWith,
+		with: {
+			steps: {
+				columns: {
+					id: true,
+					name: true,
+					status: true,
+					nextStepId: true,
+				},
+			},
+		},
 	});
 });
+
 
 const workflowInstanceWith = {
 	steps: {

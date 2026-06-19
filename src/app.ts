@@ -5,8 +5,6 @@ import { nanoid } from "nanoid";
 import { env } from "@/lib/env.js";
 import { authenticateToken, cors, errorHandler } from "@/middlewares/index.js";
 
-// end of normal imports, and router imports follow:
-
 import authRouter from "@/modules/auth/routes.js";
 import eventRouter from "@/modules/event/routes.js";
 import eventCategoriesRouter from "@/modules/event-category/routes.js";
@@ -28,7 +26,7 @@ const app: Application = express();
 
 if (!env.QUIET) {
 	app.use((req, res, next) => {
-		const id = nanoid(10); // note: store in req.id
+		const id = nanoid(10);
 		const path = req.path;
 		const timeStart = Date.now();
 
@@ -45,7 +43,6 @@ if (!env.QUIET) {
 				styleText("magenta", new Date().toISOString()),
 				styleText("dim", id),
 				styleText([resOk ? "bgGreen" : "bgRed"], ` ${res.statusCode} `),
-				// path,
 				styleText("yellow", `${Date.now() - timeStart}ms`),
 			);
 		}

@@ -28,13 +28,15 @@ export async function respondToAssignments(
 
 	const assignmentsForUserInEvent = await repository.findAssignmentsForUserInEvent(userId, eventId);
 
-	const requestedIds = new Set(body.assignmentIds);
-	const validIds = new Set(assignmentsForUserInEvent.map((a) => a.id));
+	const requestedIds = new Set(body.assignmentIds.map(Number));
+	const validIds = new Set(assignmentsForUserInEvent.map((a) => Number(a.id)));
 
 	if (requestedIds.difference(validIds).size !== 0)
 		throw new NotFoundError("Could not find some of the provided assignments in this event");
 
-	const targetAssignments = assignmentsForUserInEvent.filter((a) => requestedIds.has(a.id));
+
+	const targetAssignments = assignmentsForUserInEvent.filter((a) => requestedIds.has(Number(a.id)));
+
 
 	const instanceIds = new Set(targetAssignments.map((a) => a.step.instanceId));
 	if (instanceIds.size !== 1) throw new BadRequestError("Assignments span multiple instances");
