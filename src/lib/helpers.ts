@@ -8,18 +8,7 @@ import { FLATTENED_PERMISSIONS, PERMISSION_SCOPES } from "@/lib/constants.js";
 import { handleDbError, UnauthorizedError, UnreachableError } from "./errors.js";
 
 export function unreachable(): never {
-	console.error("never supposed to reach here");
-	throw new UnreachableError();
-}
-
-export function quickEnv(name: string, check: false): string | undefined;
-export function quickEnv(name: string, check?: true): string;
-export function quickEnv(name: string, check?: boolean): string | undefined {
-	const value = process.env[name];
-	if (check && (typeof value !== "string" || value.length === 0)) {
-		throw new Error(`Environment variable '${name}' must be set`);
-	}
-	return value;
+	throw new UnreachableError("never supposed to reach here");
 }
 
 export function isPermissionScope(scope: string): scope is PermissionScope {
@@ -79,7 +68,7 @@ export function hexSha256(token: string) {
 }
 /**
  * Orders the workflow template/instance steps in correct order despite the given order.
- * @param stepMap A map, which points (step id -> next step id)
+ * @param unorderedSteps Steps to be ordered
  * @param initialStepId The initial step to start the ordering from.
  * @returns An array of step IDs in order
  */
@@ -87,7 +76,8 @@ export function orderWorkflowSteps<T extends { id: number; nextStepId: number | 
 	unorderedSteps: T[],
 	initialStepId: number | null,
 ): T[] {
-	if (unorderedSteps.length === 0 || initialStepId == null) return []; // they should technically be asserted. no steps = no initial
+	if (unorderedSteps.length === 0) return []; // they should technically be asserted. no steps = no initial
+	if (initialStepId == null) throw new Error("Initial step ID is required for ordering steps");
 
 	const stepMap = new Map(unorderedSteps.map((s) => [s.id, s]));
 

@@ -1,14 +1,12 @@
 import { confirm } from "@inquirer/prompts";
+import { eq, inArray, type SQL, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { hashPassword, verifyPassword } from "@/lib/argon2.js";
 import { FLATTENED_PERMISSIONS } from "@/lib/constants.js";
-import { isPermission, quickEnv, unreachable } from "@/lib/helpers.js";
-import "dotenv/config";
-import { eq, inArray, type SQL, sql } from "drizzle-orm";
+import { env } from "@/lib/env.js";
+import { isPermission, unreachable } from "@/lib/helpers.js";
 
 // === Setup 'admin' user account
-const ADMIN_LOGIN_EMAIL = quickEnv("ADMIN_LOGIN_EMAIL");
-const ADMIN_LOGIN_PASSWORD = quickEnv("ADMIN_LOGIN_PASSWORD");
 
 console.log("Setting up administrator user account");
 
@@ -22,19 +20,19 @@ if (existingAdminAccounts.length === 0) {
 	await db.insert(schema.user).values({
 		type: "admin",
 		fullName: "System admin",
-		email: ADMIN_LOGIN_EMAIL,
-		passwordHash: await hashPassword(ADMIN_LOGIN_PASSWORD),
+		email: env.ADMIN_LOGIN_EMAIL,
+		passwordHash: await hashPassword(env.ADMIN_LOGIN_PASSWORD),
 	});
 } else if (existingAdminAccounts.length > 1) {
 	throw new Error("misconfiguration in database: more than one admin account");
 } else {
 	const account = existingAdminAccounts[0];
 	if (account == null) unreachable();
-	const emailMatch = account.email === ADMIN_LOGIN_EMAIL;
+	const emailMatch = account.email === env.ADMIN_LOGIN_EMAIL;
 	const passwordMatch =
 		account.passwordHash == null
 			? false
-			: await verifyPassword(account.passwordHash, ADMIN_LOGIN_PASSWORD);
+			: await verifyPassword(account.passwordHash, env.ADMIN_LOGIN_PASSWORD);
 	if (!emailMatch || !passwordMatch) {
 		console.log("mismatched credentials for admin account, setting them to config");
 		if (
@@ -45,8 +43,8 @@ if (existingAdminAccounts.length === 0) {
 			await db
 				.update(schema.user)
 				.set({
-					email: ADMIN_LOGIN_EMAIL,
-					passwordHash: await hashPassword(ADMIN_LOGIN_PASSWORD),
+					email: env.ADMIN_LOGIN_EMAIL,
+					passwordHash: await hashPassword(env.ADMIN_LOGIN_PASSWORD),
 				})
 				.where(eq(schema.user.type, "admin"));
 	}
