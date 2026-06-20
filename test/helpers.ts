@@ -1,7 +1,8 @@
 import { db, schema } from "@/db/index.js";
 import { hashPassword } from "@/lib/argon2.js";
 import { nanoid } from "nanoid";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { createEvent } from "@/modules/event/service.js";
 
 export async function createTestUser(data?: Partial<typeof schema.user.$inferInsert>) {
 	const [user] = await db
@@ -40,7 +41,20 @@ export async function createTestOrganization(data: { name?: string; organization
 		})
 		.returning();
 	if (!org) throw new Error("Failed to create test organization");
-	return org;
+
+	// Ensure managed entity exists
+	let me = await db.query.managedEntity.findFirst({
+		where: and(eq(schema.managedEntity.managedEntityType, "organization"), eq(schema.managedEntity.refId, org.id))
+	});
+
+	if (!me) {
+		[me] = await db.insert(schema.managedEntity).values({
+			managedEntityType: "organization",
+			refId: org.id,
+		}).returning();
+	}
+
+	return { ...org, managedEntity: me! };
 }
 
 export async function createTestEventType(data: { name?: string; workflowTemplateId: number }) {
@@ -193,10 +207,14 @@ export async function createBasicEventSetup() {
 	});
 
 	const template = await createTestWorkflowTemplate();
-	await createTestWorkflowStep({
+	const initialStep = await createTestWorkflowStep({
 		templateId: template.id,
 		name: "Initial Step",
 	});
+
+	await db.update(schema.workflowTemplate)
+		.set({ initialStepId: initialStep.id })
+		.where(eq(schema.workflowTemplate.id, template.id));
 
 	const eventType = await createTestEventType({
 		workflowTemplateId: template.id,
@@ -210,5 +228,43 @@ export async function createBasicEventSetup() {
 		hostOrg,
 		eventType,
 		category,
+	};
+}
+
+export async function createOrganizerTestSetup() {
+	const setup = await createBasicEventSetup();
+	
+	const mockRole = await createTestRole({ 
+		managedEntityType: "organization", 
+		typeRefId: setup.orgType.id 
+	});
+	
+	await grantPermissionToRole(mockRole.id, "event_organizer_invitation:respond");
+	await grantPermissionToRole(mockRole.id, "event_organizer:manage");
+	
+	const userRole = await createTestUserRole({ 
+		userId: setup.admin.id, 
+		roleId: mockRole.id, 
+		managedEntityId: setup.hostOrg.managedEntity.id 
+	});
+
+	const actor = { id: setup.admin.id, type: "admin" as const, permissions: [] };
+	
+	const event = await createEvent(actor, {
+		organizationId: setup.hostOrg.id,
+		title: `Event-${nanoid()}`,
+		typeId: setup.eventType.id,
+		categoryId: setup.category.id,
+		expectedParticipants: 10,
+		requestDetails: "Setup event",
+		startsAt: new Date(Date.now() + 86400000).toISOString(),
+		endsAt: new Date(Date.now() + 172800000).toISOString(),
+	});
+
+	return {
+		...setup,
+		event,
+		userRole,
+		mockRole
 	};
 }
