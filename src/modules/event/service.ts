@@ -321,3 +321,77 @@ export async function getParentableEvents(
 
 	return repository.findParentableEvents(parentableFor);
 }
+
+export async function discardDraftEvent(
+	user: { id: number; type: UserType; permissions: PermissionCode[] },
+	eventId: number,
+) {
+	const event = await repository.findEventById(eventId);
+	if (event == null) {
+		throw new NotFoundError("Event not found");
+	}
+
+	const host = event.organizers.find((o) => o.role === "host");
+	if (!host) {
+		throw new NotFoundError("Host organizer not found");
+	}
+
+	const hasPermission = await permissionRepository.hasPermissionInManagedEntity(
+		user,
+		"organization",
+		[host.organization.id],
+		"event:manage",
+	);
+	if (!hasPermission) {
+		throw new ForbiddenError("You do not have any required permission for this");
+	}
+
+	if (event.status !== "draft") {
+		throw new ConflictError("Only draft events can be discarded");
+	}
+
+	await repository.discardDraftEvent(eventId);
+}
+
+export async function cancelApprovedEvent(
+	user: { id: number; type: UserType; permissions: PermissionCode[] },
+	eventId: number,
+) {
+	const event = await repository.findEventById(eventId);
+	if (event == null) {
+		throw new NotFoundError("Event not found");
+	}
+
+	const host = event.organizers.find((o) => o.role === "host");
+	if (!host) {
+		throw new NotFoundError("Host organizer not found");
+	}
+
+	const hasPermission = await permissionRepository.hasPermissionInManagedEntity(
+		user,
+		"organization",
+		[host.organization.id],
+		"event:manage",
+	);
+	if (!hasPermission) {
+		throw new ForbiddenError("You do not have any required permission for this");
+	}
+
+	if (event.status !== "approved") {
+		throw new ConflictError("Only approved events can be cancelled");
+	}
+
+	const now = new Date();
+	const endsAt = new Date(event.endsAt);
+	if (endsAt <= now) {
+		throw new ConflictError("Cannot cancel an event that has already ended");
+	}
+
+	const result = await repository.cancelApprovedEvent(eventId);
+	if (result == null) {
+		throw new NotFoundError("Event not found");
+	}
+
+	return { id: result.id };
+}
+

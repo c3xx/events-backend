@@ -102,3 +102,18 @@ export const getParentableEvents: ApiRequestHandler<
 	const result = await service.getParentableEvents(user, query);
 	return ok(res, result);
 };
+
+export const discardEvent: ApiRequestHandler<null> = async (req, res) => {
+	const user = getAuthenticatedUser(req);
+	const params = schemas.eventScopedSchema.parse(req.params);
+	await service.discardDraftEvent(user, params.eventId);
+	return ok(res, null);
+};
+
+export const cancelEvent: ApiRequestHandler<{ id: number }> = async (req, res) => {
+	const user = getAuthenticatedUser(req);
+	const params = schemas.eventScopedSchema.parse(req.params);
+	const result = await service.cancelApprovedEvent(user, params.eventId);
+	return ok(res, result);
+};
+

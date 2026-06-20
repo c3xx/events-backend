@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, lt, or } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
@@ -48,3 +48,19 @@ export const insertVenueAllotment = dbAction(
 		});
 	},
 );
+
+export const deleteVenueAllotment = dbAction(async (eventId: number, allotmentId: number) => {
+	const [deleted] = await db
+		.update(schema.venueAllotment)
+		.set({ deletedAt: sql`now()` })
+		.where(
+			and(
+				eq(schema.venueAllotment.id, allotmentId),
+				eq(schema.venueAllotment.eventId, eventId),
+				isNull(schema.venueAllotment.deletedAt),
+			),
+		)
+		.returning({ id: schema.venueAllotment.id });
+	return deleted;
+});
+

@@ -10,3 +10,11 @@ export const createVenueAllotment: ApiRequestHandler<{ id: number }> = async (re
 	const result = await service.createVenueAllotment(user, params.eventId, body);
 	return ok(res, result);
 };
+
+export const deleteVenueAllotment: ApiRequestHandler<{ id: number }> = async (req, res) => {
+	const user = getAuthenticatedUser(req);
+	const params = schemas.allotmentScopedSchema.parse(req.params);
+	const result = await service.deleteVenueAllotment(user, params.eventId, params.allotmentId);
+	return ok(res, result);
+};
+
