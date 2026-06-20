@@ -161,3 +161,54 @@ export async function grantPermissionToRole(roleId: number, permissionCode: Perm
 		})
 		.onConflictDoNothing();
 }
+
+export async function createTestWorkflowStepRole(data: { stepId: number; roleId: number; targetGroupApprovalCriteria?: (typeof schema.workflowTargetGroupApprovalCriteriaEnum.enumValues)[number] }) {
+	const [stepRole] = await db
+		.insert(schema.workflowTemplateStepRole)
+		.values({
+			stepId: data.stepId,
+			roleId: data.roleId,
+			targetGroupApprovalCriteria: data.targetGroupApprovalCriteria ?? "all",
+		})
+		.returning();
+	if (!stepRole) throw new Error("Failed to create test workflow step role");
+	return stepRole;
+}
+
+export async function allowParentType(childTypeId: number, parentTypeId: number) {
+	await db
+		.insert(schema.organizationTypeAllowedParent)
+		.values({
+			childTypeId,
+			parentTypeId,
+		})
+		.onConflictDoNothing();
+}
+
+export async function createBasicEventSetup() {
+	const admin = await createTestUser({ type: "admin" });
+	const orgType = await createTestOrganizationType();
+	const hostOrg = await createTestOrganization({
+		organizationTypeId: orgType.id,
+	});
+
+	const template = await createTestWorkflowTemplate();
+	await createTestWorkflowStep({
+		templateId: template.id,
+		name: "Initial Step",
+	});
+
+	const eventType = await createTestEventType({
+		workflowTemplateId: template.id,
+	});
+
+	const category = await createTestEventCategory();
+
+	return {
+		admin,
+		orgType,
+		hostOrg,
+		eventType,
+		category,
+	};
+}
