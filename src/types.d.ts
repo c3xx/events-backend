@@ -84,6 +84,49 @@ declare global {
 		eventId: number;
 		submittedBy: number;
 	}[];
+	export type InstanceRow = {
+		instance_id: number;
+		instance_created_at: string;
+		instance_initial_step_id: number | null;
+		instance_status: WorkflowInstanceStatus;
+		instance_completed_at: string | null;
+		instance_event_id: number;
+		instance_submitted_by: number;
+		step_id: number | null;
+		step_name: string | null;
+		step_status: WorkflowInstanceStepStatus | null;
+		step_next_step_id: number | null;
+		step_role_id: number | null;
+		step_role_role_id: number | null;
+		step_role_criteria: WorkflowTargetGroupApprovalCriteria | null;
+		target_group_id: number | null;
+		target_group_managed_entity_id: number | null;
+		assignment_id: number | null;
+		assignment_status: WorkflowInstanceStepAssignmentStatus | null;
+		assignment_completed_at: string | null;
+		user_role_id: number | null;
+		user_id: number | null;
+		user_full_name: string | null;
+		role_id: number | null;
+		role_name: string | null;
+	};
+	export type StepEntry = Omit<WorkflowInstance["steps"][number], "stepRoles"> & {
+		stepRoles: Map<number, StepRoleEntry>;
+	};
+	export type StepRoleEntry = Omit<
+		WorkflowInstance["steps"][number]["stepRoles"][number],
+		"targetGroups"
+	> & {
+		targetGroups: Map<number, TargetGroupEntry>;
+	};
+	export type TargetGroupEntry = Omit<
+		WorkflowInstance["steps"][number]["stepRoles"][number]["targetGroups"][number],
+		"assignments"
+	> & {
+		assignments: Map<number, AssignmentEntry>;
+	};
+	export type AssignmentEntry =
+		WorkflowInstance["steps"][number]["stepRoles"][number]["targetGroups"][number]["assignments"][number];
 
 	// system types
 	export type PermissionScope = keyof typeof PERMISSION;

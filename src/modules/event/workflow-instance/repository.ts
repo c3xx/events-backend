@@ -217,26 +217,6 @@ export const insertWorkflowInstance = dbAction(
 	},
 );
 
-export const getLatestWorkflowInstance = dbAction(async (eventId: number) => {
-	return await db.query.workflowInstance.findFirst({
-		where: and(
-			eq(schema.workflowInstance.eventId, eventId),
-			isNull(schema.workflowInstance.deletedAt),
-		),
-		orderBy: (t, { desc }) => [desc(t.createdAt)],
-		columns: {
-			id: true,
-			createdAt: true,
-			initialStepId: true,
-			status: true,
-			completedAt: true,
-			eventId: true,
-			submittedBy: true,
-		},
-		with: workflowInstanceWith,
-	});
-});
-
 export const getAllWorkflowInstances = dbAction(async (eventId: number) => {
 	return await db.query.workflowInstance.findMany({
 		where: and(
@@ -255,72 +235,6 @@ export const getAllWorkflowInstances = dbAction(async (eventId: number) => {
 		},
 	});
 });
-
-export const getWorkflowInstance = dbAction(async (eventId: number, workflowInstanceId: number) => {
-	return await db.query.workflowInstance.findFirst({
-		where: and(
-			eq(schema.workflowInstance.eventId, eventId),
-			eq(schema.workflowInstance.id, workflowInstanceId),
-			isNull(schema.workflowInstance.deletedAt),
-		),
-		columns: {
-			id: true,
-			createdAt: true,
-			initialStepId: true,
-			status: true,
-			completedAt: true,
-			eventId: true,
-			submittedBy: true,
-		},
-		with: workflowInstanceWith,
-	});
-});
-
-const workflowInstanceWith = {
-	steps: {
-		columns: {
-			id: true,
-			name: true,
-			status: true,
-			nextStepId: true,
-		},
-		with: {
-			stepRoles: {
-				columns: {
-					id: true,
-					roleId: true,
-					targetGroupApprovalCriteria: true,
-				},
-				with: {
-					targetGroups: {
-						columns: {
-							id: true,
-							managedEntityId: true,
-						},
-						with: {
-							assignments: {
-								columns: {
-									id: true,
-									status: true,
-									completedAt: true,
-								},
-								with: {
-									userRole: {
-										columns: {
-											id: true,
-											userId: true,
-											roleId: true,
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	},
-} as const;
 
 export const abortWorkflowInstance = dbAction(async (instanceId: number, eventId: number) => {
 	await db.transaction(async (tx) => {
@@ -382,4 +296,89 @@ export const abortWorkflowInstance = dbAction(async (instanceId: number, eventId
 			.set({ status: "draft" })
 			.where(and(eq(schema.event.id, eventId), isNull(schema.event.deletedAt)));
 	});
+});
+
+const WORKFLOW_INSTANCE_COLUMNS = sql`
+    wi.id                               AS instance_id,
+    wi.created_at                       AS instance_created_at,
+    wi.initial_step_id                  AS instance_initial_step_id,
+    wi.status                           AS instance_status,
+    wi.completed_at                     AS instance_completed_at,
+    wi.event_id                         AS instance_event_id,
+    wi.submitted_by                     AS instance_submitted_by,
+    wis.id                              AS step_id,
+    wis.name                            AS step_name,
+    wis.status                          AS step_status,
+    wis.next_step_id                    AS step_next_step_id,
+    wisr.id                             AS step_role_id,
+    wisr.role_id                        AS step_role_role_id,
+    wisr.target_group_approval_criteria AS step_role_criteria,
+    wistg.id                            AS target_group_id,
+    wistg.managed_entity_id             AS target_group_managed_entity_id,
+    wisa.id                             AS assignment_id,
+    wisa.status                         AS assignment_status,
+    wisa.completed_at                   AS assignment_completed_at,
+    ur.id                               AS user_role_id,
+    u.id                                AS user_id,
+    u.full_name                         AS user_full_name,
+    r.id                                AS role_id,
+    r.name                              AS role_name
+`;
+
+const WORKFLOW_INSTANCE_JOINS = sql`
+    LEFT JOIN workflow_instance_step wis
+        ON wis.instance_id = wi.id
+        AND wis.deleted_at IS NULL
+    LEFT JOIN workflow_instance_step_role wisr
+        ON wisr.step_id = wis.id
+        AND wisr.deleted_at IS NULL
+    LEFT JOIN workflow_instance_step_target_group wistg
+        ON wistg.step_role_id = wisr.id
+        AND wistg.deleted_at IS NULL
+    LEFT JOIN workflow_instance_step_assignment wisa
+        ON wisa.target_group_id = wistg.id
+        AND wisa.deleted_at IS NULL
+    LEFT JOIN user_role ur
+        ON ur.id = wisa.user_role_id
+        AND ur.deleted_at IS NULL
+    LEFT JOIN "user" u
+        ON u.id = ur.user_id
+    LEFT JOIN role r
+        ON r.id = ur.role_id
+        AND r.deleted_at IS NULL
+`;
+
+//No dbAction since this is an internal function that is only used by other dbActions
+async function fetchWorkflowInstanceRows(whereClause: SQL): Promise<InstanceRow[]> {
+	const result = await db.execute<InstanceRow>(sql`
+        SELECT ${WORKFLOW_INSTANCE_COLUMNS}
+        FROM workflow_instance wi
+        ${WORKFLOW_INSTANCE_JOINS}
+        WHERE ${whereClause}
+    `);
+	return result.rows;
+}
+
+export const getLatestWorkflowInstance = dbAction(async (eventId: number) => {
+	const rows = await fetchWorkflowInstanceRows(sql`
+        wi.event_id = ${eventId}
+        AND wi.deleted_at IS NULL
+        AND wi.id = (
+            SELECT id FROM workflow_instance
+            WHERE event_id = ${eventId}
+              AND deleted_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT 1
+        )
+    `);
+	return rows;
+});
+
+export const getWorkflowInstance = dbAction(async (eventId: number, workflowInstanceId: number) => {
+	const rows = await fetchWorkflowInstanceRows(sql`
+        wi.event_id = ${eventId}
+        AND wi.id = ${workflowInstanceId}
+        AND wi.deleted_at IS NULL
+    `);
+	return rows;
 });
