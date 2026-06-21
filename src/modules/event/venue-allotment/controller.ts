@@ -17,4 +17,3 @@ export const deleteVenueAllotment: ApiRequestHandler<{ id: number }> = async (re
 	const result = await service.deleteVenueAllotment(user, params.eventId, params.allotmentId);
 	return ok(res, result);
 };
-

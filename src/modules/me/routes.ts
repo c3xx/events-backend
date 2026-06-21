@@ -12,4 +12,3 @@ router.get("/organizations/event-creatable", controller.getEventCreatableOrganiz
 router.use("/approval-assignments", approvalAssignmentsRouter);
 
 export default router;
-

@@ -63,4 +63,3 @@ export const deleteVenueAllotment = dbAction(async (eventId: number, allotmentId
 		.returning({ id: schema.venueAllotment.id });
 	return deleted;
 });
-

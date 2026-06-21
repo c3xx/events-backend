@@ -57,7 +57,9 @@ export async function deleteVenueAllotment(
 	);
 
 	if (!hasAccess) {
-		throw new ForbiddenError("You do not have permission to manage venue allotments for this event");
+		throw new ForbiddenError(
+			"You do not have permission to manage venue allotments for this event",
+		);
 	}
 
 	if (event.status !== "draft") {
@@ -71,4 +73,3 @@ export async function deleteVenueAllotment(
 
 	return { id: result.id };
 }
-

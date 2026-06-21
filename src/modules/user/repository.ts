@@ -208,4 +208,3 @@ export const updateUser = dbAction(async (id: number, data: { fullName?: string 
 		.returning({ id: schema.user.id });
 	return updated;
 });
-

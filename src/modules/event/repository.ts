@@ -330,12 +330,16 @@ export const discardDraftEvent = dbAction(async (eventId: number) => {
 		await tx
 			.update(schema.eventOrganizer)
 			.set({ deletedAt: sql`now()` })
-			.where(and(eq(schema.eventOrganizer.eventId, eventId), isNull(schema.eventOrganizer.deletedAt)));
+			.where(
+				and(eq(schema.eventOrganizer.eventId, eventId), isNull(schema.eventOrganizer.deletedAt)),
+			);
 
 		await tx
 			.update(schema.venueAllotment)
 			.set({ deletedAt: sql`now()` })
-			.where(and(eq(schema.venueAllotment.eventId, eventId), isNull(schema.venueAllotment.deletedAt)));
+			.where(
+				and(eq(schema.venueAllotment.eventId, eventId), isNull(schema.venueAllotment.deletedAt)),
+			);
 
 		await tx
 			.update(schema.eventOrganizerInvitation)
@@ -363,4 +367,3 @@ export const cancelApprovedEvent = dbAction(async (eventId: number) => {
 		.returning({ id: schema.event.id });
 	return updated;
 });
-

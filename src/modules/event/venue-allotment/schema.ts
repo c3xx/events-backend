@@ -21,4 +21,3 @@ export const allotmentScopedSchema = eventScopedSchema
 
 export type CreateVenueAllotmentSchema = z.output<typeof createVenueAllotmentSchema>;
 export type AllotmentScopedSchema = z.output<typeof allotmentScopedSchema>;
-

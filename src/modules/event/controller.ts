@@ -116,4 +116,3 @@ export const cancelEvent: ApiRequestHandler<{ id: number }> = async (req, res) =
 	const result = await service.cancelApprovedEvent(user, params.eventId);
 	return ok(res, result);
 };
-

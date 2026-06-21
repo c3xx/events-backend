@@ -394,4 +394,3 @@ export async function cancelApprovedEvent(
 
 	return { id: result.id };
 }
-

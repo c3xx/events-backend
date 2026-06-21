@@ -25,4 +25,3 @@ export const updateProfile: ApiRequestHandler<{ id: number }> = async (req, res)
 	const result = await service.updateProfile(user.id, body);
 	return ok(res, result);
 };
-

@@ -18,7 +18,6 @@ router.get("/:eventId", controller.getEvent);
 router.delete("/:eventId", requirePermissions(["event:manage"]), controller.discardEvent);
 router.post("/:eventId/cancel", requirePermissions(["event:manage"]), controller.cancelEvent);
 
-
 // todo: adjust the following router to utilize the eventId scope handler
 router.use("/:eventId/venue-allotments", venueAllotmentRouter);
 router.use("/:eventId/organizers", organizerRouter);

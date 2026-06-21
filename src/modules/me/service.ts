@@ -19,4 +19,3 @@ export async function updateProfile(userId: number, input: schemas.UpdateProfile
 	}
 	return { id: result.id };
 }
-
