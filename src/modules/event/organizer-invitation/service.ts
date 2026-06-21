@@ -1,25 +1,20 @@
 import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
-import * as eventRepository from "@/modules/event/repository.js";
+import type { EventScope } from "@/modules/event/scopes.js";
 import { hasPermissionInManagedEntity } from "@/modules/permission/repository.js";
 import * as repository from "./repository.js";
 import type { RespondToInvitationSchema, RevokeInvitationSchema } from "./schema.js";
 
-export async function getEventInvitations(eventId: number) {
-	const event = await eventRepository.findEventById(eventId);
-	if (event == null) throw new NotFoundError("Event not found");
-	return await repository.getEventInvitations(eventId);
+export async function getEventInvitations(event: EventScope["event"]) {
+	return await repository.getEventInvitations(event.id);
 }
 
 export async function respondToInvitation(
-	eventId: number,
+	event: EventScope["event"],
 	invitationId: number,
 	input: RespondToInvitationSchema,
 	user: { id: number; type: UserType },
 ) {
-	const event = await eventRepository.findEventById(eventId);
-	if (event == null) throw new NotFoundError("Event not found");
-
-	const invitation = await repository.findInvitationById(invitationId);
+	const invitation = await repository.findInvitationById(event.id, invitationId);
 	if (invitation == null) throw new NotFoundError("Invitation not found");
 
 	// can respond to invites under the recipient org with the given user-role id?
@@ -36,7 +31,7 @@ export async function respondToInvitation(
 	if (invitation.status !== "pending")
 		throw new ConflictError("The invitation is either expired or already responded to");
 
-	return await repository.respondToInvitation(eventId, invitationId, {
+	return await repository.respondToInvitation(event.id, invitationId, {
 		status: input.status,
 		respondedByUserId: input.userRoleId,
 		recipientOrganizationId: invitation.recipientOrganizationId,
@@ -44,15 +39,12 @@ export async function respondToInvitation(
 }
 
 export async function revokeInvitation(
-	eventId: number,
+	event: EventScope["event"],
 	invitationId: number,
 	input: RevokeInvitationSchema,
 	user: { id: number; type: UserType },
 ) {
-	const event = await eventRepository.findEventById(eventId);
-	if (event == null) throw new NotFoundError("Event not found");
-
-	const invitation = await repository.findInvitationById(invitationId);
+	const invitation = await repository.findInvitationById(event.id, invitationId);
 	if (invitation == null) throw new NotFoundError("Invitation not found");
 
 	if (invitation.status !== "pending")
@@ -69,5 +61,5 @@ export async function revokeInvitation(
 	if (!canManageEventOrganizers)
 		throw new ForbiddenError("You do not have permission to revoke this invitation");
 
-	return await repository.revokeInvitation(invitationId);
+	return await repository.revokeInvitation(event.id, invitationId);
 }

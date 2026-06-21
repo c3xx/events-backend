@@ -1,19 +1,11 @@
 import { Router } from "express";
-import { requirePermissions } from "@/middlewares/require-permissions.js";
+import { requireUserType } from "@/middlewares/require-user-type.js";
 import * as controller from "./controller.js";
 
 const router: Router = Router({ mergeParams: true });
 
 router.get("/", controller.getEventTypeChildTypes);
-router.post(
-	"/:childId",
-	requirePermissions(["event_type:modify_hierarchy"]),
-	controller.addAllowedChildType,
-);
-router.delete(
-	"/:childId",
-	requirePermissions(["event_type:modify_hierarchy"]),
-	controller.removeAllowedChildType,
-);
+router.post("/:childId", requireUserType("admin"), controller.addAllowedChildType);
+router.delete("/:childId", requireUserType("admin"), controller.removeAllowedChildType);
 
 export default router;

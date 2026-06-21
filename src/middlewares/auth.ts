@@ -1,6 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
 import { jwtVerify } from "jose";
-import { db, schema } from "@/db/index.js";
 import { env } from "@/lib/env.js";
 import { UnauthorizedError } from "@/lib/errors.js";
 import { JWS_ALG_HEADER_PARAMETER, JWT_ACCESS_SECRET_SIGN_KEY } from "@/lib/jwt.js";
@@ -35,25 +33,9 @@ export const authenticateToken: ApiRequestHandler = async (req, _res, next) => {
 		// todo: always fetch permissions, or embed inside *very* short-lived access tokens?
 		// going with always fetch for now, for testing purposes. this is heavy though.
 
-		const userRoles = await db
-			.selectDistinct({ roleId: schema.userRole.roleId }) // will probably have to scope it later; so might need to remove the distinct i think
-			.from(schema.userRole)
-			.where(and(isNull(schema.userRole.deletedAt), eq(schema.userRole.userId, payload.id)));
-		const permissions = await db
-			.selectDistinct({ code: schema.permission.code })
-			.from(schema.rolePermission)
-			.innerJoin(schema.permission, eq(schema.rolePermission.permissionId, schema.permission.id))
-			.where(
-				inArray(
-					schema.rolePermission.roleId,
-					userRoles.map((role) => role.roleId),
-				),
-			);
-
 		req.user = {
 			id: payload.id,
 			type: payload.type,
-			permissions: permissions.map((permission) => permission.code),
 		};
 
 		next();

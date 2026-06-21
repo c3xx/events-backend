@@ -1,4 +1,4 @@
-import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
 import { orderWorkflowSteps, unreachable } from "@/lib/helpers.js";
 import * as eventTypeRepository from "@/modules/event-type/repository.js";
 import * as organizationRepository from "@/modules/organization/repository.js";
@@ -12,7 +12,7 @@ import type { EventScope } from "./scopes.js";
 import * as workflowInstanceRepository from "./workflow-instance/repository.js";
 
 export async function createEvent(
-	user: { id: number; type: UserType; permissions: PermissionCode[] },
+	user: { id: number; type: UserType },
 	input: schemas.CreateEventSchema,
 ) {
 	if (
@@ -57,26 +57,29 @@ export async function createEvent(
 }
 
 export async function updateEvent(
-	user: { id: number; type: UserType; permissions: PermissionCode[] },
-	eventId: number,
+	user: { id: number; type: UserType },
+	event: EventScope["event"],
 	input: schemas.UpdateEventSchema,
 ) {
-	const orgIds = await repository.findEventOrganizerOrgIds(eventId);
-	if (orgIds.length === 0) throw new NotFoundError("Event not found");
+	if (event.status !== "draft") throw new BadRequestError("Only draft events can be modified");
+
+	const hostOrganizers = event.organizers.filter((organizer) => organizer.role === "host");
+	if (hostOrganizers.length !== 1 || hostOrganizers[0] == null) unreachable();
+	const hostOrganizer = hostOrganizers[0]; // note: only host can do stuff.
 
 	const hasAccess = await permissionRepository.hasPermissionInManagedEntity(
 		user,
 		"organization",
-		orgIds,
+		[hostOrganizer.organization.id],
 		"event:manage",
 	);
 
 	if (!hasAccess) {
-		throw new ForbiddenError("You do not have any required permission for this");
+		throw new ForbiddenError("You do not have permission to update this event");
 	}
 
 	const result = await repository.updateEvent({
-		id: eventId,
+		id: event.id,
 		title: input.title,
 		typeId: input.typeId,
 		categoryId: input.categoryId,
@@ -86,78 +89,25 @@ export async function updateEvent(
 		endsAt: input.endsAt,
 		parentEventId: input.parentEventId,
 	});
-	if (result == null) {
-		throw new NotFoundError("Event not found");
-	} else if ("eventExist" in result) {
-		throw new ConflictError("Only draft events can be updated");
-	}
 	return result;
 }
 
-export async function getEvent(
-	user: { id: number; type: UserType; permissions: PermissionCode[] },
-	eventId: number,
-) {
-	const event = await repository.findEventById(eventId);
-	if (event == null) throw new NotFoundError("Event not found");
-
-	if (user.type === "admin") return event;
-
-	const perms = new Set(user.permissions);
-	if (perms.has("event:view_all")) return event;
-	if (perms.has("event:view_all_non_draft") && event.status !== "draft") return event;
-	if (perms.has("event:view_all_confirmed") && event.status === "approved") return event;
-
-	const eventOrgIds = event.organizers.map((o) => o.organization.id);
-
-	if (eventOrgIds.length > 0) {
-		const hasAccess = await permissionRepository.hasPermissionInManagedEntity(
-			user,
-			"organization",
-			eventOrgIds,
-			"event:view_own",
-		);
-
-		if (hasAccess) return event;
-	}
-
-	throw new ForbiddenError("You do not have permission to view this event");
+export async function getEvent(event: EventScope["event"]) {
+	return event;
 }
 
 export async function getEvents(
-	user: { id: number; type: UserType; permissions: PermissionCode[] },
+	user: { id: number; type: UserType },
 	filter: schemas.GetEventsQuerySchema,
 ) {
-	if (user.type === "admin") {
-		return await repository.findEvents({
-			status: filter.status,
-			typeId: filter.typeId,
-			viewAll: true,
-		});
-	}
-
-	const perms = new Set(user.permissions);
-	const grants = {
-		viewAll: perms.has("event:view_all"),
-		viewAllNonDraft: perms.has("event:view_all_non_draft"),
-		viewAllConfirmed: perms.has("event:view_all_confirmed"),
-		viewOwn: perms.has("event:view_own"),
-	};
-
-	if (!Object.values(grants).some(Boolean)) return [];
-
-	const orgIds =
-		grants.viewOwn && !grants.viewAll
-			? (await userRepository.getUserOrganizations(user.id, "event:view_own")).map((org) => org.id)
-			: [];
+	const userOrganizations = await userRepository.getUserOrganizations(user.id, "event:view_own");
+	if (userOrganizations.length === 0) return [];
+	const userOrganizationsIds = userOrganizations.map((org) => org.id);
 
 	return await repository.findEvents({
+		organizationIds: userOrganizationsIds,
 		status: filter.status,
 		typeId: filter.typeId,
-		viewAll: grants.viewAll,
-		viewAllNonDraft: !grants.viewAll && grants.viewAllNonDraft,
-		viewAllConfirmed: !grants.viewAll && !grants.viewAllNonDraft && grants.viewAllConfirmed,
-		orgIds,
 	});
 }
 
@@ -178,14 +128,14 @@ type InstanceInsertData = {
 };
 
 export async function submitEvent(
-	user: { id: number; type: UserType; permissions: PermissionCode[] },
+	user: { id: number; type: UserType },
 	event: EventScope["event"],
 ) {
 	const host = event.organizers.find((o) => o.role === "host");
 	if (!host) {
 		throw new NotFoundError("Host organizer not found");
 	}
-	//Only host organization can submit event
+	// Only host organization can submit event
 	const hasPermission = await permissionRepository.hasPermissionInManagedEntity(
 		user,
 		"organization",
@@ -306,7 +256,7 @@ export async function submitEvent(
 }
 
 export async function getParentableEvents(
-	user: { id: number; type: UserType; permissions: PermissionCode[] },
+	user: { id: number; type: UserType },
 	parentableFor: schemas.GetParentableEventsSchema,
 ) {
 	const hasPermission = permissionRepository.hasPermissionInManagedEntity(

@@ -19,12 +19,8 @@ export function isPermission(permission: string): permission is PermissionCode {
 	return permission in FLATTENED_PERMISSIONS;
 }
 
-export function getAuthenticatedUser(
-	req: Express.Request,
-): Pick<User, "id" | "type"> & { permissions: PermissionCode[] } {
-	if (req.user == null) {
-		throw new UnauthorizedError("Authentication required");
-	}
+export function getAuthenticatedUser(req: Express.Request): Pick<User, "id" | "type"> {
+	if (req.user == null) throw new UnauthorizedError("Authentication required");
 	return req.user;
 }
 

@@ -1,14 +1,10 @@
 import { Router } from "express";
-import { requirePermissions } from "@/middlewares/index.js";
+import { requireUserType } from "@/middlewares/index.js";
 import * as controller from "./controller.js";
 
 const router: Router = Router({ mergeParams: true });
 
 router.get("/", controller.getOrganizationTypeChildTypes);
-router.post(
-	"/:childId",
-	requirePermissions(["organization_type:modify_hierarchy"]),
-	controller.addAllowedChildType,
-);
+router.post("/:childId", requireUserType("admin"), controller.addAllowedChildType);
 
 export default router;

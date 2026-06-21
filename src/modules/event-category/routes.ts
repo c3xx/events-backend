@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { requirePermissions } from "@/middlewares/require-permissions.js";
+import { requireUserType } from "@/middlewares/require-user-type.js";
 import * as controller from "./controller.js";
 
 const router: Router = Router();
 
 router.get("/", controller.getEventCategories);
-router.post("/", requirePermissions(["event_category:create"]), controller.createEventType);
+router.post("/", requireUserType("admin"), controller.createEventType);
 
 export default router;
