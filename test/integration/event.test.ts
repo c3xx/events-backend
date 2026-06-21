@@ -1,14 +1,17 @@
 import { describe, test, expect } from "vitest";
 import { db, schema } from "@/db/index.js";
 import { eq } from "drizzle-orm";
-import { 
+import {
 	createBasicEventSetup
-} from "../helpers.js";
-import { createEvent, updateEvent } from "@/modules/event/service.js";
+} from "../integration_test_helpers.js";
+import { createEvent, submitEvent, updateEvent, getEvent } from "@/modules/event/service.js";
 import { getEventOrganizers } from "@/modules/event/organizer/service.js";
+import { nanoid } from "nanoid";
 
 describe("Event Integration Tests", () => {
 	describe("event lifecycle", () => {
+
+		//test 1
 		test("create event creates host organizer", async () => {
 			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
 
@@ -37,6 +40,9 @@ describe("Event Integration Tests", () => {
 			expect(organizers[0]!.organization.id).toBe(hostOrg.id);
 		});
 
+
+		//test2
+
 		test("update event works for draft status", async () => {
 			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
 
@@ -61,5 +67,249 @@ describe("Event Integration Tests", () => {
 			expect(dbEvent!.title).toBe(updatedTitle);
 			expect(dbEvent!.expectedParticipants).toBe(20);
 		});
+
+
+		//test 3
+
+		test("update event fails for non-draft status", async () => {
+			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+
+			const event = await createEvent({ id: admin.id, type: "admin", permissions: [] }, {
+				organizationId: hostOrg.id,
+				title: "Original Title",
+				typeId: eventType.id,
+				categoryId: category.id,
+				expectedParticipants: 10,
+				requestDetails: "Original details",
+				startsAt: new Date(Date.now() + 86400000).toISOString(),
+				endsAt: new Date(Date.now() + 172800000).toISOString(),
+			});
+
+			const fullEvent = await getEvent(
+				{ id: admin.id, type: "admin", permissions: [] },
+				event.id
+			);
+
+			await submitEvent(
+				{ id: admin.id, type: "admin", permissions: [] },
+				fullEvent
+			);
+
+			await expect(
+				updateEvent({ id: admin.id, type: "admin", permissions: [] }, event.id, {
+					title: "Should Not Update",
+					expectedParticipants: 99,
+				})
+			).rejects.toThrow();
+
+			const dbEvent = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
+			expect(dbEvent!.title).toBe("Original Title");
+			expect(dbEvent!.expectedParticipants).toBe(10);
+		});
+
+
+		//test 4
+		test("submit event for approval", async () => {
+			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+
+			const event = await createEvent({ id: admin.id, type: "admin", permissions: [] }, {
+				organizationId: hostOrg.id,
+				title: "Submit Test Event",
+				typeId: eventType.id,
+				categoryId: category.id,
+				expectedParticipants: 10,
+				requestDetails: "Testing submission",
+				startsAt: new Date(Date.now() + 86400000).toISOString(),
+				endsAt: new Date(Date.now() + 172800000).toISOString(),
+			});
+
+			const beforeSubmit = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
+			expect(beforeSubmit!.status).toBe("draft");
+
+			const fullEvent = await getEvent(
+				{ id: admin.id, type: "admin", permissions: [] },
+				event.id
+			);
+
+			await submitEvent(
+				{ id: admin.id, type: "admin", permissions: [] },
+				fullEvent
+			);
+
+			const afterSubmit = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
+			expect(afterSubmit!.status).toBe("pending");
+
+			const workflowInstance = await db.query.workflowInstance.findFirst({
+				where: eq(schema.workflowInstance.eventId, event.id)
+			});
+			expect(workflowInstance).toBeDefined();
+			expect(workflowInstance!.status).toBe("active");
+			expect(workflowInstance!.initialStepId).not.toBeNull();
+		});
+
+
+
+
+
+
+		//test 5
+		test("create event with past dates should fail", async () => {
+			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+
+			await expect(
+				createEvent({ id: admin.id, type: "admin", permissions: [] }, {
+					organizationId: hostOrg.id,
+					title: "Past Event",
+					typeId: eventType.id,
+					categoryId: category.id,
+					expectedParticipants: 10,
+					requestDetails: "Testing past dates",
+					startsAt: new Date(Date.now() - 172800000).toISOString(),
+					endsAt: new Date(Date.now() - 86400000).toISOString(),
+				})
+			).rejects.toThrow();
+		});
+
+
+
+		//test 6	
+		test("create event where endsAt is before startsAt should fail", async () => {
+			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+
+			await expect(
+				createEvent({ id: admin.id, type: "admin", permissions: [] }, {
+					organizationId: hostOrg.id,
+					title: "Invalid Date Event",
+					typeId: eventType.id,
+					categoryId: category.id,
+					expectedParticipants: 10,
+					requestDetails: "Testing invalid dates",
+					startsAt: new Date(Date.now() + 172800000).toISOString(),
+					endsAt: new Date(Date.now() + 86400000).toISOString(),
+				})
+			).rejects.toThrow();
+		});
+
+		//test 7
+
+		test("create event with zero participants should fail", async () => {
+			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+
+			await expect(
+				createEvent({ id: admin.id, type: "admin", permissions: [] }, {
+					organizationId: hostOrg.id,
+					title: "Zero Participants Event",
+					typeId: eventType.id,
+					categoryId: category.id,
+					expectedParticipants: 0,
+					requestDetails: "Testing zero participants",
+					startsAt: new Date(Date.now() + 86400000).toISOString(),
+					endsAt: new Date(Date.now() + 172800000).toISOString(),
+				})
+			).rejects.toThrow();
+		});
+
+
+		//test 8
+
+		test("create event with inactive event type should fail", async () => {
+			const { admin, hostOrg, category, eventType } = await createBasicEventSetup();
+
+			const [inactiveEventType] = await db
+				.insert(schema.eventType)
+				.values({
+					name: `inactive-type-${nanoid()}`,
+					workflowTemplateId: eventType.workflowTemplateId,
+					isActive: false,
+					venuePolicy: "optional",
+					collaborationPolicy: "optional",
+				})
+				.returning();
+
+			await expect(
+				createEvent({ id: admin.id, type: "admin", permissions: [] }, {
+					organizationId: hostOrg.id,
+					title: "Inactive Type Event",
+					typeId: inactiveEventType!.id,
+					categoryId: category.id,
+					expectedParticipants: 10,
+					requestDetails: "Testing inactive event type",
+					startsAt: new Date(Date.now() + 86400000).toISOString(),
+					endsAt: new Date(Date.now() + 172800000).toISOString(),
+				})
+			).rejects.toThrow();
+		});
+
+
+
+		//test 9
+
+		test("updating only one field leaves other fields unchanged", async () => {
+			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+
+			const event = await createEvent({ id: admin.id, type: "admin", permissions: [] }, {
+				organizationId: hostOrg.id,
+				title: "Original Title",
+				typeId: eventType.id,
+				categoryId: category.id,
+				expectedParticipants: 10,
+				requestDetails: "Original details",
+				startsAt: new Date(Date.now() + 86400000).toISOString(),
+				endsAt: new Date(Date.now() + 172800000).toISOString(),
+			});
+
+			await updateEvent({ id: admin.id, type: "admin", permissions: [] }, event.id, {
+				title: "New Title",
+			});
+
+			const dbEvent = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
+			expect(dbEvent!.title).toBe("New Title");
+			expect(dbEvent!.expectedParticipants).toBe(10);
+			expect(dbEvent!.requestDetails).toBe("Original details");
+		});
+
+
+
+		//test 10
+
+		test("update event that does not exist should fail", async () => {
+			const { admin } = await createBasicEventSetup();
+
+			await expect(
+				updateEvent({ id: admin.id, type: "admin", permissions: [] }, 99999, {
+					title: "Ghost Event",
+				})
+			).rejects.toThrow();
+		});
+
+
+
+		//test 11
+
+		test("create event with invalid organization should fail", async () => {
+			const { admin, eventType, category } = await createBasicEventSetup();
+
+			await expect(
+				createEvent({ id: admin.id, type: "admin", permissions: [] }, {
+					organizationId: 99999,  // non-existent org
+					title: "Invalid Org Event",
+					typeId: eventType.id,
+					categoryId: category.id,
+					expectedParticipants: 10,
+					requestDetails: "Testing invalid org",
+					startsAt: new Date(Date.now() + 86400000).toISOString(),
+					endsAt: new Date(Date.now() + 172800000).toISOString(),
+				})
+			).rejects.toThrow();
+		});
+
+
+
+
+
+
+
+
+
 	});
 });

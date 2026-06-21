@@ -41,20 +41,22 @@ export async function createTestOrganization(data: { name?: string; organization
 		})
 		.returning();
 	if (!org) throw new Error("Failed to create test organization");
+	return org;
+}
 
-	// Ensure managed entity exists
+export async function getManagedEntityForOrganization(organizationId: number) {
 	let me = await db.query.managedEntity.findFirst({
-		where: and(eq(schema.managedEntity.managedEntityType, "organization"), eq(schema.managedEntity.refId, org.id))
+		where: and(eq(schema.managedEntity.managedEntityType, "organization"), eq(schema.managedEntity.refId, organizationId))
 	});
 
 	if (!me) {
 		[me] = await db.insert(schema.managedEntity).values({
 			managedEntityType: "organization",
-			refId: org.id,
+			refId: organizationId,
 		}).returning();
 	}
 
-	return { ...org, managedEntity: me! };
+	return me!;
 }
 
 export async function createTestEventType(data: { name?: string; workflowTemplateId: number }) {
@@ -148,7 +150,6 @@ export async function createTestUserRole(data: { userId: number; roleId: number;
 }
 
 export async function grantPermissionToRole(roleId: number, permissionCode: PermissionCode) {
-	// 1. Ensure permission exists
 	let [perm] = await db
 		.select()
 		.from(schema.permission)
@@ -166,7 +167,6 @@ export async function grantPermissionToRole(roleId: number, permissionCode: Perm
 
 	if (!perm) throw new Error(`Failed to ensure permission ${permissionCode} exists`);
 
-	// 2. Link permission to role
 	await db
 		.insert(schema.rolePermission)
 		.values({
@@ -212,6 +212,17 @@ export async function createBasicEventSetup() {
 		name: "Initial Step",
 	});
 
+	const stepRole = await createTestRole({
+		managedEntityType: "organization",
+		typeRefId: orgType.id,
+	});
+
+	await createTestWorkflowStepRole({
+		stepId: initialStep.id,
+		roleId: stepRole.id,
+		targetGroupApprovalCriteria: "any",
+	});
+
 	await db.update(schema.workflowTemplate)
 		.set({ initialStepId: initialStep.id })
 		.where(eq(schema.workflowTemplate.id, template.id));
@@ -233,23 +244,29 @@ export async function createBasicEventSetup() {
 
 export async function createOrganizerTestSetup() {
 	const setup = await createBasicEventSetup();
-	
-	const mockRole = await createTestRole({ 
-		managedEntityType: "organization", 
-		typeRefId: setup.orgType.id 
-	});
-	
-	await grantPermissionToRole(mockRole.id, "event_organizer_invitation:respond");
-	await grantPermissionToRole(mockRole.id, "event_organizer:manage");
-	
-	const userRole = await createTestUserRole({ 
-		userId: setup.admin.id, 
-		roleId: mockRole.id, 
-		managedEntityId: setup.hostOrg.managedEntity.id 
+
+	const hostME = await getManagedEntityForOrganization(setup.hostOrg.id);
+
+	const mockRole = await createTestRole({
+		managedEntityType: "organization",
+		typeRefId: setup.orgType.id
 	});
 
-	const actor = { id: setup.admin.id, type: "admin" as const, permissions: [] };
-	
+	await grantPermissionToRole(mockRole.id, "event_organizer_invitation:respond" as PermissionCode);
+	await grantPermissionToRole(mockRole.id, "event_organizer:manage" as PermissionCode);
+
+	const userRole = await createTestUserRole({
+		userId: setup.admin.id,
+		roleId: mockRole.id,
+		managedEntityId: hostME.id
+	});
+
+	const actor = {
+		id: setup.admin.id,
+		type: "admin" as UserType,
+		permissions: [] as PermissionCode[]
+	};
+
 	const event = await createEvent(actor, {
 		organizationId: setup.hostOrg.id,
 		title: `Event-${nanoid()}`,
