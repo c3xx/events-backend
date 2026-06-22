@@ -1,7 +1,7 @@
+import { and, eq } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import { db, schema } from "@/db/index.js";
 import { hashPassword } from "@/lib/argon2.js";
-import { nanoid } from "nanoid";
-import { eq, and } from "drizzle-orm";
 import { createEvent } from "@/modules/event/service.js";
 
 export async function createTestUser(data?: Partial<typeof schema.user.$inferInsert>) {
@@ -19,7 +19,9 @@ export async function createTestUser(data?: Partial<typeof schema.user.$inferIns
 	return user;
 }
 
-export async function createTestOrganizationType(data?: Partial<typeof schema.organizationType.$inferInsert>) {
+export async function createTestOrganizationType(
+	data?: Partial<typeof schema.organizationType.$inferInsert>,
+) {
 	const [orgType] = await db
 		.insert(schema.organizationType)
 		.values({
@@ -31,7 +33,11 @@ export async function createTestOrganizationType(data?: Partial<typeof schema.or
 	return orgType;
 }
 
-export async function createTestOrganization(data: { name?: string; organizationTypeId: number; parentOrganizationId?: number }) {
+export async function createTestOrganization(data: {
+	name?: string;
+	organizationTypeId: number;
+	parentOrganizationId?: number;
+}) {
 	const [org] = await db
 		.insert(schema.organization)
 		.values({
@@ -46,17 +52,24 @@ export async function createTestOrganization(data: { name?: string; organization
 
 export async function getManagedEntityForOrganization(organizationId: number) {
 	let me = await db.query.managedEntity.findFirst({
-		where: and(eq(schema.managedEntity.managedEntityType, "organization"), eq(schema.managedEntity.refId, organizationId))
+		where: and(
+			eq(schema.managedEntity.managedEntityType, "organization"),
+			eq(schema.managedEntity.refId, organizationId),
+		),
 	});
 
 	if (!me) {
-		[me] = await db.insert(schema.managedEntity).values({
-			managedEntityType: "organization",
-			refId: organizationId,
-		}).returning();
+		[me] = await db
+			.insert(schema.managedEntity)
+			.values({
+				managedEntityType: "organization",
+				refId: organizationId,
+			})
+			.returning();
 	}
 
-	return me!;
+	if (!me) throw new Error("Failed to create or find managed entity");
+	return me;
 }
 
 export async function createTestEventType(data: { name?: string; workflowTemplateId: number }) {
@@ -74,7 +87,9 @@ export async function createTestEventType(data: { name?: string; workflowTemplat
 	return eventType;
 }
 
-export async function createTestEventCategory(data?: Partial<typeof schema.eventCategory.$inferInsert>) {
+export async function createTestEventCategory(
+	data?: Partial<typeof schema.eventCategory.$inferInsert>,
+) {
 	const [category] = await db
 		.insert(schema.eventCategory)
 		.values({
@@ -86,7 +101,9 @@ export async function createTestEventCategory(data?: Partial<typeof schema.event
 	return category;
 }
 
-export async function createTestWorkflowTemplate(data?: Partial<typeof schema.workflowTemplate.$inferInsert>) {
+export async function createTestWorkflowTemplate(
+	data?: Partial<typeof schema.workflowTemplate.$inferInsert>,
+) {
 	const [template] = await db
 		.insert(schema.workflowTemplate)
 		.values({
@@ -98,7 +115,11 @@ export async function createTestWorkflowTemplate(data?: Partial<typeof schema.wo
 	return template;
 }
 
-export async function createTestWorkflowStep(data: { templateId: number; name?: string; nextStepId?: number }) {
+export async function createTestWorkflowStep(data: {
+	templateId: number;
+	name?: string;
+	nextStepId?: number;
+}) {
 	const [step] = await db
 		.insert(schema.workflowTemplateStep)
 		.values({
@@ -111,7 +132,11 @@ export async function createTestWorkflowStep(data: { templateId: number; name?: 
 	return step;
 }
 
-export async function createTestRole(data: { name?: string; managedEntityType: (typeof schema.managedEntityTypeEnum.enumValues)[number]; typeRefId: number }) {
+export async function createTestRole(data: {
+	name?: string;
+	managedEntityType: (typeof schema.managedEntityTypeEnum.enumValues)[number];
+	typeRefId: number;
+}) {
 	const [newRole] = await db
 		.insert(schema.role)
 		.values({
@@ -124,7 +149,10 @@ export async function createTestRole(data: { name?: string; managedEntityType: (
 	return newRole;
 }
 
-export async function createTestManagedEntity(data: { managedEntityType: (typeof schema.managedEntityTypeEnum.enumValues)[number]; refId: number }) {
+export async function createTestManagedEntity(data: {
+	managedEntityType: (typeof schema.managedEntityTypeEnum.enumValues)[number];
+	refId: number;
+}) {
 	const [entity] = await db
 		.insert(schema.managedEntity)
 		.values({
@@ -136,7 +164,11 @@ export async function createTestManagedEntity(data: { managedEntityType: (typeof
 	return entity;
 }
 
-export async function createTestUserRole(data: { userId: number; roleId: number; managedEntityId: number }) {
+export async function createTestUserRole(data: {
+	userId: number;
+	roleId: number;
+	managedEntityId: number;
+}) {
 	const [userRole] = await db
 		.insert(schema.userRole)
 		.values({
@@ -176,7 +208,11 @@ export async function grantPermissionToRole(roleId: number, permissionCode: Perm
 		.onConflictDoNothing();
 }
 
-export async function createTestWorkflowStepRole(data: { stepId: number; roleId: number; targetGroupApprovalCriteria?: (typeof schema.workflowTargetGroupApprovalCriteriaEnum.enumValues)[number] }) {
+export async function createTestWorkflowStepRole(data: {
+	stepId: number;
+	roleId: number;
+	targetGroupApprovalCriteria?: (typeof schema.workflowTargetGroupApprovalCriteriaEnum.enumValues)[number];
+}) {
 	const [stepRole] = await db
 		.insert(schema.workflowTemplateStepRole)
 		.values({
@@ -223,7 +259,8 @@ export async function createBasicEventSetup() {
 		targetGroupApprovalCriteria: "any",
 	});
 
-	await db.update(schema.workflowTemplate)
+	await db
+		.update(schema.workflowTemplate)
 		.set({ initialStepId: initialStep.id })
 		.where(eq(schema.workflowTemplate.id, template.id));
 
@@ -249,7 +286,7 @@ export async function createOrganizerTestSetup() {
 
 	const mockRole = await createTestRole({
 		managedEntityType: "organization",
-		typeRefId: setup.orgType.id
+		typeRefId: setup.orgType.id,
 	});
 
 	await grantPermissionToRole(mockRole.id, "event_organizer_invitation:respond" as PermissionCode);
@@ -258,13 +295,13 @@ export async function createOrganizerTestSetup() {
 	const userRole = await createTestUserRole({
 		userId: setup.admin.id,
 		roleId: mockRole.id,
-		managedEntityId: hostME.id
+		managedEntityId: hostME.id,
 	});
 
 	const actor = {
 		id: setup.admin.id,
 		type: "admin" as UserType,
-		permissions: [] as PermissionCode[]
+		permissions: [] as PermissionCode[],
 	};
 
 	const event = await createEvent(actor, {
@@ -282,6 +319,6 @@ export async function createOrganizerTestSetup() {
 		...setup,
 		event,
 		userRole,
-		mockRole
+		mockRole,
 	};
 }

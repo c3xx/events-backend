@@ -1,20 +1,17 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
+import { fileURLToPath } from "url";
 
 export default defineConfig({
+	resolve: {
+		alias: {
+			"@/": fileURLToPath(new URL("./src/", import.meta.url)),
+		},
+	},
 	test: {
 		globalSetup: "./test/global-setup.ts",
 		setupFiles: ["./test/setup-env.ts", "./test/setup.ts"],
-		testTimeout: 60 * 1000, // 30s to get the container start (hopefully)
+		testTimeout: 60 * 1000,
 		hookTimeout: 60 * 1000,
-		alias: {
-			"@/": path.resolve(__dirname, "./src") + "/",
-			"@": path.resolve(__dirname, "./src"),
-		},
 		fileParallelism: false,
 		env: {
 			JWT_ACCESS_SECRET: "teststuff",
