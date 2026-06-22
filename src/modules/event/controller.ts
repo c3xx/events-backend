@@ -48,8 +48,6 @@ export const getEvent: ScopedApiRequestHandler<
 		parentEventId: number | null;
 		startsAt: string;
 		endsAt: string;
-		createdAt: string;
-		updatedAt: string;
 		type: { id: number; name: string };
 		category: { id: number; name: string };
 		parentEvent: { id: number; title: string } | null;
@@ -64,7 +62,6 @@ export const getEvent: ScopedApiRequestHandler<
 			endsAt: string;
 			venue: { id: number; name: string };
 		}[];
-		report: { id: number; details: string; submittedAt: string } | null;
 	}
 > = async (_req, res) => {
 	const result = await service.getEvent(res.locals.event);

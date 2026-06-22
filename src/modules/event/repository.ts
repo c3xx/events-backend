@@ -151,8 +151,6 @@ export const findEventById = dbAction(async (eventId: number) => {
 			parentEventId: true,
 			startsAt: true,
 			endsAt: true,
-			createdAt: true,
-			updatedAt: true,
 		},
 		with: {
 			type: {
@@ -181,9 +179,6 @@ export const findEventById = dbAction(async (eventId: number) => {
 						columns: { id: true, name: true },
 					},
 				},
-			},
-			report: {
-				columns: { id: true, details: true, submittedAt: true },
 			},
 		},
 	});
