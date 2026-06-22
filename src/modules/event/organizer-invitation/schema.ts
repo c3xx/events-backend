@@ -10,7 +10,7 @@ export const invitationItemScopedSchema = eventScopedSchema
 
 export const respondToInvitationSchema = z
 	.object({
-		userRoleId: idLike("Invalid user role id"),
+		roleId: idLike("Invalid user role id"),
 		status: z.enum(["accepted", "rejected"], {
 			error: "Status must be either accepted or rejected",
 		}),
@@ -19,7 +19,7 @@ export const respondToInvitationSchema = z
 
 export const revokeInvitationSchema = z
 	.object({
-		userRoleId: idLike("Invalid user role ID"),
+		roleId: idLike("Invalid user role ID"),
 	})
 	.strict();
 

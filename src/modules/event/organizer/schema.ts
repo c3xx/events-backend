@@ -10,7 +10,7 @@ export const organizerScopedSchema = eventScopedSchema
 
 export const addEventOrganizerSchema = z
 	.object({
-		userRoleId: idLike("Invalid user role ID"),
+		roleId: idLike("Invalid role ID"),
 		organizationId: idLike("Invalid organization ID"),
 		intendedRole: z.enum(["co_host", "resource_provider"], {
 			error: "Type must be either co_host or resource_provider",
