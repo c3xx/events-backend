@@ -263,12 +263,7 @@ export async function getParentableEvents(
 	return repository.findParentableEvents(parentableFor);
 }
 
-export async function discardDraftEvent(user: AuthenticatedUser, eventId: number) {
-	const event = await repository.findEventById(eventId);
-	if (event == null) {
-		throw new NotFoundError("Event not found");
-	}
-
+export async function discardDraftEvent(user: AuthenticatedUser, event: EventScope["event"]) {
 	const host = event.organizers.find((o) => o.role === "host");
 	if (!host) {
 		throw new NotFoundError("Host organizer not found");
@@ -288,15 +283,10 @@ export async function discardDraftEvent(user: AuthenticatedUser, eventId: number
 		throw new ConflictError("Only draft events can be discarded");
 	}
 
-	await repository.discardDraftEvent(eventId);
+	await repository.discardDraftEvent(event.id);
 }
 
-export async function cancelApprovedEvent(user: AuthenticatedUser, eventId: number) {
-	const event = await repository.findEventById(eventId);
-	if (event == null) {
-		throw new NotFoundError("Event not found");
-	}
-
+export async function cancelApprovedEvent(user: AuthenticatedUser, event: EventScope["event"]) {
 	const host = event.organizers.find((o) => o.role === "host");
 	if (!host) {
 		throw new NotFoundError("Host organizer not found");
@@ -322,7 +312,7 @@ export async function cancelApprovedEvent(user: AuthenticatedUser, eventId: numb
 		throw new ConflictError("Cannot cancel an event that has already ended");
 	}
 
-	const result = await repository.cancelApprovedEvent(eventId);
+	const result = await repository.cancelApprovedEvent(event.id);
 	if (result == null) {
 		throw new NotFoundError("Event not found");
 	}
