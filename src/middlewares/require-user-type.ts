@@ -6,7 +6,7 @@ export function requireUserType(userType: UserType | UserType[]): ApiRequestHand
 			throw new UnauthorizedError("Unauthorized");
 		}
 
-		const types = Array.isArray(userType) ? [userType] : userType;
+		const types = Array.isArray(userType) ? userType : [userType];
 
 		if (types.includes(req.user.type)) {
 			return next();
