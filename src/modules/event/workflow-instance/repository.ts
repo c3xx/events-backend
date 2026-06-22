@@ -136,7 +136,7 @@ export const insertWorkflowInstance = dbAction(
 
 				await tx
 					.update(schema.workflowInstanceStep)
-					.set({ nextStepId: sql.join(sqlChunks, sql.raw(" ")) })
+					.set({ nextStepId: sql`(${sql.join(sqlChunks, sql.raw(" "))})::bigint` })
 					.where(inArray(schema.workflowInstanceStep.id, ids));
 			}
 
@@ -175,6 +175,8 @@ export const insertWorkflowInstance = dbAction(
 					const role = step.roles[j];
 					const insertedRole = insertedRoles[j];
 					if (role == null || insertedRole == null) return unreachable();
+
+					if (role.targetGroups.length === 0) continue;
 
 					const insertedGroups = await tx
 						.insert(schema.workflowInstanceStepTargetGroup)
@@ -277,26 +279,68 @@ const workflowInstanceWith = {
 			name: true,
 			status: true,
 			nextStepId: true,
+			completedAt: true,
 		},
 		with: {
-			stepRoles: {
+			roles: {
 				columns: {
 					id: true,
-					roleId: true,
 					targetGroupApprovalCriteria: true,
 				},
 				with: {
+					role: {
+						columns: {
+							id: true,
+							name: true,
+						},
+						extras: {
+							scope: sql<{
+								type: "organization" | "venue";
+								kindId: number;
+								kindName: string;
+							}>`case
+								when ${schema.role.managedEntityType} = 'organization'
+								then (
+									select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', ot.id, 'kindName', ot.name)
+									from organization_type ot where ot.id = ${schema.role.typeRefId} limit 1
+								)
+								when ${schema.role.managedEntityType} = 'venue'
+								then (
+									select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', vt.id, 'kindName', vt.name)
+									from venue_type vt where vt.id = ${schema.role.typeRefId} limit 1
+								)
+								else null
+							end`.as("scope"),
+						},
+					},
 					targetGroups: {
 						columns: {
 							id: true,
-							managedEntityId: true,
 						},
+						extras: {
+							scope: sql<{
+								type: "organization" | "venue";
+								id: number;
+								name: string;
+							}>`(SELECT CASE
+								WHEN me.managed_entity_type = 'organization' THEN json_build_object('type', me.managed_entity_type, 'id', o.id, 'name', o.name)
+								WHEN me.managed_entity_type = 'venue' THEN json_build_object('type', me.managed_entity_type, 'id', v.id, 'name', v.name)
+								ELSE null
+							END
+							FROM managed_entity me
+							LEFT JOIN organization o ON me.managed_entity_type = 'organization' AND o.id = me.ref_id
+							LEFT JOIN venue v ON me.managed_entity_type = 'venue' AND v.id = me.ref_id
+							WHERE me.id = ${schema.workflowInstanceStepTargetGroup.managedEntityId}
+							LIMIT 1)`.as("scope"),
+						},
+
 						with: {
 							assignments: {
 								columns: {
 									id: true,
 									status: true,
 									completedAt: true,
+									remarks: true,
 								},
 								with: {
 									userRole: {
@@ -304,12 +348,6 @@ const workflowInstanceWith = {
 											id: true,
 										},
 										with: {
-											role: {
-												columns: {
-													id: true,
-													name: true,
-												},
-											},
 											user: {
 												columns: {
 													id: true,

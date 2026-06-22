@@ -1,5 +1,5 @@
-import type { SQL } from "drizzle-orm";
-import { and, eq, exists, gt, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
@@ -53,115 +53,89 @@ export const createEvent = dbAction(
 
 export const findEvents = dbAction(
 	async (filter: {
+		organizationIds: number[];
 		status?: EventStatus[] | undefined;
 		typeId?: number | undefined;
-		viewAll?: boolean | undefined;
-		viewAllNonDraft?: boolean | undefined;
-		viewAllConfirmed?: boolean | undefined;
-		orgIds?: number[] | undefined;
 	}) => {
-		const baseConditions: SQL[] = [isNull(schema.event.deletedAt)];
+		const parentEvent = alias(schema.event, "parentEvent");
 
-		if (filter.typeId !== undefined) {
-			baseConditions.push(eq(schema.event.typeId, filter.typeId));
-		}
-
-		// Wraps a condition with an optional status filter on top
-		const withStatusFilter = (condition: SQL): SQL => {
-			if (filter.status && filter.status.length > 0) {
-				return and(condition, inArray(schema.event.status, filter.status)) as SQL;
-			}
-			return condition;
-		};
-
-		// Each item here is an OR branch — user sees events matching any one of these
-		const accessConditions: SQL[] = [];
-
-		if (filter.viewAll && filter.status && filter.status.length > 0) {
-			// Admin-like: see all events but filtered by status
-			accessConditions.push(inArray(schema.event.status, filter.status));
-		} else if (filter.viewAllNonDraft) {
-			// Can see everything except drafts
-			accessConditions.push(withStatusFilter(ne(schema.event.status, "draft" as const)));
-		} else if (filter.viewAllConfirmed) {
-			// Can only see completed events
-			accessConditions.push(eq(schema.event.status, "approved" as const));
-		}
-
-		if (filter.orgIds && filter.orgIds.length > 0) {
-			// User's orgs: show events where their org is an organizer
-			const orgExists = exists(
-				db
-					.select({ _: sql`1` })
-					.from(schema.eventOrganizer)
-					.where(
-						and(
-							eq(schema.eventOrganizer.eventId, schema.event.id),
-							inArray(schema.eventOrganizer.organizationId, filter.orgIds),
-							isNull(schema.eventOrganizer.deletedAt),
-						),
-					),
-			);
-			accessConditions.push(withStatusFilter(orgExists));
-		}
-
-		// Base conditions always apply; access is granted if any OR branch matches
-		const where =
-			accessConditions.length > 0
-				? and(...baseConditions, or(...accessConditions))
-				: and(...baseConditions);
-
-		const rows = await db.query.event.findMany({
-			where,
-			columns: {
-				id: true,
-				title: true,
-				status: true,
-				parentEventId: true,
-				startsAt: true,
-			},
-			with: {
+		return await db
+			.select({
+				id: schema.event.id,
+				title: schema.event.title,
+				status: schema.event.status,
+				startsAt: schema.event.startsAt,
 				type: {
-					columns: { id: true, name: true },
+					id: schema.eventType.id,
+					name: schema.eventType.name,
 				},
 				category: {
-					columns: { id: true, name: true },
+					id: schema.eventCategory.id,
+					name: schema.eventCategory.name,
 				},
 				parentEvent: {
-					columns: { id: true, title: true },
+					id: parentEvent.id,
+					title: parentEvent.title,
 				},
-				organizers: {
-					where: isNull(schema.eventOrganizer.deletedAt),
-					columns: { id: true, role: true },
-					with: {
+				organizers: sql<
+					{
+						id: number;
+						role: EventOrganizerRole;
 						organization: {
-							columns: { id: true, name: true },
-						},
-					},
-				},
-			},
-			orderBy: schema.event.startsAt,
-		});
+							id: number;
+							name: string;
+						};
+					}[]
+				>`json_agg(json_build_object('id', ${schema.eventOrganizer.id}, 'role', ${schema.eventOrganizer.role}, 'organization', json_build_object('id', ${schema.organization.id}, 'name', ${schema.organization.name})))`,
+			})
+			.from(schema.event)
+			.innerJoin(schema.eventCategory, eq(schema.event.categoryId, schema.eventCategory.id))
+			.innerJoin(schema.eventType, eq(schema.event.typeId, schema.eventType.id))
+			.leftJoin(parentEvent, eq(schema.event.parentEventId, parentEvent.id))
+			.innerJoin(
+				schema.eventOrganizer,
+				and(
+					eq(schema.eventOrganizer.eventId, schema.event.id),
+					isNull(schema.eventOrganizer.deletedAt),
+				),
+			)
+			.innerJoin(
+				schema.organization,
+				and(
+					eq(schema.organization.id, schema.eventOrganizer.organizationId),
+					isNull(schema.organization.deletedAt),
+				),
+			)
+			.where(
+				and(
+					inArray(
+						schema.organization.id,
+						filter.organizationIds,
+						// db
+						// 	.selectDistinct({ id: schema.organization.id })
+						// 	.from(schema.userRole)
+						// 	.innerJoin(
+						// 		schema.managedEntity,
+						// 		and(
+						// 			eq(schema.managedEntity.id, schema.userRole.managedEntityId),
+						// 			eq(schema.managedEntity.managedEntityType, "organization"),
+						// 		),
+						// 	)
+						// 	.innerJoin(
+						// 		schema.organization,
+						// 		eq(schema.organization.id, schema.managedEntity.refId),
+						// 	)
+						// 	.where(eq(schema.userRole.userId, 7)),
+					),
 
-		return rows.map((event) => ({
-			id: event.id,
-			title: event.title,
-			type: { id: event.type.id, name: event.type.name },
-			category: { id: event.category.id, name: event.category.name },
-			status: event.status,
-			parentEvent: event.parentEvent
-				? { id: event.parentEvent.id, title: event.parentEvent.title }
-				: null,
-			startsAt: event.startsAt,
-			organizers: event.organizers.map((o) => ({
-				id: o.id,
-				organization: {
-					id: o.organization.id,
-					name: o.organization.name,
-				},
-				role: o.role,
-			})),
-		}));
+					filter.status != null ? inArray(schema.event.status, filter.status) : undefined,
+					filter.typeId != null ? eq(schema.event.typeId, filter.typeId) : undefined,
+
+					isNull(schema.event.deletedAt),
+				),
+			)
+			.groupBy(schema.event.id, schema.eventType.id, schema.eventCategory.id, parentEvent.id)
+			.orderBy(schema.event.startsAt);
 	},
 );
 
@@ -177,8 +151,6 @@ export const findEventById = dbAction(async (eventId: number) => {
 			parentEventId: true,
 			startsAt: true,
 			endsAt: true,
-			createdAt: true,
-			updatedAt: true,
 		},
 		with: {
 			type: {
@@ -207,9 +179,6 @@ export const findEventById = dbAction(async (eventId: number) => {
 						columns: { id: true, name: true },
 					},
 				},
-			},
-			report: {
-				columns: { id: true, details: true, submittedAt: true },
 			},
 		},
 	});
@@ -259,14 +228,10 @@ export const updateEvent = dbAction(
 				),
 			)
 			.returning({ id: schema.event.id });
-		if (updated != null) return updated;
 
-		const [existing] = await db
-			.select({ eventExist: sql`1` })
-			.from(schema.event)
-			.where(and(eq(schema.event.id, data.id), isNull(schema.event.deletedAt)))
-			.limit(1);
-		return existing;
+		if (updated == null) unreachable();
+
+		return updated;
 	},
 );
 

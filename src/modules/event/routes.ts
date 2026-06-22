@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { requirePermissions } from "@/middlewares/require-permissions.js";
 import * as controller from "./controller.js";
 import organizerRouter from "./organizer/routes.js";
 import organizerInvitationRouter from "./organizer-invitation/routes.js";
@@ -9,22 +8,24 @@ import workflowInstanceRouter from "./workflow-instance/routes.js";
 
 const router: Router = Router();
 
-router.post("/", controller.createEvent);
-router.get("/", controller.getEvents);
-router.patch("/:eventId", requirePermissions(["event:manage"]), controller.updateEvent);
 router.get("/parentable", controller.getParentableEvents);
 
+router.get("/", controller.getEvents);
+router.post("/", controller.createEvent);
+
+router.param("eventId", eventIdParamHandler);
+
 router.get("/:eventId", controller.getEvent);
-router.delete("/:eventId", requirePermissions(["event:manage"]), controller.discardEvent);
-router.post("/:eventId/cancel", requirePermissions(["event:manage"]), controller.cancelEvent);
+router.patch("/:eventId", controller.updateEvent);
+router.post("/:eventId/submit", controller.submitEvent);
+
+router.delete("/:eventId", controller.discardEvent);
+router.post("/:eventId/cancel", controller.cancelEvent);
 
 // todo: adjust the following router to utilize the eventId scope handler
 router.use("/:eventId/venue-allotments", venueAllotmentRouter);
 router.use("/:eventId/organizers", organizerRouter);
 router.use("/:eventId/organizer-invitations", organizerInvitationRouter);
-
-router.param("eventId", eventIdParamHandler);
-router.post("/:eventId/submit", controller.submitEvent);
 router.use("/:eventId/workflows", workflowInstanceRouter);
 
 export default router;

@@ -31,7 +31,7 @@ export const getEventInvitations = dbAction(async (eventId: number) => {
 	});
 });
 
-export const findInvitationById = dbAction(async (invitationId: number) => {
+export const findInvitationById = dbAction(async (eventId: number, invitationId: number) => {
 	const [invitation] = await db
 		.select({
 			id: schema.eventOrganizerInvitation.id,
@@ -43,6 +43,7 @@ export const findInvitationById = dbAction(async (invitationId: number) => {
 		.where(
 			and(
 				eq(schema.eventOrganizerInvitation.id, invitationId),
+				eq(schema.eventOrganizerInvitation.eventId, eventId),
 				isNull(schema.eventOrganizerInvitation.deletedAt),
 			),
 		)
@@ -141,7 +142,7 @@ export const respondToInvitation = dbAction(
 	},
 );
 
-export const revokeInvitation = dbAction(async (invitationId: number) => {
+export const revokeInvitation = dbAction(async (eventId: number, invitationId: number) => {
 	await db
 		.update(schema.eventOrganizerInvitation)
 		.set({
@@ -151,6 +152,7 @@ export const revokeInvitation = dbAction(async (invitationId: number) => {
 		.where(
 			and(
 				eq(schema.eventOrganizerInvitation.id, invitationId),
+				eq(schema.eventOrganizerInvitation.eventId, eventId),
 				isNull(schema.eventOrganizerInvitation.deletedAt),
 			),
 		);

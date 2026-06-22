@@ -90,6 +90,9 @@ export async function requestPasswordToken(input: schemas.RequestPasswordTokenSc
 
 	if (user == null) return;
 
+	if (user.type !== "end_user")
+		throw new BadRequestError("Only end users can change their passwords");
+
 	if (input.type === "reset_password" && user.passwordHash == null) return;
 
 	if (input.type === "reset_password" && !user.isActive) return;

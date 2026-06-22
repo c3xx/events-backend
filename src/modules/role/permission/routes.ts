@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { requirePermissions } from "@/middlewares/require-permissions.js";
+import { requireUserType } from "@/middlewares/require-user-type.js";
 import * as controller from "./controller.js";
 
 const router: Router = Router({ mergeParams: true });
 
 router.get("/", controller.getRolePermissions);
-router.put("/", requirePermissions(["role:modify_permissions"]), controller.setRolePermissions);
+router.put("/", requireUserType("admin"), controller.setRolePermissions);
 
 export default router;

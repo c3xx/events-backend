@@ -104,10 +104,10 @@ export const PERMISSION = {
 	event: {
 		manage: "Manage events",
 		view_own: "View own organization's events of all statuses",
-		view_all_confirmed: "View all confirmed and upcoming events",
-		view_all: "View all events of all statuses",
-		view_all_non_draft: "View all events except drafts",
-		allot_venue: "Allot and remove venues for events",
+		// view_all_confirmed: "View all confirmed and upcoming events",
+		// view_all: "View all events of all statuses",
+		// view_all_non_draft: "View all events except drafts",
+		// allot_venue: "Allot and remove venues for events",
 	},
 	event_organizer: {
 		manage: "Manage organizers of an event",

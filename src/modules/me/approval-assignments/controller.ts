@@ -12,41 +12,80 @@ export const getPendingApprovalEvents: ApiRequestHandler<
 	}[]
 > = async (req, res) => {
 	const user = getAuthenticatedUser(req);
-	const result = await service.getPendingApprovalEvents(user.id);
+	const result = await service.getPendingApprovalEvents(user);
 	return ok(res, result);
 };
 
 export const getEventAssignments: ApiRequestHandler<
 	{
 		id: number;
-		status: WorkflowInstanceStepAssignmentStatus;
-		remarks: string | null;
-		completedAt: string | null;
-		step: {
+		title: string;
+		expectedParticipants: number;
+		requestDetails: string;
+		status: EventStatus;
+		parentEventId: number | null;
+		startsAt: string;
+		endsAt: string;
+		type: {
 			id: number;
 			name: string;
-			status: WorkflowInstanceStepStatus;
 		};
-		role: {
+		category: {
 			id: number;
 			name: string;
-			scope: {
-				type: "organization" | "venue";
-				kindId: number;
-				kindName: string;
+		};
+		parentEvent: {
+			id: number;
+			title: string;
+		} | null;
+		venueAllotments: {
+			id: number;
+			startsAt: string;
+			endsAt: string;
+			venue: {
+				id: number;
+				name: string;
 			};
-		};
-		scope: {
-			type: "organization" | "venue";
+		}[];
+		organizers: {
 			id: number;
-			name: string;
-		};
-	}[],
+			role: EventOrganizerRole;
+			organization: {
+				id: number;
+				name: string;
+			};
+		}[];
+		assignments: {
+			id: number;
+			status: WorkflowInstanceStepAssignmentStatus;
+			remarks: string | null;
+			completedAt: string | null;
+			step: {
+				id: number;
+				name: string;
+				status: WorkflowInstanceStepStatus;
+			};
+			role: {
+				id: number;
+				name: string;
+				scope: {
+					type: ManagedEntityType;
+					kindId: number;
+					kindName: string;
+				};
+			};
+			scope: {
+				type: ManagedEntityType;
+				id: number;
+				name: string;
+			};
+		}[];
+	},
 	schemas.EventParamsSchema
 > = async (req, res) => {
 	const user = getAuthenticatedUser(req);
 	const params = schemas.eventParamsSchema.parse(req.params);
-	const result = await service.getEventAssignments(user.id, params.eventId);
+	const result = await service.getEventWithAssignments(user, params.eventId);
 	return ok(res, result);
 };
 
@@ -58,6 +97,6 @@ export const respondToAssignments: ApiRequestHandler<
 	const user = getAuthenticatedUser(req);
 	const params = schemas.eventParamsSchema.parse(req.params);
 	const body = schemas.respondToAssignmentsSchema.parse(req.body);
-	await service.respondToAssignments(user.id, params.eventId, body);
+	await service.respondToAssignments(user, params.eventId, body);
 	return ok(res, true);
 };
