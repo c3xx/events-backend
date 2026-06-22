@@ -868,7 +868,7 @@ export const workflowInstanceStepRelations = relations(workflowInstanceStep, (r)
 		fields: [workflowInstanceStep.nextStepId],
 		references: [workflowInstanceStep.id],
 	}),
-	stepRoles: r.many(workflowInstanceStepRole),
+	roles: r.many(workflowInstanceStepRole),
 }));
 
 export const workflowInstanceStepRole = pgTable(

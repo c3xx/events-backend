@@ -36,6 +36,7 @@ declare global {
 		(typeof schema.workflowInstanceStepStatusEnum.enumValues)[number];
 	export type WorkflowInstanceStepAssignmentStatus =
 		(typeof schema.workflowInstanceStepAssignmentStatusEnum.enumValues)[number];
+
 	export type WorkflowInstance = {
 		id: number;
 		createdAt: string;
@@ -49,23 +50,33 @@ declare global {
 			name: string;
 			nextStepId: number | null;
 			status: WorkflowInstanceStepStatus;
-			stepRoles: {
-				roleId: number;
-				targetGroupApprovalCriteria: WorkflowTargetGroupApprovalCriteria;
+			completedAt: string | null;
+			roles: {
 				id: number;
+				targetGroupApprovalCriteria: WorkflowTargetGroupApprovalCriteria;
+				role: {
+					id: number;
+					name: string;
+					scope: {
+						type: ManagedEntityType;
+						kindId: number;
+						kindName: string;
+					};
+				};
 				targetGroups: {
 					id: number;
-					managedEntityId: number;
+					scope: {
+						type: ManagedEntityType;
+						id: number;
+						name: string;
+					};
 					assignments: {
 						id: number;
 						status: WorkflowInstanceStepAssignmentStatus;
 						completedAt: string | null;
+						remarks: string | null;
 						userRole: {
 							id: number;
-							role: {
-								id: number;
-								name: string;
-							};
 							user: {
 								id: number;
 								fullName: string;
@@ -76,6 +87,7 @@ declare global {
 			}[];
 		}[];
 	};
+
 	export type WorkflowInstances = {
 		id: number;
 		createdAt: string;
