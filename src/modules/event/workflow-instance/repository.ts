@@ -136,7 +136,7 @@ export const insertWorkflowInstance = dbAction(
 
 				await tx
 					.update(schema.workflowInstanceStep)
-					.set({ nextStepId: sql.join(sqlChunks, sql.raw(" ")) })
+					.set({ nextStepId: sql`(${sql.join(sqlChunks, sql.raw(" "))})::bigint` })
 					.where(inArray(schema.workflowInstanceStep.id, ids));
 			}
 
@@ -175,6 +175,8 @@ export const insertWorkflowInstance = dbAction(
 					const role = step.roles[j];
 					const insertedRole = insertedRoles[j];
 					if (role == null || insertedRole == null) return unreachable();
+
+					if (role.targetGroups.length === 0) continue;
 
 					const insertedGroups = await tx
 						.insert(schema.workflowInstanceStepTargetGroup)
