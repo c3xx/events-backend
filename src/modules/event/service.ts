@@ -263,10 +263,7 @@ export async function getParentableEvents(
 	return repository.findParentableEvents(parentableFor);
 }
 
-export async function discardDraftEvent(
-	user: { id: number; type: UserType; permissions: PermissionCode[] },
-	eventId: number,
-) {
+export async function discardDraftEvent(user: AuthenticatedUser, eventId: number) {
 	const event = await repository.findEventById(eventId);
 	if (event == null) {
 		throw new NotFoundError("Event not found");
@@ -294,10 +291,7 @@ export async function discardDraftEvent(
 	await repository.discardDraftEvent(eventId);
 }
 
-export async function cancelApprovedEvent(
-	user: { id: number; type: UserType; permissions: PermissionCode[] },
-	eventId: number,
-) {
+export async function cancelApprovedEvent(user: AuthenticatedUser, eventId: number) {
 	const event = await repository.findEventById(eventId);
 	if (event == null) {
 		throw new NotFoundError("Event not found");

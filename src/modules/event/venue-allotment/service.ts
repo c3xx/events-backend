@@ -1,5 +1,6 @@
-import { BadRequestError, ConflictError, ForbiddenError } from "@/lib/errors.js";
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
 import { unreachable } from "@/lib/helpers.js";
+import * as eventRepository from "@/modules/event/repository.js";
 import type { EventScope } from "@/modules/event/scopes.js";
 import * as permissionRepository from "@/modules/permission/repository.js";
 import * as repository from "./repository.js";
@@ -37,7 +38,7 @@ export async function createVenueAllotment(
 }
 
 export async function deleteVenueAllotment(
-	user: { id: number; type: UserType },
+	user: AuthenticatedUser,
 	eventId: number,
 	allotmentId: number,
 ) {
@@ -55,7 +56,7 @@ export async function deleteVenueAllotment(
 		user,
 		"organization",
 		orgIds,
-		"event:allot_venue",
+		"event:manage",
 	);
 
 	if (!hasAccess) {
