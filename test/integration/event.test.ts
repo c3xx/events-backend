@@ -212,7 +212,8 @@ describe("Event Integration Tests", () => {
 					{
 						organizationId: hostOrg.id,
 						title: "Inactive Type Event",
-						typeId: inactiveEventType?.id,
+						// biome-ignore lint/style/noNonNullAssertion: asserted defined in test setup
+						typeId: inactiveEventType!.id,
 						categoryId: category.id,
 						expectedParticipants: 10,
 						requestDetails: "Testing inactive event type",
