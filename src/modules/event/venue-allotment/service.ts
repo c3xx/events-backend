@@ -6,7 +6,7 @@ import * as repository from "./repository.js";
 import type * as schemas from "./schema.js";
 
 export async function createVenueAllotment(
-	user: { id: number; type: UserType },
+	user: AuthenticatedUser,
 	event: EventScope["event"],
 	input: schemas.CreateVenueAllotmentSchema,
 ) {

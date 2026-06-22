@@ -13,7 +13,7 @@ export async function getEventOrganizers(event: EventScope["event"]) {
 export async function addEventOrganizer(
 	event: EventScope["event"],
 	input: AddEventOrganizerSchema,
-	user: { id: number; type: UserType },
+	user: AuthenticatedUser,
 ) {
 	const hostOrganizers = event.organizers.filter((organizer) => organizer.role === "host");
 	if (hostOrganizers.length !== 1 || hostOrganizers[0] == null) unreachable();
@@ -78,7 +78,7 @@ export async function addEventOrganizer(
 export async function removeEventOrganizer(
 	event: EventScope["event"],
 	organizerId: number,
-	user: { id: number; type: UserType },
+	user: AuthenticatedUser,
 ) {
 	const existingOrganizer = event.organizers.find((organizer) => organizer.id === organizerId);
 	if (existingOrganizer == null) throw new ConflictError("Organizer not found."); // todo: decide whether to return silently or not

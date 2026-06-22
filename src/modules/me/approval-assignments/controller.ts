@@ -12,7 +12,7 @@ export const getPendingApprovalEvents: ApiRequestHandler<
 	}[]
 > = async (req, res) => {
 	const user = getAuthenticatedUser(req);
-	const result = await service.getPendingApprovalEvents(user.id);
+	const result = await service.getPendingApprovalEvents(user);
 	return ok(res, result);
 };
 
@@ -97,6 +97,6 @@ export const respondToAssignments: ApiRequestHandler<
 	const user = getAuthenticatedUser(req);
 	const params = schemas.eventParamsSchema.parse(req.params);
 	const body = schemas.respondToAssignmentsSchema.parse(req.body);
-	await service.respondToAssignments(user.id, params.eventId, body);
+	await service.respondToAssignments(user, params.eventId, body);
 	return ok(res, true);
 };

@@ -30,7 +30,7 @@ export async function getWorkflowInstance(event: EventScope["event"], workflowIn
 export async function abortWorkflowInstance(
 	event: EventScope["event"],
 	instanceId: number,
-	user: { id: number; type: UserType },
+	user: AuthenticatedUser,
 ) {
 	const hostOrganizers = event.organizers.filter((o) => o.role === "host");
 	if (hostOrganizers.length !== 1 || hostOrganizers[0] == null) unreachable();

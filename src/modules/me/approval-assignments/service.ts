@@ -6,14 +6,11 @@ import { hasPermissionInManagedEntity } from "@/modules/permission/repository.js
 import * as repository from "./repository.js";
 import type { RespondToAssignmentsSchema } from "./schema.js";
 
-export async function getPendingApprovalEvents(userId: number) {
-	return await repository.findPendingEventsForUser(userId);
+export async function getPendingApprovalEvents(user: AuthenticatedUser) {
+	return await repository.findPendingEventsForUser(user.id);
 }
 
-export async function getEventWithAssignments(
-	user: { id: number; type: UserType },
-	eventId: number,
-) {
+export async function getEventWithAssignments(user: AuthenticatedUser, eventId: number) {
 	const event = await eventRepository.findEventById(eventId);
 	if (event == null) throw new NotFoundError("Event not found");
 
@@ -39,7 +36,7 @@ export async function getEventWithAssignments(
 }
 
 export async function respondToAssignments(
-	userId: number,
+	user: AuthenticatedUser,
 	eventId: number,
 	body: RespondToAssignmentsSchema,
 ) {
@@ -49,7 +46,10 @@ export async function respondToAssignments(
 	const event = await repository.findEventByIdSimple(eventId);
 	if (event == null) throw new NotFoundError("Event not found");
 
-	const assignmentsForUserInEvent = await repository.findAssignmentsForUserInEvent(userId, eventId);
+	const assignmentsForUserInEvent = await repository.findAssignmentsForUserInEvent(
+		user.id,
+		eventId,
+	);
 
 	const requestedIds = new Set(body.assignmentIds);
 	const validIds = new Set(assignmentsForUserInEvent.map((a) => a.id));

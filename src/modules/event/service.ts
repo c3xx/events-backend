@@ -11,10 +11,7 @@ import type * as schemas from "./schema.js";
 import type { EventScope } from "./scopes.js";
 import * as workflowInstanceRepository from "./workflow-instance/repository.js";
 
-export async function createEvent(
-	user: { id: number; type: UserType },
-	input: schemas.CreateEventSchema,
-) {
+export async function createEvent(user: AuthenticatedUser, input: schemas.CreateEventSchema) {
 	if (
 		!(await permissionRepository.hasPermissionInManagedEntity(
 			user,
@@ -57,7 +54,7 @@ export async function createEvent(
 }
 
 export async function updateEvent(
-	user: { id: number; type: UserType },
+	user: AuthenticatedUser,
 	event: EventScope["event"],
 	input: schemas.UpdateEventSchema,
 ) {
@@ -96,10 +93,7 @@ export async function getEvent(event: EventScope["event"]) {
 	return event;
 }
 
-export async function getEvents(
-	user: { id: number; type: UserType },
-	filter: schemas.GetEventsQuerySchema,
-) {
+export async function getEvents(user: AuthenticatedUser, filter: schemas.GetEventsQuerySchema) {
 	const userOrganizations = await userRepository.getUserOrganizations(user.id, "event:view_own");
 	if (userOrganizations.length === 0) return [];
 	const userOrganizationsIds = userOrganizations.map((org) => org.id);
@@ -127,10 +121,7 @@ type InstanceInsertData = {
 	}[];
 };
 
-export async function submitEvent(
-	user: { id: number; type: UserType },
-	event: EventScope["event"],
-) {
+export async function submitEvent(user: AuthenticatedUser, event: EventScope["event"]) {
 	const host = event.organizers.find((o) => o.role === "host");
 	if (!host) {
 		throw new NotFoundError("Host organizer not found");
@@ -256,7 +247,7 @@ export async function submitEvent(
 }
 
 export async function getParentableEvents(
-	user: { id: number; type: UserType },
+	user: AuthenticatedUser,
 	parentableFor: schemas.GetParentableEventsSchema,
 ) {
 	const hasPermission = permissionRepository.hasPermissionInManagedEntity(

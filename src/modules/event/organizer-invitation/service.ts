@@ -12,7 +12,7 @@ export async function respondToInvitation(
 	event: EventScope["event"],
 	invitationId: number,
 	input: RespondToInvitationSchema,
-	user: { id: number; type: UserType },
+	user: AuthenticatedUser,
 ) {
 	const invitation = await repository.findInvitationById(event.id, invitationId);
 	if (invitation == null) throw new NotFoundError("Invitation not found");
@@ -42,7 +42,7 @@ export async function revokeInvitation(
 	event: EventScope["event"],
 	invitationId: number,
 	input: RevokeInvitationSchema,
-	user: { id: number; type: UserType },
+	user: AuthenticatedUser,
 ) {
 	const invitation = await repository.findInvitationById(event.id, invitationId);
 	if (invitation == null) throw new NotFoundError("Invitation not found");

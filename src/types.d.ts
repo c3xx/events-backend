@@ -37,6 +37,8 @@ declare global {
 	export type WorkflowInstanceStepAssignmentStatus =
 		(typeof schema.workflowInstanceStepAssignmentStatusEnum.enumValues)[number];
 
+	// system types
+
 	export type WorkflowInstance = {
 		id: number;
 		createdAt: string;
@@ -98,13 +100,14 @@ declare global {
 		submittedBy: number;
 	}[];
 
-	// system types
+	type AuthenticatedUser = Pick<User, "id" | "type">;
+
 	export type PermissionScope = keyof typeof PERMISSION;
 	export type PermissionCode =
 		// | keyof typeof PERMISSION
 		FlattenPermission<typeof PERMISSION>;
 
-	export type IJWTPayload = JWTPayload & Pick<User, "id" | "type">;
+	export type IJWTPayload = JWTPayload & AuthenticatedUser;
 
 	// frontend types:
 	// types that are re-used in frontend.
