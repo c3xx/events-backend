@@ -6,9 +6,28 @@ export const getPendingApprovalEvents: ApiRequestHandler<
 	{
 		id: number;
 		title: string;
-		status: EventStatus;
 		startsAt: string;
 		endsAt: string;
+		type: {
+			id: number;
+			name: string;
+		};
+		category: {
+			id: number;
+			name: string;
+		};
+		parentEvent: {
+			id: number;
+			title: string;
+		} | null;
+		organizers: {
+			id: number;
+			role: "host" | "co_host" | "resource_provider";
+			organization: {
+				id: number;
+				name: string;
+			};
+		}[];
 	}[]
 > = async (req, res) => {
 	const user = getAuthenticatedUser(req);
