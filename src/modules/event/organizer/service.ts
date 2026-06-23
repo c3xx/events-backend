@@ -37,7 +37,7 @@ export async function addEventOrganizer(
 		user,
 		"organization",
 		[hostOrganizer.organization.id], // only hosts can
-		"event_organizer:manage",
+		"event:manage",
 		userRoleInUse.id,
 	);
 	if (!canManageOrganizers)
@@ -103,7 +103,7 @@ export async function removeEventOrganizer(
 		user,
 		"organization",
 		[hostOrganizer.organization.id], // only hosts
-		"event_organizer:manage",
+		"event:manage",
 	);
 	if (!canManageOrganizers)
 		throw new ForbiddenError("You do not have permission to manage this event's organizers");

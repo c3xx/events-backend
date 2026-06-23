@@ -72,7 +72,7 @@ export async function revokeInvitation(
 		user,
 		"organization",
 		[invitation.senderOrganizationId],
-		"event_organizer:manage",
+		"event:manage",
 		userRoleInUse.id,
 	);
 	if (!canManageEventOrganizers)
