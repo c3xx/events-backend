@@ -20,6 +20,8 @@ declare global {
 	// -- events
 	export type EventStatus = (typeof schema.eventStatusEnum.enumValues)[number];
 	export type EventOrganizerRole = (typeof schema.eventOrganizerRoleEnum.enumValues)[number];
+	export type EventOrganizerInvitationRole =
+		(typeof schema.eventOrganizerInvitationRoleEnum.enumValues)[number];
 	export type EventOrganizerInvitationStatus =
 		(typeof schema.eventOrganizerInvitationStatusEnum.enumValues)[number];
 

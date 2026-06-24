@@ -96,52 +96,6 @@ export const sendInvitation = dbAction(
 	},
 );
 
-export const respondToInvitation = dbAction(
-	async (
-		eventId: number,
-		invitationId: number,
-		data: {
-			status: "accepted" | "rejected";
-			respondedByUserId: number;
-			recipientOrganizationId: number;
-		},
-	) => {
-		const updated = await db.transaction(async (tx) => {
-			const [updated] = await tx
-				.update(schema.eventOrganizerInvitation)
-				.set({
-					status: data.status,
-					respondedByUserId: data.respondedByUserId,
-					closedAt: new Date().toISOString(),
-				})
-				.where(
-					and(
-						eq(schema.eventOrganizerInvitation.id, invitationId),
-						isNull(schema.eventOrganizerInvitation.deletedAt),
-					),
-				)
-				.returning({
-					id: schema.eventOrganizerInvitation.id,
-					intendedRole: schema.eventOrganizerInvitation.intendedRole,
-				});
-
-			if (updated == null) unreachable();
-
-			if (data.status === "accepted") {
-				await tx.insert(schema.eventOrganizer).values({
-					eventId: eventId,
-					organizationId: data.recipientOrganizationId,
-					invitationId: invitationId,
-					role: updated.intendedRole,
-				});
-			}
-
-			return { id: updated.id };
-		});
-		return updated;
-	},
-);
-
 export const revokeInvitation = dbAction(async (eventId: number, invitationId: number) => {
 	await db
 		.update(schema.eventOrganizerInvitation)

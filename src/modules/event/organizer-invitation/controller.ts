@@ -1,10 +1,6 @@
 import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
 import type { EventScope } from "@/modules/event/scopes.js";
-import {
-	invitationItemScopedSchema,
-	respondToInvitationSchema,
-	revokeInvitationSchema,
-} from "./schema.js";
+import { invitationItemScopedSchema, revokeInvitationSchema } from "./schema.js";
 import * as service from "./service.js";
 
 export const getEventInvitations: ScopedApiRequestHandler<
@@ -32,24 +28,6 @@ export const getEventInvitations: ScopedApiRequestHandler<
 	}[]
 > = async (_req, res) => {
 	const result = await service.getEventInvitations(res.locals.event);
-	return ok(res, result);
-};
-
-export const respondToInvitation: ScopedApiRequestHandler<
-	EventScope,
-	{
-		id: number;
-	}
-> = async (req, res) => {
-	const user = getAuthenticatedUser(req);
-	const params = invitationItemScopedSchema.parse(req.params);
-	const body = respondToInvitationSchema.parse(req.body);
-	const result = await service.respondToInvitation(
-		res.locals.event,
-		params.invitationId,
-		body,
-		user,
-	);
 	return ok(res, result);
 };
 
