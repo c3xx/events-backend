@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { describe, expect, test } from "vitest";
+import { assert, describe, expect, test } from "vitest";
 import { db, schema } from "@/db/index.js";
 import { getEventOrganizers } from "@/modules/event/organizer/service.js";
+import { findEventById } from "@/modules/event/repository.js";
 import { createEvent, getEvent, submitEvent, updateEvent } from "@/modules/event/service.js";
 import { createBasicEventSetup } from "./integration-test-helpers.js";
 
@@ -22,7 +23,7 @@ describe("Event Integration Tests", () => {
 				endsAt: new Date(Date.now() + 172800000).toISOString(),
 			};
 
-			const event = await createEvent({ id: admin.id, type: "admin", permissions: [] }, eventBody);
+			const event = await createEvent({ id: admin.id, type: "admin" }, eventBody);
 
 			expect(event).toBeDefined();
 			expect(event.id).toBeGreaterThan(0);
@@ -30,7 +31,10 @@ describe("Event Integration Tests", () => {
 			const dbEvent = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
 			expect(dbEvent?.status).toBe("draft");
 
-			const organizers = await getEventOrganizers(event.id);
+			const eventFound = await findEventById(event.id);
+			assert(eventFound != null);
+
+			const organizers = await getEventOrganizers(eventFound);
 			expect(organizers).toHaveLength(1);
 			expect(organizers[0]?.role).toBe("host");
 			expect(organizers[0]?.organization.id).toBe(hostOrg.id);
@@ -40,7 +44,7 @@ describe("Event Integration Tests", () => {
 			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			const event = await createEvent(
-				{ id: admin.id, type: "admin", permissions: [] },
+				{ id: admin.id, type: "admin" },
 				{
 					organizationId: hostOrg.id,
 					title: "Original Title",
@@ -53,8 +57,11 @@ describe("Event Integration Tests", () => {
 				},
 			);
 
+			const eventFound = await findEventById(event.id);
+			assert(eventFound != null);
+
 			const updatedTitle = "Updated Title";
-			await updateEvent({ id: admin.id, type: "admin", permissions: [] }, event.id, {
+			await updateEvent({ id: admin.id, type: "admin" }, eventFound, {
 				title: updatedTitle,
 				expectedParticipants: 20,
 			});
@@ -68,7 +75,7 @@ describe("Event Integration Tests", () => {
 			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			const event = await createEvent(
-				{ id: admin.id, type: "admin", permissions: [] },
+				{ id: admin.id, type: "admin" },
 				{
 					organizationId: hostOrg.id,
 					title: "Original Title",
@@ -81,12 +88,15 @@ describe("Event Integration Tests", () => {
 				},
 			);
 
-			const fullEvent = await getEvent({ id: admin.id, type: "admin", permissions: [] }, event.id);
+			const eventFound = await findEventById(event.id);
+			assert(eventFound != null);
 
-			await submitEvent({ id: admin.id, type: "admin", permissions: [] }, fullEvent);
+			const fullEvent = await getEvent(eventFound);
+
+			await submitEvent({ id: admin.id, type: "admin" }, fullEvent);
 
 			await expect(
-				updateEvent({ id: admin.id, type: "admin", permissions: [] }, event.id, {
+				updateEvent({ id: admin.id, type: "admin" }, eventFound, {
 					title: "Should Not Update",
 					expectedParticipants: 99,
 				}),
@@ -101,7 +111,7 @@ describe("Event Integration Tests", () => {
 			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			const event = await createEvent(
-				{ id: admin.id, type: "admin", permissions: [] },
+				{ id: admin.id, type: "admin" },
 				{
 					organizationId: hostOrg.id,
 					title: "Submit Test Event",
@@ -117,9 +127,12 @@ describe("Event Integration Tests", () => {
 			const beforeSubmit = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
 			expect(beforeSubmit?.status).toBe("draft");
 
-			const fullEvent = await getEvent({ id: admin.id, type: "admin", permissions: [] }, event.id);
+			const eventFound = await findEventById(event.id);
+			assert(eventFound != null);
 
-			await submitEvent({ id: admin.id, type: "admin", permissions: [] }, fullEvent);
+			const fullEvent = await getEvent(eventFound);
+
+			await submitEvent({ id: admin.id, type: "admin" }, fullEvent);
 
 			const afterSubmit = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
 			expect(afterSubmit?.status).toBe("pending");
@@ -137,7 +150,7 @@ describe("Event Integration Tests", () => {
 
 			await expect(
 				createEvent(
-					{ id: admin.id, type: "admin", permissions: [] },
+					{ id: admin.id, type: "admin" },
 					{
 						organizationId: hostOrg.id,
 						title: "Past Event",
@@ -157,7 +170,7 @@ describe("Event Integration Tests", () => {
 
 			await expect(
 				createEvent(
-					{ id: admin.id, type: "admin", permissions: [] },
+					{ id: admin.id, type: "admin" },
 					{
 						organizationId: hostOrg.id,
 						title: "Invalid Date Event",
@@ -177,7 +190,7 @@ describe("Event Integration Tests", () => {
 
 			await expect(
 				createEvent(
-					{ id: admin.id, type: "admin", permissions: [] },
+					{ id: admin.id, type: "admin" },
 					{
 						organizationId: hostOrg.id,
 						title: "Zero Participants Event",
@@ -208,7 +221,7 @@ describe("Event Integration Tests", () => {
 
 			await expect(
 				createEvent(
-					{ id: admin.id, type: "admin", permissions: [] },
+					{ id: admin.id, type: "admin" },
 					{
 						organizationId: hostOrg.id,
 						title: "Inactive Type Event",
@@ -228,7 +241,7 @@ describe("Event Integration Tests", () => {
 			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			const event = await createEvent(
-				{ id: admin.id, type: "admin", permissions: [] },
+				{ id: admin.id, type: "admin" },
 				{
 					organizationId: hostOrg.id,
 					title: "Original Title",
@@ -241,7 +254,10 @@ describe("Event Integration Tests", () => {
 				},
 			);
 
-			await updateEvent({ id: admin.id, type: "admin", permissions: [] }, event.id, {
+			const eventFound = await findEventById(event.id);
+			assert(eventFound != null);
+
+			await updateEvent({ id: admin.id, type: "admin" }, eventFound, {
 				title: "New Title",
 			});
 
@@ -255,7 +271,8 @@ describe("Event Integration Tests", () => {
 			const { admin } = await createBasicEventSetup();
 
 			await expect(
-				updateEvent({ id: admin.id, type: "admin", permissions: [] }, 99999, {
+				// biome-ignore lint/suspicious/noExplicitAny: testing purposes
+				updateEvent({ id: admin.id, type: "admin" }, { id: 9999999 } as any, {
 					title: "Ghost Event",
 				}),
 			).rejects.toThrow();
@@ -266,7 +283,7 @@ describe("Event Integration Tests", () => {
 
 			await expect(
 				createEvent(
-					{ id: admin.id, type: "admin", permissions: [] },
+					{ id: admin.id, type: "admin" },
 					{
 						organizationId: 99999, // non-existent org
 						title: "Invalid Org Event",
