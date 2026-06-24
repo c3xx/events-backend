@@ -1,10 +1,10 @@
-import { and, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { PASSWORD_TOKEN_EXPIRY } from "@/lib/constants.js";
 import { dbAction } from "@/lib/helpers.js";
 
-export const findActivePasswordToken = dbAction(async (tokenHash: string) => {
-	const [user] = await db
+export const findPasswordToken = dbAction(async (tokenHash: string) => {
+	const [token] = await db
 		.select({
 			id: schema.userPasswordToken.id,
 			type: schema.userPasswordToken.type,
@@ -13,20 +13,15 @@ export const findActivePasswordToken = dbAction(async (tokenHash: string) => {
 				email: schema.user.email,
 				isActive: schema.user.isActive,
 			},
+			usedAt: schema.userPasswordToken.usedAt,
+			expiresAt: schema.userPasswordToken.expiresAt,
 		})
 		.from(schema.userPasswordToken)
 		.innerJoin(schema.user, eq(schema.userPasswordToken.userId, schema.user.id))
-		.where(
-			and(
-				eq(schema.userPasswordToken.tokenHash, tokenHash),
-				isNull(schema.userPasswordToken.usedAt),
-				gt(schema.userPasswordToken.expiresAt, sql`now()`),
-				isNull(schema.user.deletedAt),
-			),
-		)
+		.where(and(eq(schema.userPasswordToken.tokenHash, tokenHash), isNull(schema.user.deletedAt)))
 		.limit(1);
 
-	return user;
+	return token;
 });
 
 export const applyPasswordChange = dbAction(

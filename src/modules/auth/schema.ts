@@ -25,6 +25,14 @@ export const resetPasswordSchema = z
 
 export type ResetPasswordSchema = z.output<typeof resetPasswordSchema>;
 
+export const validateTokenSchema = z
+	.object({
+		token: z.string({ error: "Token is required" }).trim().nonempty(),
+	})
+	.strict();
+
+export type ValidateTokenSchema = z.output<typeof validateTokenSchema>;
+
 export const requestPasswordTokenSchema = z
 	.object({
 		email: z

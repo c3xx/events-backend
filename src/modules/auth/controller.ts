@@ -55,14 +55,23 @@ export const refresh: ApiRequestHandler<{
 	});
 };
 
-export const requestPasswordToken: ApiRequestHandler = async (req, res) => {
+export const requestPasswordToken: ApiRequestHandler<true> = async (req, res) => {
 	const body = schemas.requestPasswordTokenSchema.parse(req.body);
 	await service.requestPasswordToken(body);
 	return ok(res, true);
 };
 
-export const resetPassword: ApiRequestHandler = async (req, res) => {
-	const body = schemas.resetPasswordSchema.parse(req.body);
-	const result = await service.resetPassword(body);
+export const validatePasswordToken: ApiRequestHandler<{
+	type: PasswordTokenType;
+	expiresAt: string;
+}> = async (req, res) => {
+	const body = schemas.validateTokenSchema.parse(req.body);
+	const result = await service.validatePasswordToken(body);
 	return ok(res, result);
+};
+
+export const resetPassword: ApiRequestHandler<true> = async (req, res) => {
+	const body = schemas.resetPasswordSchema.parse(req.body);
+	await service.resetPassword(body);
+	return ok(res, true);
 };

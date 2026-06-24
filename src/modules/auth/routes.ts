@@ -8,6 +8,7 @@ router.post("/refresh", controller.refresh);
 router.post("/logout", controller.logout);
 
 router.post("/request-password-token", controller.requestPasswordToken);
+router.post("/validate-password-token", controller.validatePasswordToken);
 router.post("/reset-password", controller.resetPassword);
 
 export default router;
