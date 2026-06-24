@@ -51,15 +51,15 @@ export async function createTestOrganization(data: {
 }
 
 export async function getManagedEntityForOrganization(organizationId: number) {
-	let me = await db.query.managedEntity.findFirst({
+	let managedentity = await db.query.managedEntity.findFirst({
 		where: and(
 			eq(schema.managedEntity.managedEntityType, "organization"),
 			eq(schema.managedEntity.refId, organizationId),
 		),
 	});
 
-	if (!me) {
-		[me] = await db
+	if (!managedentity) {
+		[managedentity] = await db
 			.insert(schema.managedEntity)
 			.values({
 				managedEntityType: "organization",
@@ -68,8 +68,8 @@ export async function getManagedEntityForOrganization(organizationId: number) {
 			.returning();
 	}
 
-	if (!me) throw new Error("Failed to create or find managed entity");
-	return me;
+	if (!managedentity) throw new Error("Failed to create or find managed entity");
+	return managedentity;
 }
 
 export async function createTestEventType(data: { name?: string; workflowTemplateId: number }) {
