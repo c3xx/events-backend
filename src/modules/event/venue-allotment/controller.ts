@@ -1,12 +1,16 @@
 import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
-import { eventScopedSchema } from "@/modules/event/schema.js";
+import type { EventScope } from "@/modules/event/scopes.js";
 import * as schemas from "./schema.js";
 import * as service from "./service.js";
 
-export const createVenueAllotment: ApiRequestHandler<{ id: number }> = async (req, res) => {
+export const createVenueAllotment: ScopedApiRequestHandler<
+	EventScope,
+	{
+		id: number;
+	}
+> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
-	const params = eventScopedSchema.parse(req.params);
 	const body = schemas.createVenueAllotmentSchema.parse(req.body);
-	const result = await service.createVenueAllotment(user, params.eventId, body);
+	const result = await service.createVenueAllotment(user, res.locals.event, body);
 	return ok(res, result);
 };

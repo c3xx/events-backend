@@ -90,6 +90,9 @@ export async function requestPasswordToken(input: schemas.RequestPasswordTokenSc
 
 	if (user == null) return;
 
+	if (user.type !== "end_user")
+		throw new BadRequestError("Only end users can change their passwords");
+
 	if (input.type === "reset_password" && user.passwordHash == null) return;
 
 	if (input.type === "reset_password" && !user.isActive) return;
@@ -121,16 +124,34 @@ export async function requestPasswordToken(input: schemas.RequestPasswordTokenSc
 	});
 }
 
-export async function resetPassword(input: schemas.ResetPasswordSchema) {
+export async function validatePasswordToken(input: schemas.ValidateTokenSchema) {
 	const tokenHash = hexSha256(input.token);
-	const tokenRecord = await repository.findActivePasswordToken(tokenHash);
+	const tokenRecord = await repository.findPasswordToken(tokenHash);
 
-	if (tokenRecord == null) {
-		throw new UnauthorizedError("Invalid, expired, or already used token");
-	}
+	if (tokenRecord == null) throw new BadRequestError("Invalid token!");
+	if (tokenRecord.usedAt != null) throw new BadRequestError("Token already used!");
+	if (new Date() > new Date(tokenRecord.expiresAt)) throw new BadRequestError("Expired token!");
 
 	if (tokenRecord.type === "reset_password" && !tokenRecord.user.isActive) {
-		throw new ForbiddenError("Your account is not active. Password change is not allowed.");
+		throw new BadRequestError("Your account is not active. Password change is not allowed.");
+	}
+
+	return {
+		type: tokenRecord.type,
+		expiresAt: tokenRecord.expiresAt,
+	};
+}
+
+export async function resetPassword(input: schemas.ResetPasswordSchema) {
+	const tokenHash = hexSha256(input.token);
+	const tokenRecord = await repository.findPasswordToken(tokenHash);
+
+	if (tokenRecord == null) throw new BadRequestError("Invalid token!");
+	if (tokenRecord.usedAt != null) throw new BadRequestError("Token already used!");
+	if (new Date() > new Date(tokenRecord.expiresAt)) throw new BadRequestError("Expired token!");
+
+	if (tokenRecord.type === "reset_password" && !tokenRecord.user.isActive) {
+		throw new BadRequestError("Your account is not active. Password change is not allowed.");
 	}
 
 	const newPasswordHash = await hashPassword(input.password);

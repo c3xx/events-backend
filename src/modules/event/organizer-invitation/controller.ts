@@ -1,13 +1,10 @@
 import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
-import { eventScopedSchema } from "@/modules/event/schema.js";
-import {
-	invitationItemScopedSchema,
-	respondToInvitationSchema,
-	revokeInvitationSchema,
-} from "./schema.js";
+import type { EventScope } from "@/modules/event/scopes.js";
+import { invitationItemScopedSchema, revokeInvitationSchema } from "./schema.js";
 import * as service from "./service.js";
 
-export const getEventInvitations: ApiRequestHandler<
+export const getEventInvitations: ScopedApiRequestHandler<
+	EventScope,
 	{
 		id: number;
 		status: EventOrganizerInvitationStatus;
@@ -29,26 +26,15 @@ export const getEventInvitations: ApiRequestHandler<
 			name: string;
 		};
 	}[]
-> = async (req, res) => {
-	const params = eventScopedSchema.parse(req.params);
-	const result = await service.getEventInvitations(params.eventId);
+> = async (_req, res) => {
+	const result = await service.getEventInvitations(res.locals.event);
 	return ok(res, result);
 };
 
-export const respondToInvitation: ApiRequestHandler<{
-	id: number;
-}> = async (req, res) => {
-	const user = getAuthenticatedUser(req);
-	const params = invitationItemScopedSchema.parse(req.params);
-	const body = respondToInvitationSchema.parse(req.body);
-	const result = await service.respondToInvitation(params.eventId, params.invitationId, body, user);
-	return ok(res, result);
-};
-
-export const revokeInvitation: ApiRequestHandler<null> = async (req, res) => {
+export const revokeInvitation: ScopedApiRequestHandler<EventScope, true> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
 	const params = invitationItemScopedSchema.parse(req.params);
 	const body = revokeInvitationSchema.parse(req.body);
-	await service.revokeInvitation(params.eventId, params.invitationId, body, user);
-	return ok(res, null);
+	await service.revokeInvitation(res.locals.event, params.invitationId, body, user);
+	return ok(res, true);
 };

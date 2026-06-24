@@ -7,7 +7,7 @@ export async function resolveStep(tx: DbTransaction, stepId: number): Promise<vo
 		where: eq(schema.workflowInstanceStep.id, stepId),
 		columns: { id: true, instanceId: true, nextStepId: true, status: true },
 		with: {
-			stepRoles: {
+			roles: {
 				columns: { id: true, targetGroupApprovalCriteria: true },
 				where: (t, { isNull }) => isNull(t.deletedAt),
 				with: {
@@ -29,7 +29,7 @@ export async function resolveStep(tx: DbTransaction, stepId: number): Promise<vo
 
 	if (step.status !== "active" && step.status !== "pending" && step.status !== "blocked") return;
 
-	const allGroups = step.stepRoles.flatMap((stepRole) => stepRole.targetGroups);
+	const allGroups = step.roles.flatMap((stepRole) => stepRole.targetGroups);
 
 	if (allGroups.length === 0) {
 		await advanceWorkflow(tx, step, "skipped");
@@ -37,7 +37,7 @@ export async function resolveStep(tx: DbTransaction, stepId: number): Promise<vo
 	}
 
 	// Update sibling assignments for roles with "any" criteria if one assignment was approved
-	for (const stepRole of step.stepRoles) {
+	for (const stepRole of step.roles) {
 		if (stepRole.targetGroupApprovalCriteria === "any") {
 			for (const group of stepRole.targetGroups) {
 				const hasApproved = group.assignments.some((a) => a.status === "approved");
@@ -62,7 +62,7 @@ export async function resolveStep(tx: DbTransaction, stepId: number): Promise<vo
 			}
 		}
 	}
-	for (const stepRole of step.stepRoles) {
+	for (const stepRole of step.roles) {
 		for (const group of stepRole.targetGroups) {
 			if (group.assignments.some((a) => a.status === "denied")) {
 				await advanceWorkflow(tx, step, "denied");
@@ -71,7 +71,7 @@ export async function resolveStep(tx: DbTransaction, stepId: number): Promise<vo
 		}
 	}
 	let hasPending = false;
-	for (const stepRole of step.stepRoles) {
+	for (const stepRole of step.roles) {
 		if (stepRole.targetGroups.length === 0) continue;
 		for (const group of stepRole.targetGroups) {
 			if (group.assignments.length === 0) continue;
@@ -101,7 +101,7 @@ export async function resolveStep(tx: DbTransaction, stepId: number): Promise<vo
 	}
 
 	let hasBlocked = false;
-	for (const stepRole of step.stepRoles) {
+	for (const stepRole of step.roles) {
 		if (stepRole.targetGroups.length === 0) continue;
 		for (const group of stepRole.targetGroups) {
 			if (group.assignments.length === 0) {

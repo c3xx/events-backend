@@ -1,24 +1,12 @@
 import { Router } from "express";
-import { requirePermissions } from "@/middlewares/index.js";
+import { requireUserType } from "@/middlewares/require-user-type.js";
 import * as controller from "./controller.js";
 
 const router: Router = Router({ mergeParams: true });
 
 router.get("/", controller.getOrganizationMembers);
-router.post(
-	"/",
-	requirePermissions(["organization:add_member"]),
-	controller.addMemberToOrganization,
-);
-router.put(
-	"/:userId",
-	requirePermissions(["organization:add_member"]),
-	controller.updateOrganizationMemberRoles,
-);
-router.delete(
-	"/:userId",
-	requirePermissions(["organization:add_member"]),
-	controller.deleteOrganizationMember,
-);
+router.post("/", requireUserType("admin"), controller.addMemberToOrganization);
+router.put("/:userId", requireUserType("admin"), controller.updateOrganizationMemberRoles);
+router.delete("/:userId", requireUserType("admin"), controller.deleteOrganizationMember);
 
 export default router;

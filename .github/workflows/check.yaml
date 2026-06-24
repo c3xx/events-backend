@@ -52,5 +52,5 @@ jobs:
             - name: Install dependencies
               run: pnpm ci --frozen-lockfile
 
-            - name: Type-check & lint
+            - name: Test
               run: pnpm run test run

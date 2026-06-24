@@ -1,32 +1,55 @@
 import { BadRequestError, ConflictError, NotFoundError, ValidationError } from "@/lib/errors.js";
 import { orderWorkflowSteps, unreachable } from "@/lib/helpers.js";
+import * as eventRepository from "@/modules/event/repository.js";
 import * as workflowInstanceRepository from "@/modules/event/workflow-instance/repository.js";
+import { hasPermissionInManagedEntity } from "@/modules/permission/repository.js";
 import * as repository from "./repository.js";
 import type { RespondToAssignmentsSchema } from "./schema.js";
 
-export async function getPendingApprovalEvents(userId: number) {
-	return await repository.findPendingEventsForUser(userId);
+export async function getPendingApprovalEvents(user: AuthenticatedUser) {
+	return await repository.findPendingEventsForUser(user.id);
 }
 
-export async function getEventAssignments(userId: number, eventId: number) {
-	const existingEvent = await repository.findEventByIdSimple(eventId);
-	if (existingEvent == null) throw new NotFoundError("Event not found");
+export async function getEventWithAssignments(user: AuthenticatedUser, eventId: number) {
+	const event = await eventRepository.findEventById(eventId);
+	if (event == null) throw new NotFoundError("Event not found");
 
-	return await repository.findAssignmentsForUserInEvent(userId, eventId);
+	const assignments = await repository.findAssignmentsForUserInEvent(user.id, eventId);
+	if (assignments.length === 0) {
+		// if the user has no permission to view this event, and there are no assignments for them
+		// to avoid data leakage, dont let that user see the event details.
+
+		const hasPermissionToViewThisEvent = await hasPermissionInManagedEntity(
+			user,
+			"organization",
+			event.organizers.map((organizer) => organizer.organization.id),
+			"event:view_own",
+		);
+		if (!hasPermissionToViewThisEvent)
+			throw new BadRequestError("You are not assigned to approve this event");
+	}
+
+	return {
+		...event,
+		assignments: assignments,
+	};
 }
 
 export async function respondToAssignments(
-	userId: number,
+	user: AuthenticatedUser,
 	eventId: number,
 	body: RespondToAssignmentsSchema,
 ) {
 	if (body.decision === "denied" && (!body.remarks || body.remarks.trim() === ""))
 		throw new ValidationError("Remarks are required to deny an assignment");
 
-	const existingEvent = await repository.findEventByIdSimple(eventId);
-	if (existingEvent == null) throw new NotFoundError("Event not found");
+	const event = await repository.findEventByIdSimple(eventId);
+	if (event == null) throw new NotFoundError("Event not found");
 
-	const assignmentsForUserInEvent = await repository.findAssignmentsForUserInEvent(userId, eventId);
+	const assignmentsForUserInEvent = await repository.findAssignmentsForUserInEvent(
+		user.id,
+		eventId,
+	);
 
 	const requestedIds = new Set(body.assignmentIds);
 	const validIds = new Set(assignmentsForUserInEvent.map((a) => a.id));

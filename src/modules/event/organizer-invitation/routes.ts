@@ -5,8 +5,6 @@ const router: Router = Router({ mergeParams: true });
 
 router.get("/", controller.getEventInvitations);
 
-router.patch("/:invitationId", controller.respondToInvitation);
-
 router.delete("/:invitationId", controller.revokeInvitation);
 
 export default router;

@@ -13,8 +13,6 @@ export type EventScope = {
 		parentEventId: number | null;
 		startsAt: string;
 		endsAt: string;
-		createdAt: string;
-		updatedAt: string;
 		type: {
 			id: number;
 			name: string;
@@ -44,11 +42,6 @@ export type EventScope = {
 				name: string;
 			};
 		}[];
-		report: {
-			id: number;
-			details: string;
-			submittedAt: string;
-		} | null;
 	};
 };
 

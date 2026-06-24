@@ -135,3 +135,41 @@ export const deleteOrganizationMember = dbAction(
 			.returning({ id: schema.userRole.id });
 	},
 );
+
+export const findOrganizerMemberWithRole = dbAction(
+	async (data: { organizationId: number; userId: number; roleId: number }) => {
+		const [userRole] = await db
+			.select({ id: schema.userRole.id })
+			.from(schema.userRole)
+			.innerJoin(
+				schema.managedEntity,
+				and(
+					eq(schema.managedEntity.id, schema.userRole.managedEntityId),
+					eq(schema.managedEntity.managedEntityType, "organization"),
+					isNull(schema.managedEntity.deletedAt),
+				),
+			)
+			.innerJoin(
+				schema.organization,
+				and(
+					eq(schema.organization.id, schema.managedEntity.refId),
+					eq(schema.organization.id, data.organizationId),
+					isNull(schema.organization.deletedAt),
+				),
+			)
+			.innerJoin(
+				schema.role,
+				and(eq(schema.role.id, schema.userRole.roleId), isNull(schema.role.deletedAt)),
+			)
+			.where(
+				and(
+					eq(schema.userRole.userId, data.userId),
+					eq(schema.userRole.roleId, data.roleId),
+					isNull(schema.userRole.deletedAt),
+				),
+			)
+			.limit(1);
+
+		return userRole;
+	},
+);

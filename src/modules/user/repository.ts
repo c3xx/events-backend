@@ -98,8 +98,11 @@ export const getFullUser = dbAction(async (userId: number) => {
 			),
 		})
 		.from(schema.user)
-		.leftJoin(schema.userRole, eq(schema.userRole.userId, schema.user.id))
-		.where(and(eq(schema.user.id, userId), isNull(schema.userRole.deletedAt)))
+		.leftJoin(
+			schema.userRole,
+			and(eq(schema.userRole.userId, schema.user.id), isNull(schema.userRole.deletedAt)),
+		)
+		.where(eq(schema.user.id, userId))
 		.groupBy(schema.user.id);
 
 	if (user == null) return null;

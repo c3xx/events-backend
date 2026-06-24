@@ -20,6 +20,8 @@ declare global {
 	// -- events
 	export type EventStatus = (typeof schema.eventStatusEnum.enumValues)[number];
 	export type EventOrganizerRole = (typeof schema.eventOrganizerRoleEnum.enumValues)[number];
+	export type EventOrganizerInvitationRole =
+		(typeof schema.eventOrganizerInvitationRoleEnum.enumValues)[number];
 	export type EventOrganizerInvitationStatus =
 		(typeof schema.eventOrganizerInvitationStatusEnum.enumValues)[number];
 
@@ -36,6 +38,9 @@ declare global {
 		(typeof schema.workflowInstanceStepStatusEnum.enumValues)[number];
 	export type WorkflowInstanceStepAssignmentStatus =
 		(typeof schema.workflowInstanceStepAssignmentStatusEnum.enumValues)[number];
+
+	// system types
+
 	export type WorkflowInstance = {
 		id: number;
 		createdAt: string;
@@ -49,23 +54,33 @@ declare global {
 			name: string;
 			nextStepId: number | null;
 			status: WorkflowInstanceStepStatus;
-			stepRoles: {
-				roleId: number;
-				targetGroupApprovalCriteria: WorkflowTargetGroupApprovalCriteria;
+			completedAt: string | null;
+			roles: {
 				id: number;
+				targetGroupApprovalCriteria: WorkflowTargetGroupApprovalCriteria;
+				role: {
+					id: number;
+					name: string;
+					scope: {
+						type: ManagedEntityType;
+						kindId: number;
+						kindName: string;
+					};
+				};
 				targetGroups: {
 					id: number;
-					managedEntityId: number;
+					scope: {
+						type: ManagedEntityType;
+						id: number;
+						name: string;
+					};
 					assignments: {
 						id: number;
 						status: WorkflowInstanceStepAssignmentStatus;
 						completedAt: string | null;
+						remarks: string | null;
 						userRole: {
 							id: number;
-							role: {
-								id: number;
-								name: string;
-							};
 							user: {
 								id: number;
 								fullName: string;
@@ -76,6 +91,7 @@ declare global {
 			}[];
 		}[];
 	};
+
 	export type WorkflowInstances = {
 		id: number;
 		createdAt: string;
@@ -86,13 +102,14 @@ declare global {
 		submittedBy: number;
 	}[];
 
-	// system types
+	type AuthenticatedUser = Pick<User, "id" | "type">;
+
 	export type PermissionScope = keyof typeof PERMISSION;
 	export type PermissionCode =
 		// | keyof typeof PERMISSION
 		FlattenPermission<typeof PERMISSION>;
 
-	export type IJWTPayload = JWTPayload & Pick<User, "id" | "type">;
+	export type IJWTPayload = JWTPayload & AuthenticatedUser;
 
 	// frontend types:
 	// types that are re-used in frontend.
