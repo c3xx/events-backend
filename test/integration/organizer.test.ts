@@ -5,9 +5,11 @@ import { getEventOrganizers } from "@/modules/event/organizer/service.js";
 import { addEventOrganizer } from "@/modules/event/organizer/service.js";
 import {
 	getEventInvitations,
-	respondToInvitation,
 	revokeInvitation,
 } from "@/modules/event/organizer-invitation/service.js";
+import {
+	respondToInvitation
+} from "@/modules/me/invitation/service.js";
 import {
 	createOrganizerTestSetup,
 	createTestOrganization,
