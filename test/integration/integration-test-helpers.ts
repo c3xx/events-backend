@@ -248,14 +248,14 @@ export async function createBasicEventSetup() {
 		name: "Initial Step",
 	});
 
-	const stepRole = await createTestRole({
+	const role = await createTestRole({
 		managedEntityType: "organization",
 		typeRefId: orgType.id,
 	});
 
 	await createTestWorkflowStepRole({
 		stepId: initialStep.id,
-		roleId: stepRole.id,
+		roleId: role.id,
 		targetGroupApprovalCriteria: "any",
 	});
 
