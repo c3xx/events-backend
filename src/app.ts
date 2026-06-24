@@ -91,7 +91,7 @@ apiRouter.use("/event-categories", eventCategoriesRouter);
 apiRouter.use("/events", eventRouter);
 apiRouter.use("/workflow-templates", workflowTemplatesRouter);
 
-app.use("/api/v1", apiRouter);
+app.use("/", apiRouter);
 
 // app.use(express.static(resolve("public")));
 // app.get("/{*path}", (_req, res) => {
