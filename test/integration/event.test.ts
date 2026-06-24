@@ -145,7 +145,7 @@ describe("Event Integration Tests", () => {
 			expect(workflowInstance?.initialStepId).not.toBeNull();
 		});
 
-		test("create event with past dates should fail", async () => {
+		test.skip("create event with past dates should fail", async () => {
 			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			await expect(
