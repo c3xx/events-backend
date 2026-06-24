@@ -1,6 +1,6 @@
 import { styleText } from "node:util";
 import cookieParser from "cookie-parser";
-import express, { type Application } from "express";
+import express, { type Application, Router } from "express";
 import { nanoid } from "nanoid";
 import { env } from "@/lib/env.js";
 import { authenticateToken, cors, errorHandler } from "@/middlewares/index.js";
@@ -67,27 +67,36 @@ app.use(
 app.use(cookieParser());
 app.use(express.json());
 
+const apiRouter = Router();
+
 // === Health
-app.get("/", (_req, res) => res.status(200).json({ status: "active" }));
+apiRouter.get("/", (_req, res) => res.status(200).json({ status: "active" }));
 
 // === Routes
-app.use("/auth", authRouter);
+apiRouter.use("/auth", authRouter);
 
-app.use(authenticateToken);
+apiRouter.use(authenticateToken);
 
-app.use("/me", meRouter);
-app.use("/users", usersRouter);
-app.use("/permissions", permissionsRouter);
-app.use("/roles", rolesRouter);
-app.use("/organizations", organizationRouter);
-app.use("/organization-types", organizationTypesRouter);
-app.use("/venues", venuesRouter);
-app.use("/venue-types", venueTypesRouter);
-app.use("/facilities", facilitiesRouter);
-app.use("/event-types", eventTypesRouter);
-app.use("/event-categories", eventCategoriesRouter);
-app.use("/events", eventRouter);
-app.use("/workflow-templates", workflowTemplatesRouter);
+apiRouter.use("/me", meRouter);
+apiRouter.use("/users", usersRouter);
+apiRouter.use("/permissions", permissionsRouter);
+apiRouter.use("/roles", rolesRouter);
+apiRouter.use("/organizations", organizationRouter);
+apiRouter.use("/organization-types", organizationTypesRouter);
+apiRouter.use("/venues", venuesRouter);
+apiRouter.use("/venue-types", venueTypesRouter);
+apiRouter.use("/facilities", facilitiesRouter);
+apiRouter.use("/event-types", eventTypesRouter);
+apiRouter.use("/event-categories", eventCategoriesRouter);
+apiRouter.use("/events", eventRouter);
+apiRouter.use("/workflow-templates", workflowTemplatesRouter);
+
+app.use("/api/v1", apiRouter);
+
+// app.use(express.static(resolve("public")));
+// app.get("/{*path}", (_req, res) => {
+// 	res.sendFile(resolve("public", "index.html"));
+// });
 
 app.use(errorHandler);
 
