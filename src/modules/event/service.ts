@@ -316,6 +316,4 @@ export async function cancelApprovedEvent(user: AuthenticatedUser, event: EventS
 	if (result == null) {
 		throw new NotFoundError("Event not found");
 	}
-
-	return { id: result.id };
 }

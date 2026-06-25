@@ -15,9 +15,9 @@ export const createVenueAllotment: ScopedApiRequestHandler<
 	return ok(res, result);
 };
 
-export const deleteVenueAllotment: ApiRequestHandler<{ id: number }> = async (req, res) => {
+export const deleteVenueAllotment: ScopedApiRequestHandler<EventScope, true> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
 	const params = schemas.allotmentScopedSchema.parse(req.params);
-	const result = await service.deleteVenueAllotment(user, params.eventId, params.allotmentId);
-	return ok(res, result);
+	await service.deleteVenueAllotment(user, res.locals.event, params.allotmentId);
+	return ok(res, true);
 };

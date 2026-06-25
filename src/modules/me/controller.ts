@@ -19,9 +19,9 @@ export const getEventCreatableOrganizations: ApiRequestHandler<
 	return ok(res, result);
 };
 
-export const updateProfile: ApiRequestHandler<{ id: number }> = async (req, res) => {
+export const updateProfile: ApiRequestHandler<true> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
 	const body = schemas.updateProfileSchema.parse(req.body);
-	const result = await service.updateProfile(user.id, body);
-	return ok(res, result);
+	await service.updateProfile(user.id, body);
+	return ok(res, true);
 };

@@ -1,6 +1,5 @@
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
 import { unreachable } from "@/lib/helpers.js";
-import * as eventRepository from "@/modules/event/repository.js";
 import type { EventScope } from "@/modules/event/scopes.js";
 import * as permissionRepository from "@/modules/permission/repository.js";
 import * as repository from "./repository.js";
@@ -39,23 +38,17 @@ export async function createVenueAllotment(
 
 export async function deleteVenueAllotment(
 	user: AuthenticatedUser,
-	eventId: number,
+	event: EventScope["event"],
 	allotmentId: number,
 ) {
-	const event = await eventRepository.findEventById(eventId);
-	if (event == null) {
-		throw new NotFoundError("Event not found");
-	}
-
-	const orgIds = event.organizers.map((o) => o.organization.id);
-	if (orgIds.length === 0) {
-		throw new NotFoundError("Event organizers not found");
-	}
+	const hostOrganizers = event.organizers.filter((organizer) => organizer.role === "host");
+	if (hostOrganizers.length !== 1 || hostOrganizers[0] == null) unreachable();
+	const hostOrganizer = hostOrganizers[0];
 
 	const hasAccess = await permissionRepository.hasPermissionInManagedEntity(
 		user,
 		"organization",
-		orgIds,
+		[hostOrganizer.organization.id],
 		"event:manage",
 	);
 
@@ -69,10 +62,8 @@ export async function deleteVenueAllotment(
 		throw new ConflictError("Venue allotments can only be removed from draft events");
 	}
 
-	const result = await repository.deleteVenueAllotment(eventId, allotmentId);
+	const result = await repository.deleteVenueAllotment(event.id, allotmentId);
 	if (result == null) {
 		throw new NotFoundError("Venue allotment not found");
 	}
-
-	return { id: result.id };
 }

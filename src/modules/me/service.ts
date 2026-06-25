@@ -17,5 +17,4 @@ export async function updateProfile(userId: number, input: schemas.UpdateProfile
 	if (result == null) {
 		throw new NotFoundError("User not found");
 	}
-	return { id: result.id };
 }

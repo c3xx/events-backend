@@ -109,13 +109,8 @@ export const discardEvent: ScopedApiRequestHandler<EventScope, true> = async (re
 	return ok(res, true);
 };
 
-export const cancelEvent: ScopedApiRequestHandler<
-	EventScope,
-	{
-		id: number;
-	}
-> = async (req, res) => {
+export const cancelEvent: ScopedApiRequestHandler<EventScope, true> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
-	const result = await service.cancelApprovedEvent(user, res.locals.event);
-	return ok(res, result);
+	await service.cancelApprovedEvent(user, res.locals.event);
+	return ok(res, true);
 };
