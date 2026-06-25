@@ -36,6 +36,14 @@
 					"name": "biome"
 				}
 			}
+		},
+		"YAML": {
+			"language_servers": ["yaml-language-server"],
+			"formatter": {
+				"language_server": {
+					"name": "biome"
+				}
+			}
 		}
 	},
 	"lsp": {

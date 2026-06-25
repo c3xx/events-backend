@@ -2,6 +2,7 @@ import { ConflictError, ForbiddenError } from "@/lib/errors.js";
 import { unreachable } from "@/lib/helpers.js";
 import * as invitationRepository from "@/modules/event/organizer-invitation/repository.js";
 import type { EventScope } from "@/modules/event/scopes.js";
+import * as organizationMemberRepository from "@/modules/organization/member/repository.js";
 import { hasPermissionInManagedEntity } from "@/modules/permission/repository.js";
 import * as repository from "./repository.js";
 import type { AddEventOrganizerSchema } from "./schema.js";
@@ -21,13 +22,23 @@ export async function addEventOrganizer(
 
 	// todo: decide whether these actions are host-only. or implemenet permissions
 
+	const userRoleInUse = await organizationMemberRepository.findOrganizerMemberWithRole({
+		organizationId: hostOrganizer.organization.id,
+		userId: user.id,
+		roleId: input.roleId,
+	});
+	if (userRoleInUse == null)
+		throw new ForbiddenError(
+			"You don't have the chosen role in the host organization in order to add organizers",
+		);
+
 	// check if the user is in host org + has permission to perform + with the given userroleid
 	const canManageOrganizers = await hasPermissionInManagedEntity(
 		user,
 		"organization",
 		[hostOrganizer.organization.id], // only hosts can
-		"event_organizer:manage",
-		input.userRoleId,
+		"event:manage",
+		userRoleInUse.id,
 	);
 	if (!canManageOrganizers)
 		throw new ForbiddenError("You do not have permission to manage this event's organizers");
@@ -58,7 +69,7 @@ export async function addEventOrganizer(
 		} else {
 			return await invitationRepository.sendInvitation({
 				eventId: event.id,
-				invitedByUserId: input.userRoleId,
+				invitedByUserId: userRoleInUse.id,
 				senderOrganizationId: hostOrganizer.organization.id,
 				recipientOrganizationId: input.organizationId,
 				intendedRole: input.intendedRole,
@@ -92,7 +103,7 @@ export async function removeEventOrganizer(
 		user,
 		"organization",
 		[hostOrganizer.organization.id], // only hosts
-		"event_organizer:manage",
+		"event:manage",
 	);
 	if (!canManageOrganizers)
 		throw new ForbiddenError("You do not have permission to manage this event's organizers");

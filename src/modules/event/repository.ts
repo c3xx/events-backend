@@ -64,6 +64,7 @@ export const findEvents = dbAction(
 				id: schema.event.id,
 				title: schema.event.title,
 				status: schema.event.status,
+				createdAt: schema.event.createdAt,
 				startsAt: schema.event.startsAt,
 				type: {
 					id: schema.eventType.id,
@@ -149,12 +150,18 @@ export const findEventById = dbAction(async (eventId: number) => {
 			requestDetails: true,
 			status: true,
 			parentEventId: true,
+			createdAt: true,
 			startsAt: true,
 			endsAt: true,
 		},
 		with: {
 			type: {
-				columns: { id: true, name: true },
+				columns: {
+					id: true,
+					name: true,
+					collaborationPolicy: true,
+					venuePolicy: true,
+				},
 			},
 			category: {
 				columns: { id: true, name: true },

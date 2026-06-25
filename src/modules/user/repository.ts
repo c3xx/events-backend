@@ -98,8 +98,11 @@ export const getFullUser = dbAction(async (userId: number) => {
 			),
 		})
 		.from(schema.user)
-		.leftJoin(schema.userRole, eq(schema.userRole.userId, schema.user.id))
-		.where(and(eq(schema.user.id, userId), isNull(schema.userRole.deletedAt)))
+		.leftJoin(
+			schema.userRole,
+			and(eq(schema.userRole.userId, schema.user.id), isNull(schema.userRole.deletedAt)),
+		)
+		.where(eq(schema.user.id, userId))
 		.groupBy(schema.user.id);
 
 	if (user == null) return null;
@@ -111,13 +114,19 @@ export const getFullUser = dbAction(async (userId: number) => {
 		.select({
 			id: schema.role.id,
 			name: schema.role.name,
-			permissions: sql<string[]>`array_agg(distinct ${schema.permission.code})`.as("permissions"),
+			permissions: sql<
+				string[]
+			>`coalesce(array_agg(distinct ${schema.permission.code}) filter (where ${schema.permission.code} is not null), '{}'::text[])`.as(
+				"permissions",
+			),
 		})
 		.from(schema.role)
-		.innerJoin(schema.rolePermission, eq(schema.rolePermission.roleId, schema.role.id))
-		.innerJoin(schema.permission, eq(schema.permission.id, schema.rolePermission.permissionId))
-		.where(and(and(isNull(schema.role.deletedAt), inArray(schema.role.id, [...allRoleIds]))))
+		.leftJoin(schema.rolePermission, eq(schema.rolePermission.roleId, schema.role.id))
+		.leftJoin(schema.permission, eq(schema.permission.id, schema.rolePermission.permissionId))
+		.where(and(isNull(schema.role.deletedAt), inArray(schema.role.id, [...allRoleIds])))
 		.groupBy(schema.role.id);
+
+	console.log(roles);
 
 	const managedEntities = await db
 		.select({

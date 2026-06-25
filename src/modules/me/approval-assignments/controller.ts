@@ -6,9 +6,29 @@ export const getPendingApprovalEvents: ApiRequestHandler<
 	{
 		id: number;
 		title: string;
-		status: EventStatus;
+		createdAt: string;
 		startsAt: string;
 		endsAt: string;
+		type: {
+			id: number;
+			name: string;
+		};
+		category: {
+			id: number;
+			name: string;
+		};
+		parentEvent: {
+			id: number;
+			title: string;
+		} | null;
+		organizers: {
+			id: number;
+			role: "host" | "co_host" | "resource_provider";
+			organization: {
+				id: number;
+				name: string;
+			};
+		}[];
 	}[]
 > = async (req, res) => {
 	const user = getAuthenticatedUser(req);
@@ -20,6 +40,7 @@ export const getEventAssignments: ApiRequestHandler<
 	{
 		id: number;
 		title: string;
+		createdAt: string;
 		expectedParticipants: number;
 		requestDetails: string;
 		status: EventStatus;
@@ -29,6 +50,8 @@ export const getEventAssignments: ApiRequestHandler<
 		type: {
 			id: number;
 			name: string;
+			collaborationPolicy: EventTypeCollaborationPolicy;
+			venuePolicy: EventTypeVenuePolicy;
 		};
 		category: {
 			id: number;
@@ -59,6 +82,7 @@ export const getEventAssignments: ApiRequestHandler<
 			id: number;
 			status: WorkflowInstanceStepAssignmentStatus;
 			remarks: string | null;
+			createdAt: string;
 			completedAt: string | null;
 			step: {
 				id: number;

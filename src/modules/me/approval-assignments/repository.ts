@@ -1,17 +1,42 @@
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db, schema } from "@/db/index.js";
 import { dbAction } from "@/lib/helpers.js";
 import { resolveStep } from "@/modules/event/workflow-instance/progression.js";
 
 // Find all events that requires approval from the user
 export const findPendingEventsForUser = dbAction(async (userId: number) => {
+	const parentEvent = alias(schema.event, "parentEvent");
+
 	return await db
 		.select({
 			id: schema.event.id,
 			title: schema.event.title,
-			status: schema.event.status,
+			createdAt: schema.event.createdAt,
 			startsAt: schema.event.startsAt,
 			endsAt: schema.event.endsAt,
+			type: {
+				id: schema.eventType.id,
+				name: schema.eventType.name,
+			},
+			category: {
+				id: schema.eventCategory.id,
+				name: schema.eventCategory.name,
+			},
+			parentEvent: {
+				id: parentEvent.id,
+				title: parentEvent.title,
+			},
+			organizers: sql<
+				{
+					id: number;
+					role: EventOrganizerRole;
+					organization: {
+						id: number;
+						name: string;
+					};
+				}[]
+			>`json_agg(json_build_object('id', ${schema.eventOrganizer.id}, 'role', ${schema.eventOrganizer.role}, 'organization', json_build_object('id', ${schema.organization.id}, 'name', ${schema.organization.name})))`,
 		})
 		.from(schema.workflowInstanceStepAssignment)
 		.innerJoin(
@@ -38,6 +63,23 @@ export const findPendingEventsForUser = dbAction(async (userId: number) => {
 			eq(schema.workflowInstanceStep.instanceId, schema.workflowInstance.id),
 		)
 		.innerJoin(schema.event, eq(schema.workflowInstance.eventId, schema.event.id))
+		.innerJoin(schema.eventCategory, eq(schema.event.categoryId, schema.eventCategory.id))
+		.innerJoin(schema.eventType, eq(schema.event.typeId, schema.eventType.id))
+		.leftJoin(parentEvent, eq(schema.event.parentEventId, parentEvent.id))
+		.innerJoin(
+			schema.eventOrganizer,
+			and(
+				eq(schema.eventOrganizer.eventId, schema.event.id),
+				isNull(schema.eventOrganizer.deletedAt),
+			),
+		)
+		.innerJoin(
+			schema.organization,
+			and(
+				eq(schema.organization.id, schema.eventOrganizer.organizationId),
+				isNull(schema.organization.deletedAt),
+			),
+		)
 		.where(
 			and(
 				eq(schema.userRole.userId, userId), // for the given user id
@@ -52,7 +94,8 @@ export const findPendingEventsForUser = dbAction(async (userId: number) => {
 				isNull(schema.workflowInstance.deletedAt),
 				isNull(schema.event.deletedAt),
 			),
-		);
+		)
+		.groupBy(schema.event.id, schema.eventType.id, schema.eventCategory.id, parentEvent.id);
 });
 
 export const findEventByIdSimple = dbAction(async (eventId: number) => {
@@ -68,6 +111,7 @@ export const findAssignmentsForUserInEvent = dbAction(async (userId: number, eve
 			id: schema.workflowInstanceStepAssignment.id,
 			status: schema.workflowInstanceStepAssignment.status,
 			remarks: schema.workflowInstanceStepAssignment.remarks,
+			createdAt: schema.workflowInstanceStepAssignment.createdAt,
 			completedAt: schema.workflowInstanceStepAssignment.completedAt,
 
 			step: {

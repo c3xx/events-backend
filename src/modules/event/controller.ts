@@ -20,6 +20,7 @@ export const getEvents: ApiRequestHandler<
 		category: { id: number; name: string };
 		status: EventStatus;
 		parentEvent: { id: number; title: string } | null;
+		createdAt: string;
 		startsAt: string;
 		organizers: {
 			id: number;
@@ -46,9 +47,15 @@ export const getEvent: ScopedApiRequestHandler<
 		requestDetails: string;
 		status: EventStatus;
 		parentEventId: number | null;
+		createdAt: string;
 		startsAt: string;
 		endsAt: string;
-		type: { id: number; name: string };
+		type: {
+			id: number;
+			name: string;
+			collaborationPolicy: EventTypeCollaborationPolicy;
+			venuePolicy: EventTypeVenuePolicy;
+		};
 		category: { id: number; name: string };
 		parentEvent: { id: number; title: string } | null;
 		organizers: {

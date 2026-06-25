@@ -1,129 +1,129 @@
 
-import { and, eq, isNull, sql } from "drizzle-orm";
-import { db, schema } from "./src/db/index.js";
+import { getPendingInvitations, getPendingInvitation } from "./src/modules/me/invitation/service.js";
 
+const result = await getPendingInvitation({id: 13, type: "end_user"},20)
 
-const result = await db.query.workflowInstance.findFirst({
-where: and(
-	eq(schema.workflowInstance.id, 27),
-	isNull(schema.workflowInstance.deletedAt),
-),
-columns: {
-	id: true,
-	createdAt: true,
-	initialStepId: true,
-	status: true,
-	completedAt: true,
-	eventId: true,
-	submittedBy: true,
-},
-with: {
-	steps: {
-		columns: {
-			id: true,
-			name: true,
-			status: true,
-			nextStepId: true,
-			completedAt: true,
-		},
-		with: {
-			roles: {
-				columns: {
-					id: true,
-					targetGroupApprovalCriteria: true,
-				},
-				with: {
-					role: {
-						columns: {
-							id: true,
-							name: true,
-						},
-						extras: {
-							scope: sql<{
-								// note: null intentionally not handled because, critical system change
-								type: "organization" | "venue";
-								kindId: number;
-								kindName: string;
-							}>`case
-								when ${schema.role.managedEntityType} = 'organization'
-								then (
-									select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', ot.id, 'kindName', ot.name)
-									from organization_type ot where ot.id = ${schema.role.typeRefId} limit 1
-								)
-								when ${schema.role.managedEntityType} = 'venue'
-								then (
-									select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', vt.id, 'kindName', vt.name)
-									from venue_type vt where vt.id = ${schema.role.typeRefId} limit 1
-								)
-								else null
-							end`.as("scope"),
-						},
-					},
-					targetGroups: {
-						columns: {
-							id: true,
-						},
-						extras: {
-						    scope: sql<{
-						      type: "organization" | "venue";
-						      id: number;
-						      name: string;
-						    } | null>`(
-						      select case
-						        when me.managed_entity_type = 'organization'
-						        then json_build_object(
-						          'type', me.managed_entity_type,
-						          'id', o.id,
-						          'name', o.name
-						        )
-						        when me.managed_entity_type = 'venue'
-						        then json_build_object(
-						          'type', me.managed_entity_type,
-						          'id', v.id,
-						          'name', v.name
-						        )
-						        else null
-						      end
-						      from managed_entity me
-						      left join organization o on me.managed_entity_type = 'organization' and o.id = me.ref_id
-						      left join venue v on me.managed_entity_type = 'venue' and v.id = me.ref_id
-						      where me.id = ${schema.workflowInstanceStepTargetGroup.managedEntityId}
-						      limit 1
-						    )`.as("entity"),
-						  },
+// const result = await db.query.workflowInstance.findFirst({
+// where: and(
+// 	eq(schema.workflowInstance.id, 27),
+// 	isNull(schema.workflowInstance.deletedAt),
+// ),
+// columns: {
+// 	id: true,
+// 	createdAt: true,
+// 	initialStepId: true,
+// 	status: true,
+// 	completedAt: true,
+// 	eventId: true,
+// 	submittedBy: true,
+// },
+// with: {
+// 	steps: {
+// 		columns: {
+// 			id: true,
+// 			name: true,
+// 			status: true,
+// 			nextStepId: true,
+// 			completedAt: true,
+// 		},
+// 		with: {
+// 			roles: {
+// 				columns: {
+// 					id: true,
+// 					targetGroupApprovalCriteria: true,
+// 				},
+// 				with: {
+// 					role: {
+// 						columns: {
+// 							id: true,
+// 							name: true,
+// 						},
+// 						extras: {
+// 							scope: sql<{
+// 								// note: null intentionally not handled because, critical system change
+// 								type: "organization" | "venue";
+// 								kindId: number;
+// 								kindName: string;
+// 							}>`case
+// 								when ${schema.role.managedEntityType} = 'organization'
+// 								then (
+// 									select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', ot.id, 'kindName', ot.name)
+// 									from organization_type ot where ot.id = ${schema.role.typeRefId} limit 1
+// 								)
+// 								when ${schema.role.managedEntityType} = 'venue'
+// 								then (
+// 									select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', vt.id, 'kindName', vt.name)
+// 									from venue_type vt where vt.id = ${schema.role.typeRefId} limit 1
+// 								)
+// 								else null
+// 							end`.as("scope"),
+// 						},
+// 					},
+// 					targetGroups: {
+// 						columns: {
+// 							id: true,
+// 						},
+// 						extras: {
+// 						    scope: sql<{
+// 						      type: "organization" | "venue";
+// 						      id: number;
+// 						      name: string;
+// 						    } | null>`(
+// 						      select case
+// 						        when me.managed_entity_type = 'organization'
+// 						        then json_build_object(
+// 						          'type', me.managed_entity_type,
+// 						          'id', o.id,
+// 						          'name', o.name
+// 						        )
+// 						        when me.managed_entity_type = 'venue'
+// 						        then json_build_object(
+// 						          'type', me.managed_entity_type,
+// 						          'id', v.id,
+// 						          'name', v.name
+// 						        )
+// 						        else null
+// 						      end
+// 						      from managed_entity me
+// 						      left join organization o on me.managed_entity_type = 'organization' and o.id = me.ref_id
+// 						      left join venue v on me.managed_entity_type = 'venue' and v.id = me.ref_id
+// 						      where me.id = ${schema.workflowInstanceStepTargetGroup.managedEntityId}
+// 						      limit 1
+// 						    )`.as("entity"),
+// 						  },
 
-						with: {
-							assignments: {
-								columns: {
-									id: true,
-									status: true,
-									completedAt: true,
-									remarks: true,
-								},
-								with: {
-									userRole: {
-										columns: {
-											id: true,
-										},
-										with: {
-											user: {
-												columns: {
-													id: true,
-													fullName: true,
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	},
-},
-});
+// 						with: {
+// 							assignments: {
+// 								columns: {
+// 									id: true,
+// 									status: true,
+// 									completedAt: true,
+// 									remarks: true,
+// 								},
+// 								with: {
+// 									userRole: {
+// 										columns: {
+// 											id: true,
+// 										},
+// 										with: {
+// 											user: {
+// 												columns: {
+// 													id: true,
+// 													fullName: true,
+// 												},
+// 											},
+// 										},
+// 									},
+// 								},
+// 							},
+// 						},
+// 					},
+// 				},
+// 			},
+// 		},
+// 	},
+// },
+// });
 
 console.dir(result, { depth: 33 });
 

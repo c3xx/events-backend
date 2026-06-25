@@ -20,6 +20,8 @@ declare global {
 	// -- events
 	export type EventStatus = (typeof schema.eventStatusEnum.enumValues)[number];
 	export type EventOrganizerRole = (typeof schema.eventOrganizerRoleEnum.enumValues)[number];
+	export type EventOrganizerInvitationRole =
+		(typeof schema.eventOrganizerInvitationRoleEnum.enumValues)[number];
 	export type EventOrganizerInvitationStatus =
 		(typeof schema.eventOrganizerInvitationStatusEnum.enumValues)[number];
 
@@ -45,8 +47,10 @@ declare global {
 		initialStepId: number | null;
 		status: WorkflowInstanceStatus;
 		completedAt: string | null;
-		eventId: number;
-		submittedBy: number;
+		submitter: {
+			id: number;
+			fullName: string;
+		};
 		steps: {
 			id: number;
 			name: string;
@@ -89,16 +93,6 @@ declare global {
 			}[];
 		}[];
 	};
-
-	export type WorkflowInstances = {
-		id: number;
-		createdAt: string;
-		initialStepId: number | null;
-		status: WorkflowInstanceStatus;
-		completedAt: string | null;
-		eventId: number;
-		submittedBy: number;
-	}[];
 
 	type AuthenticatedUser = Pick<User, "id" | "type">;
 
