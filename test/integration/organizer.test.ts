@@ -1,15 +1,11 @@
-import { and, eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
-import { db, schema } from "@/db/index.js";
 import { getEventOrganizers } from "@/modules/event/organizer/service.js";
 import { addEventOrganizer } from "@/modules/event/organizer/service.js";
 import {
 	getEventInvitations,
 	revokeInvitation,
 } from "@/modules/event/organizer-invitation/service.js";
-import {
-	respondToInvitation
-} from "@/modules/me/invitation/service.js";
+import { respondToInvitation } from "@/modules/me/invitation/service.js";
 import {
 	createOrganizerTestSetup,
 	createTestOrganization,
@@ -19,7 +15,6 @@ import {
 } from "./integration-test-helpers.js";
 
 describe("organizer management", () => {
-
 	test("add resource provider", async () => {
 		const { admin, event, userRole, orgType } = await createOrganizerTestSetup();
 		const rpOrg = await createTestOrganization({
@@ -32,16 +27,22 @@ describe("organizer management", () => {
 			permissions: [] as PermissionCode[],
 		};
 
-		const result = await addEventOrganizer(event.id, {
-			organizationId: rpOrg.id,
-			intendedRole: "resource_provider",
-			userRoleId: userRole.id,
-		}, actor);
+		const result = await addEventOrganizer(
+			event.id,
+			{
+				organizationId: rpOrg.id,
+				intendedRole: "resource_provider",
+				userRoleId: userRole.id,
+			},
+			actor,
+		);
 
 		expect(result).toBeDefined();
 
 		const organizers = await getEventOrganizers(event.id);
-		expect(organizers.some(o => o.role === "resource_provider" && o.organization.id === rpOrg.id)).toBe(true);
+		expect(
+			organizers.some((o) => o.role === "resource_provider" && o.organization.id === rpOrg.id),
+		).toBe(true);
 	});
 
 	test("accept co-host invitation", async () => {
@@ -54,11 +55,15 @@ describe("organizer management", () => {
 			permissions: [] as PermissionCode[],
 		};
 
-		const inviteResult = await addEventOrganizer(event.id, {
-			organizationId: coHostOrg.id,
-			intendedRole: "co_host",
-			userRoleId: userRole.id,
-		}, actor);
+		const inviteResult = await addEventOrganizer(
+			event.id,
+			{
+				organizationId: coHostOrg.id,
+				intendedRole: "co_host",
+				userRoleId: userRole.id,
+			},
+			actor,
+		);
 
 		expect(inviteResult.id).toBeDefined();
 
@@ -79,13 +84,20 @@ describe("organizer management", () => {
 			permissions: [] as PermissionCode[],
 		};
 
-		await respondToInvitation(event.id, Number(inviteResult.id), {
-			status: "accepted",
-			userRoleId: coHostUserRole.id,
-		}, coHostActor);
+		await respondToInvitation(
+			event.id,
+			Number(inviteResult.id),
+			{
+				status: "accepted",
+				userRoleId: coHostUserRole.id,
+			},
+			coHostActor,
+		);
 
 		const organizers = await getEventOrganizers(event.id);
-		expect(organizers.some(o => o.role === "co_host" && o.organization.id === coHostOrg.id)).toBe(true);
+		expect(organizers.some((o) => o.role === "co_host" && o.organization.id === coHostOrg.id)).toBe(
+			true,
+		);
 	});
 
 	test("reject co-host invitation", async () => {
@@ -98,11 +110,15 @@ describe("organizer management", () => {
 			permissions: [] as PermissionCode[],
 		};
 
-		const inviteResult = await addEventOrganizer(event.id, {
-			organizationId: coHostOrg.id,
-			intendedRole: "co_host",
-			userRoleId: userRole.id,
-		}, actor);
+		const inviteResult = await addEventOrganizer(
+			event.id,
+			{
+				organizationId: coHostOrg.id,
+				intendedRole: "co_host",
+				userRoleId: userRole.id,
+			},
+			actor,
+		);
 
 		expect(inviteResult.id).toBeDefined();
 
@@ -123,10 +139,15 @@ describe("organizer management", () => {
 			permissions: [] as PermissionCode[],
 		};
 
-		await respondToInvitation(event.id, Number(inviteResult.id), {
-			status: "rejected",
-			userRoleId: coHostUserRole.id,
-		}, coHostActor);
+		await respondToInvitation(
+			event.id,
+			Number(inviteResult.id),
+			{
+				status: "rejected",
+				userRoleId: coHostUserRole.id,
+			},
+			coHostActor,
+		);
 
 		const invites = await getEventInvitations(event.id);
 		expect(invites[0]).toBeDefined();
@@ -146,23 +167,31 @@ describe("organizer management", () => {
 			permissions: [] as PermissionCode[],
 		};
 
-		const inviteResult = await addEventOrganizer(event.id, {
-			organizationId: coHostOrg.id,
-			intendedRole: "co_host",
-			userRoleId: userRole.id,
-		}, actor);
+		const inviteResult = await addEventOrganizer(
+			event.id,
+			{
+				organizationId: coHostOrg.id,
+				intendedRole: "co_host",
+				userRoleId: userRole.id,
+			},
+			actor,
+		);
 
 		expect(inviteResult.id).toBeDefined();
 
-		await revokeInvitation(event.id, Number(inviteResult.id), {
-			userRoleId: userRole.id,
-		}, actor);
+		await revokeInvitation(
+			event.id,
+			Number(inviteResult.id),
+			{
+				userRoleId: userRole.id,
+			},
+			actor,
+		);
 
 		const invites = await getEventInvitations(event.id);
 		expect(invites[0]).toBeDefined();
 		expect(invites[0]?.status).toBe("revoked");
 	});
-
 
 	test("add organizer to non-existent event should fail", async () => {
 		const { admin, userRole, orgType } = await createOrganizerTestSetup();
@@ -175,11 +204,15 @@ describe("organizer management", () => {
 		};
 
 		await expect(
-			addEventOrganizer(99999, {  
-				organizationId: rpOrg.id,
-				intendedRole: "resource_provider",
-				userRoleId: userRole.id,
-			}, actor)
+			addEventOrganizer(
+				99999,
+				{
+					organizationId: rpOrg.id,
+					intendedRole: "resource_provider",
+					userRoleId: userRole.id,
+				},
+				actor,
+			),
 		).rejects.toThrow();
 	});
 
@@ -193,18 +226,26 @@ describe("organizer management", () => {
 			permissions: [] as PermissionCode[],
 		};
 
-		await addEventOrganizer(event.id, {
-			organizationId: coHostOrg.id,
-			intendedRole: "co_host",
-			userRoleId: userRole.id,
-		}, actor);
-
-		await expect(
-			addEventOrganizer(event.id, {
+		await addEventOrganizer(
+			event.id,
+			{
 				organizationId: coHostOrg.id,
 				intendedRole: "co_host",
 				userRoleId: userRole.id,
-			}, actor)
+			},
+			actor,
+		);
+
+		await expect(
+			addEventOrganizer(
+				event.id,
+				{
+					organizationId: coHostOrg.id,
+					intendedRole: "co_host",
+					userRoleId: userRole.id,
+				},
+				actor,
+			),
 		).rejects.toThrow();
 	});
 
@@ -218,11 +259,15 @@ describe("organizer management", () => {
 			permissions: [] as PermissionCode[],
 		};
 
-		const inviteResult = await addEventOrganizer(event.id, {
-			organizationId: coHostOrg.id,
-			intendedRole: "co_host",
-			userRoleId: userRole.id,
-		}, actor);
+		const inviteResult = await addEventOrganizer(
+			event.id,
+			{
+				organizationId: coHostOrg.id,
+				intendedRole: "co_host",
+				userRoleId: userRole.id,
+			},
+			actor,
+		);
 
 		const coHostUser = await createTestUser();
 		const coHostME = await getManagedEntityForOrganization(coHostOrg.id);
@@ -238,16 +283,26 @@ describe("organizer management", () => {
 			permissions: [] as PermissionCode[],
 		};
 
-		await respondToInvitation(event.id, Number(inviteResult.id), {
-			status: "accepted",
-			userRoleId: coHostUserRole.id,
-		}, coHostActor);
+		await respondToInvitation(
+			event.id,
+			Number(inviteResult.id),
+			{
+				status: "accepted",
+				userRoleId: coHostUserRole.id,
+			},
+			coHostActor,
+		);
 
 		await expect(
-			respondToInvitation(event.id, Number(inviteResult.id), {
-				status: "rejected",
-				userRoleId: coHostUserRole.id,
-			}, coHostActor)
+			respondToInvitation(
+				event.id,
+				Number(inviteResult.id),
+				{
+					status: "rejected",
+					userRoleId: coHostUserRole.id,
+				},
+				coHostActor,
+			),
 		).rejects.toThrow();
 	});
 
@@ -272,11 +327,15 @@ describe("organizer management", () => {
 		const targetOrg = await createTestOrganization({ organizationTypeId: orgType.id });
 
 		await expect(
-			addEventOrganizer(event.id, {
-				organizationId: targetOrg.id,
-				intendedRole: "co_host",
-				userRoleId: outsiderUserRole.id,
-			}, outsiderActor)
+			addEventOrganizer(
+				event.id,
+				{
+					organizationId: targetOrg.id,
+					intendedRole: "co_host",
+					userRoleId: outsiderUserRole.id,
+				},
+				outsiderActor,
+			),
 		).rejects.toThrow();
 	});
 });
