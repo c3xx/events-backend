@@ -6,6 +6,7 @@ export const getPendingApprovalEvents: ApiRequestHandler<
 	{
 		id: number;
 		title: string;
+		createdAt: string;
 		startsAt: string;
 		endsAt: string;
 		type: {
@@ -39,6 +40,7 @@ export const getEventAssignments: ApiRequestHandler<
 	{
 		id: number;
 		title: string;
+		createdAt: string;
 		expectedParticipants: number;
 		requestDetails: string;
 		status: EventStatus;
@@ -80,6 +82,7 @@ export const getEventAssignments: ApiRequestHandler<
 			id: number;
 			status: WorkflowInstanceStepAssignmentStatus;
 			remarks: string | null;
+			createdAt: string;
 			completedAt: string | null;
 			step: {
 				id: number;

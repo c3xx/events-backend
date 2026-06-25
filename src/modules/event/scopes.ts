@@ -11,6 +11,7 @@ export type EventScope = {
 		requestDetails: string;
 		status: EventStatus;
 		parentEventId: number | null;
+		createdAt: string;
 		startsAt: string;
 		endsAt: string;
 		type: {
