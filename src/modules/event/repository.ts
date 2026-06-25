@@ -154,7 +154,12 @@ export const findEventById = dbAction(async (eventId: number) => {
 		},
 		with: {
 			type: {
-				columns: { id: true, name: true },
+				columns: {
+					id: true,
+					name: true,
+					collaborationPolicy: true,
+					venuePolicy: true,
+				},
 			},
 			category: {
 				columns: { id: true, name: true },

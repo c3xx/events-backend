@@ -48,7 +48,12 @@ export const getEvent: ScopedApiRequestHandler<
 		parentEventId: number | null;
 		startsAt: string;
 		endsAt: string;
-		type: { id: number; name: string };
+		type: {
+			id: number;
+			name: string;
+			collaborationPolicy: EventTypeCollaborationPolicy;
+			venuePolicy: EventTypeVenuePolicy;
+		};
 		category: { id: number; name: string };
 		parentEvent: { id: number; title: string } | null;
 		organizers: {

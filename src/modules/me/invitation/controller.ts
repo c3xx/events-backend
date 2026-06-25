@@ -68,6 +68,8 @@ export const getPendingInvitation: ApiRequestHandler<{
 		type: {
 			id: number;
 			name: string;
+			venuePolicy: EventTypeVenuePolicy;
+			collaborationPolicy: EventTypeCollaborationPolicy;
 		};
 		category: {
 			id: number;

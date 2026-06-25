@@ -16,6 +16,8 @@ export type EventScope = {
 		type: {
 			id: number;
 			name: string;
+			collaborationPolicy: EventTypeCollaborationPolicy;
+			venuePolicy: EventTypeVenuePolicy;
 		};
 		category: {
 			id: number;

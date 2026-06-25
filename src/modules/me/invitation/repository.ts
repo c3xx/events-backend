@@ -150,6 +150,8 @@ export const findPendingInvitationById = dbAction(async (invitationId: number) =
 				type: jsonBuildObject({
 					id: schema.eventType.id,
 					name: schema.eventType.name,
+					collaborationPolicy: schema.eventType.collaborationPolicy,
+					venuePolicy: schema.eventType.venuePolicy,
 				}),
 				category: jsonBuildObject({
 					id: schema.eventCategory.id,
