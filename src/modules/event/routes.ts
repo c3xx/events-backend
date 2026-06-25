@@ -19,6 +19,9 @@ router.get("/:eventId", controller.getEvent);
 router.patch("/:eventId", controller.updateEvent);
 router.post("/:eventId/submit", controller.submitEvent);
 
+router.delete("/:eventId", controller.discardEvent);
+router.post("/:eventId/cancel", controller.cancelEvent);
+
 // todo: adjust the following router to utilize the eventId scope handler
 router.use("/:eventId/venue-allotments", venueAllotmentRouter);
 router.use("/:eventId/organizers", organizerRouter);

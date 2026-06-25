@@ -109,3 +109,15 @@ export const getParentableEvents: ApiRequestHandler<
 	const result = await service.getParentableEvents(user, query);
 	return ok(res, result);
 };
+
+export const discardEvent: ScopedApiRequestHandler<EventScope, true> = async (req, res) => {
+	const user = getAuthenticatedUser(req);
+	await service.discardDraftEvent(user, res.locals.event);
+	return ok(res, true);
+};
+
+export const cancelEvent: ScopedApiRequestHandler<EventScope, true> = async (req, res) => {
+	const user = getAuthenticatedUser(req);
+	await service.cancelApprovedEvent(user, res.locals.event);
+	return ok(res, true);
+};

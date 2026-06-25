@@ -291,3 +291,51 @@ export const findParentableEvents = dbAction(
 // 		.where(eq(schema.eventOrganizer.organizationId, organizationId))
 // 		.orderBy(schema.event.startsAt);
 // });
+
+export const discardDraftEvent = dbAction(async (eventId: number) => {
+	await db.transaction(async (tx) => {
+		await tx
+			.update(schema.event)
+			.set({ deletedAt: sql`now()` })
+			.where(and(eq(schema.event.id, eventId), isNull(schema.event.deletedAt)));
+
+		await tx
+			.update(schema.eventOrganizer)
+			.set({ deletedAt: sql`now()` })
+			.where(
+				and(eq(schema.eventOrganizer.eventId, eventId), isNull(schema.eventOrganizer.deletedAt)),
+			);
+
+		await tx
+			.update(schema.venueAllotment)
+			.set({ deletedAt: sql`now()` })
+			.where(
+				and(eq(schema.venueAllotment.eventId, eventId), isNull(schema.venueAllotment.deletedAt)),
+			);
+
+		await tx
+			.update(schema.eventOrganizerInvitation)
+			.set({ deletedAt: sql`now()` })
+			.where(
+				and(
+					eq(schema.eventOrganizerInvitation.eventId, eventId),
+					isNull(schema.eventOrganizerInvitation.deletedAt),
+				),
+			);
+	});
+});
+
+export const cancelApprovedEvent = dbAction(async (eventId: number) => {
+	const [updated] = await db
+		.update(schema.event)
+		.set({ status: "cancelled" })
+		.where(
+			and(
+				eq(schema.event.id, eventId),
+				eq(schema.event.status, "approved"),
+				isNull(schema.event.deletedAt),
+			),
+		)
+		.returning({ id: schema.event.id });
+	return updated;
+});

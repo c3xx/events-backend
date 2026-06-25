@@ -208,3 +208,12 @@ export const getFullUser = dbAction(async (userId: number) => {
 		}),
 	};
 });
+
+export const updateUser = dbAction(async (id: number, data: { fullName?: string }) => {
+	const [updated] = await db
+		.update(schema.user)
+		.set(data)
+		.where(and(eq(schema.user.id, id), isNull(schema.user.deletedAt)))
+		.returning({ id: schema.user.id });
+	return updated;
+});
