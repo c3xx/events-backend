@@ -41,6 +41,9 @@ importers:
       set-cookie-parser:
         specifier: ^3.1.0
         version: 3.1.0
+      yaml:
+        specifier: ^2.9.0
+        version: 2.9.0
       zod:
         specifier: ^4.3.6
         version: 4.3.6
