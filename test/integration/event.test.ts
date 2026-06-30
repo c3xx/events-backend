@@ -2,42 +2,37 @@ import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { assert, describe, expect, test } from "vitest";
 import { db, schema } from "@/db/index.js";
-import { getEventOrganizers } from "@/modules/event/organizer/service.js";
 import { findEventById } from "@/modules/event/repository.js";
+import { createEventSchema } from "@/modules/event/schema.js";
 import { createEvent, getEvent, submitEvent, updateEvent } from "@/modules/event/service.js";
-import { createBasicEventSetup } from "./integration-test-helpers.js";
+import { createBasicEventSetup, createTestEventBody } from "./integration-test-helpers.js";
 
 describe("Event Integration Tests", () => {
 	describe("event lifecycle", () => {
 		test("create event creates host organizer", async () => {
 			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
 
-			const eventBody = {
+			const eventBody = createTestEventBody({
 				organizationId: hostOrg.id,
 				title: "Core Lifecycle Event",
 				typeId: eventType.id,
 				categoryId: category.id,
-				expectedParticipants: 10,
 				requestDetails: "Testing host auto-creation",
-				startsAt: new Date(Date.now() + 86400000).toISOString(),
-				endsAt: new Date(Date.now() + 172800000).toISOString(),
-			};
+			});
 
 			const event = await createEvent({ id: admin.id, type: "admin" }, eventBody);
 
-			expect(event).toBeDefined();
-			expect(event.id).toBeGreaterThan(0);
-
-			const dbEvent = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
-			expect(dbEvent?.status).toBe("draft");
-
 			const eventFound = await findEventById(event.id);
 			assert(eventFound != null);
+			expect(eventFound.status).toBe("draft");
 
-			const organizers = await getEventOrganizers(eventFound);
+			const organizers = eventFound.organizers;
 			expect(organizers).toHaveLength(1);
-			expect(organizers[0]?.role).toBe("host");
-			expect(organizers[0]?.organization.id).toBe(hostOrg.id);
+
+			const hostOrganizer = organizers[0];
+			assert(hostOrganizer != null);
+			expect(hostOrganizer.role).toBe("host");
+			expect(hostOrganizer.organization.id).toBe(hostOrg.id);
 		});
 
 		test("update event works for draft status", async () => {
@@ -45,16 +40,13 @@ describe("Event Integration Tests", () => {
 
 			const event = await createEvent(
 				{ id: admin.id, type: "admin" },
-				{
+				createTestEventBody({
 					organizationId: hostOrg.id,
 					title: "Original Title",
 					typeId: eventType.id,
 					categoryId: category.id,
-					expectedParticipants: 10,
 					requestDetails: "Original details",
-					startsAt: new Date(Date.now() + 86400000).toISOString(),
-					endsAt: new Date(Date.now() + 172800000).toISOString(),
-				},
+				}),
 			);
 
 			const eventFound = await findEventById(event.id);
@@ -67,8 +59,9 @@ describe("Event Integration Tests", () => {
 			});
 
 			const dbEvent = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
-			expect(dbEvent?.title).toBe(updatedTitle);
-			expect(dbEvent?.expectedParticipants).toBe(20);
+			assert(dbEvent != null);
+			expect(dbEvent.title).toBe(updatedTitle);
+			expect(dbEvent.expectedParticipants).toBe(20);
 		});
 
 		test("update event fails for non-draft status", async () => {
@@ -76,16 +69,13 @@ describe("Event Integration Tests", () => {
 
 			const event = await createEvent(
 				{ id: admin.id, type: "admin" },
-				{
+				createTestEventBody({
 					organizationId: hostOrg.id,
 					title: "Original Title",
 					typeId: eventType.id,
 					categoryId: category.id,
-					expectedParticipants: 10,
 					requestDetails: "Original details",
-					startsAt: new Date(Date.now() + 86400000).toISOString(),
-					endsAt: new Date(Date.now() + 172800000).toISOString(),
-				},
+				}),
 			);
 
 			const eventFound = await findEventById(event.id);
@@ -103,8 +93,9 @@ describe("Event Integration Tests", () => {
 			).rejects.toThrow();
 
 			const dbEvent = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
-			expect(dbEvent?.title).toBe("Original Title");
-			expect(dbEvent?.expectedParticipants).toBe(10);
+			assert(dbEvent != null);
+			expect(dbEvent.title).toBe("Original Title");
+			expect(dbEvent.expectedParticipants).toBe(10);
 		});
 
 		test("submit event for approval", async () => {
@@ -112,20 +103,18 @@ describe("Event Integration Tests", () => {
 
 			const event = await createEvent(
 				{ id: admin.id, type: "admin" },
-				{
+				createTestEventBody({
 					organizationId: hostOrg.id,
 					title: "Submit Test Event",
 					typeId: eventType.id,
 					categoryId: category.id,
-					expectedParticipants: 10,
 					requestDetails: "Testing submission",
-					startsAt: new Date(Date.now() + 86400000).toISOString(),
-					endsAt: new Date(Date.now() + 172800000).toISOString(),
-				},
+				}),
 			);
 
 			const beforeSubmit = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
-			expect(beforeSubmit?.status).toBe("draft");
+			assert(beforeSubmit != null);
+			expect(beforeSubmit.status).toBe("draft");
 
 			const eventFound = await findEventById(event.id);
 			assert(eventFound != null);
@@ -135,14 +124,17 @@ describe("Event Integration Tests", () => {
 			await submitEvent({ id: admin.id, type: "admin" }, fullEvent);
 
 			const afterSubmit = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
-			expect(afterSubmit?.status).toBe("pending");
+			assert(afterSubmit != null);
+			expect(afterSubmit.status).toBe("pending");
 
-			const workflowInstance = await db.query.workflowInstance.findFirst({
+			const instances = await db.query.workflowInstance.findMany({
 				where: eq(schema.workflowInstance.eventId, event.id),
 			});
-			expect(workflowInstance).toBeDefined();
-			expect(workflowInstance?.status).toBe("active");
-			expect(workflowInstance?.initialStepId).not.toBeNull();
+			expect(instances).toHaveLength(1);
+			const workflowInstance = instances[0];
+			assert(workflowInstance != null);
+			expect(workflowInstance.status).toBe("active");
+			expect(workflowInstance.initialStepId).not.toBeNull();
 		});
 
 		test.skip("create event with past dates should fail", async () => {
@@ -151,16 +143,15 @@ describe("Event Integration Tests", () => {
 			await expect(
 				createEvent(
 					{ id: admin.id, type: "admin" },
-					{
+					createTestEventBody({
 						organizationId: hostOrg.id,
 						title: "Past Event",
 						typeId: eventType.id,
 						categoryId: category.id,
-						expectedParticipants: 10,
 						requestDetails: "Testing past dates",
 						startsAt: new Date(Date.now() - 172800000).toISOString(),
 						endsAt: new Date(Date.now() - 86400000).toISOString(),
-					},
+					}),
 				),
 			).rejects.toThrow();
 		});
@@ -171,16 +162,15 @@ describe("Event Integration Tests", () => {
 			await expect(
 				createEvent(
 					{ id: admin.id, type: "admin" },
-					{
+					createTestEventBody({
 						organizationId: hostOrg.id,
 						title: "Invalid Date Event",
 						typeId: eventType.id,
 						categoryId: category.id,
-						expectedParticipants: 10,
 						requestDetails: "Testing invalid dates",
 						startsAt: new Date(Date.now() + 172800000).toISOString(),
 						endsAt: new Date(Date.now() + 86400000).toISOString(),
-					},
+					}),
 				),
 			).rejects.toThrow();
 		});
@@ -191,18 +181,74 @@ describe("Event Integration Tests", () => {
 			await expect(
 				createEvent(
 					{ id: admin.id, type: "admin" },
-					{
+					createTestEventBody({
 						organizationId: hostOrg.id,
 						title: "Zero Participants Event",
 						typeId: eventType.id,
 						categoryId: category.id,
 						expectedParticipants: 0,
 						requestDetails: "Testing zero participants",
-						startsAt: new Date(Date.now() + 86400000).toISOString(),
-						endsAt: new Date(Date.now() + 172800000).toISOString(),
-					},
+					}),
 				),
 			).rejects.toThrow();
+		});
+
+		test("createEventSchema validation for expectedParticipants", () => {
+			// Zero should fail positive check
+			const zeroResult = createEventSchema.safeParse(
+				createTestEventBody({
+					organizationId: 1,
+					typeId: 1,
+					categoryId: 1,
+					expectedParticipants: 0,
+				}),
+			);
+			assert(!zeroResult.success);
+			const zeroIssue = zeroResult.error.issues[0];
+			assert(zeroIssue != null);
+			expect(zeroIssue.message).toBe("Expected participants must be positive");
+
+			// Negative should fail positive check
+			const negativeResult = createEventSchema.safeParse(
+				createTestEventBody({
+					organizationId: 1,
+					typeId: 1,
+					categoryId: 1,
+					expectedParticipants: -5,
+				}),
+			);
+			assert(!negativeResult.success);
+			const negativeIssue = negativeResult.error.issues[0];
+			assert(negativeIssue != null);
+			expect(negativeIssue.message).toBe("Expected participants must be positive");
+
+			// Floating point should fail integer check
+			const floatResult = createEventSchema.safeParse(
+				createTestEventBody({
+					organizationId: 1,
+					typeId: 1,
+					categoryId: 1,
+					expectedParticipants: 10.5,
+				}),
+			);
+			assert(!floatResult.success);
+			const floatIssue = floatResult.error.issues[0];
+			assert(floatIssue != null);
+			expect(floatIssue.message).toBe("Invalid expected participants count");
+
+			// NaN should fail integer/number check
+			const nanResult = createEventSchema.safeParse(
+				createTestEventBody({
+					organizationId: 1,
+					typeId: 1,
+					categoryId: 1,
+					expectedParticipants: Number.NaN,
+				}),
+			);
+			assert(!nanResult.success);
+			const nanIssue = nanResult.error.issues[0];
+			assert(nanIssue != null);
+			expect(nanIssue.message).toBe("Invalid expected participants count");
 		});
 
 		test("create event with inactive event type should fail", async () => {
@@ -218,21 +264,18 @@ describe("Event Integration Tests", () => {
 					collaborationPolicy: "optional",
 				})
 				.returning();
+			assert(inactiveEventType != null);
 
 			await expect(
 				createEvent(
 					{ id: admin.id, type: "admin" },
-					{
+					createTestEventBody({
 						organizationId: hostOrg.id,
 						title: "Inactive Type Event",
-						// biome-ignore lint/style/noNonNullAssertion: asserted defined in test setup
-						typeId: inactiveEventType!.id,
+						typeId: inactiveEventType.id,
 						categoryId: category.id,
-						expectedParticipants: 10,
 						requestDetails: "Testing inactive event type",
-						startsAt: new Date(Date.now() + 86400000).toISOString(),
-						endsAt: new Date(Date.now() + 172800000).toISOString(),
-					},
+					}),
 				),
 			).rejects.toThrow();
 		});
@@ -242,16 +285,13 @@ describe("Event Integration Tests", () => {
 
 			const event = await createEvent(
 				{ id: admin.id, type: "admin" },
-				{
+				createTestEventBody({
 					organizationId: hostOrg.id,
 					title: "Original Title",
 					typeId: eventType.id,
 					categoryId: category.id,
-					expectedParticipants: 10,
 					requestDetails: "Original details",
-					startsAt: new Date(Date.now() + 86400000).toISOString(),
-					endsAt: new Date(Date.now() + 172800000).toISOString(),
-				},
+				}),
 			);
 
 			const eventFound = await findEventById(event.id);
@@ -262,9 +302,10 @@ describe("Event Integration Tests", () => {
 			});
 
 			const dbEvent = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
-			expect(dbEvent?.title).toBe("New Title");
-			expect(dbEvent?.expectedParticipants).toBe(10);
-			expect(dbEvent?.requestDetails).toBe("Original details");
+			assert(dbEvent != null);
+			expect(dbEvent.title).toBe("New Title");
+			expect(dbEvent.expectedParticipants).toBe(10);
+			expect(dbEvent.requestDetails).toBe("Original details");
 		});
 
 		test("update event that does not exist should fail", async () => {
@@ -284,16 +325,13 @@ describe("Event Integration Tests", () => {
 			await expect(
 				createEvent(
 					{ id: admin.id, type: "admin" },
-					{
-						organizationId: 99999, // non-existent org
+					createTestEventBody({
+						organizationId: 99999,
 						title: "Invalid Org Event",
 						typeId: eventType.id,
 						categoryId: category.id,
-						expectedParticipants: 10,
 						requestDetails: "Testing invalid org",
-						startsAt: new Date(Date.now() + 86400000).toISOString(),
-						endsAt: new Date(Date.now() + 172800000).toISOString(),
-					},
+					}),
 				),
 			).rejects.toThrow();
 		});

@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db, schema } from "@/db/index.js";
 import { hashPassword } from "@/lib/argon2.js";
+import { findEventById } from "@/modules/event/repository.js";
 import { createEvent } from "@/modules/event/service.js";
 
 export async function createTestUser(data?: Partial<typeof schema.user.$inferInsert>) {
@@ -50,26 +51,17 @@ export async function createTestOrganization(data: {
 	return org;
 }
 
-export async function getManagedEntityForOrganization(organizationId: number) {
-	let managedentity = await db.query.managedEntity.findFirst({
+export async function getManagedEntity(data: {
+	managedEntityType: (typeof schema.managedEntityTypeEnum.enumValues)[number];
+	refId: number;
+}) {
+	const entity = await db.query.managedEntity.findFirst({
 		where: and(
-			eq(schema.managedEntity.managedEntityType, "organization"),
-			eq(schema.managedEntity.refId, organizationId),
+			eq(schema.managedEntity.managedEntityType, data.managedEntityType),
+			eq(schema.managedEntity.refId, data.refId),
 		),
 	});
-
-	if (!managedentity) {
-		[managedentity] = await db
-			.insert(schema.managedEntity)
-			.values({
-				managedEntityType: "organization",
-				refId: organizationId,
-			})
-			.returning();
-	}
-
-	if (!managedentity) throw new Error("Failed to create or find managed entity");
-	return managedentity;
+	return entity;
 }
 
 export async function createTestEventType(data: { name?: string; workflowTemplateId: number }) {
@@ -282,8 +274,11 @@ export async function createBasicEventSetup() {
 export async function createOrganizerTestSetup() {
 	const setup = await createBasicEventSetup();
 
-	const hostME = await getManagedEntityForOrganization(setup.hostOrg.id);
-
+	const hostME = await getManagedEntity({
+		managedEntityType: "organization",
+		refId: setup.hostOrg.id,
+	});
+	if (!hostME) throw new Error("Expected managed entity for host organization");
 	const mockRole = await createTestRole({
 		managedEntityType: "organization",
 		typeRefId: setup.orgType.id,
@@ -304,21 +299,47 @@ export async function createOrganizerTestSetup() {
 		permissions: [] as PermissionCode[],
 	};
 
-	const event = await createEvent(actor, {
-		organizationId: setup.hostOrg.id,
-		title: `Event-${nanoid()}`,
-		typeId: setup.eventType.id,
-		categoryId: setup.category.id,
-		expectedParticipants: 10,
-		requestDetails: "Setup event",
-		startsAt: new Date(Date.now() + 86400000).toISOString(),
-		endsAt: new Date(Date.now() + 172800000).toISOString(),
-	});
+	const createdEvent = await createEvent(
+		actor,
+		createTestEventBody({
+			organizationId: setup.hostOrg.id,
+			title: `Event-${nanoid()}`,
+			typeId: setup.eventType.id,
+			categoryId: setup.category.id,
+			requestDetails: "Setup event",
+		}),
+	);
+	const event = await findEventById(createdEvent.id);
+	if (!event) throw new Error("Failed to fetch created event");
 
 	return {
 		...setup,
 		event,
 		userRole,
 		mockRole,
+	};
+}
+
+export function createTestEventBody(overrides: {
+	organizationId: number;
+	typeId: number;
+	categoryId: number;
+	title?: string;
+	// biome-ignore lint/suspicious/noExplicitAny: testing purpose
+	expectedParticipants?: any;
+	requestDetails?: string;
+	startsAt?: string;
+	endsAt?: string;
+}) {
+	return {
+		organizationId: overrides.organizationId,
+		title: overrides.title ?? "Test Event",
+		typeId: overrides.typeId,
+		categoryId: overrides.categoryId,
+		expectedParticipants:
+			overrides.expectedParticipants !== undefined ? overrides.expectedParticipants : 10,
+		requestDetails: overrides.requestDetails ?? "Testing host auto-creation",
+		startsAt: overrides.startsAt ?? new Date(Date.now() + 86400000).toISOString(),
+		endsAt: overrides.endsAt ?? new Date(Date.now() + 172800000).toISOString(),
 	};
 }
