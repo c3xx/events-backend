@@ -343,3 +343,59 @@ export function createTestEventBody(overrides: {
 		endsAt: overrides.endsAt ?? new Date(Date.now() + 172800000).toISOString(),
 	};
 }
+
+export async function setupRecipientUser(organizationId: number, organizationTypeId: number) {
+	const user = await createTestUser({ type: "end_user" });
+	const role = await createTestRole({
+		managedEntityType: "organization",
+		typeRefId: organizationTypeId,
+	});
+	await grantPermissionToRole(role.id, "event_organizer_invitation:respond" as PermissionCode);
+
+	const me = await getManagedEntity({
+		managedEntityType: "organization",
+		refId: organizationId,
+	});
+	if (me == null) throw new Error("Expected managed entity for recipient organization");
+
+	await createTestUserRole({
+		userId: user.id,
+		roleId: role.id,
+		managedEntityId: me.id,
+	});
+
+	return { user, role };
+}
+
+export async function createTestVenueType(data?: Partial<typeof schema.venueType.$inferInsert>) {
+	const [venueType] = await db
+		.insert(schema.venueType)
+		.values({
+			name: `venue-type-${nanoid()}`,
+			...data,
+		})
+		.returning();
+	if (!venueType) throw new Error("Failed to create test venue type");
+	return venueType;
+}
+
+export async function createTestVenue(data: {
+	venueTypeId: number;
+	name?: string;
+	accessLevel?: (typeof schema.venueAccessLevelEnum.enumValues)[number];
+	isAvailable?: boolean;
+	maxCapacity?: number;
+}) {
+	const [venue] = await db
+		.insert(schema.venue)
+		.values({
+			name: data.name ?? `venue-${nanoid()}`,
+			venueTypeId: data.venueTypeId,
+			accessLevel: data.accessLevel ?? "public",
+			isAvailable: data.isAvailable ?? true,
+			maxCapacity: data.maxCapacity ?? 100,
+		})
+		.returning();
+	if (!venue) throw new Error("Failed to create test venue");
+	return venue;
+}
