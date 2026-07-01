@@ -13,13 +13,13 @@ const envSchema = z.object({
 			(value) => {
 				const lastIndex = value.lastIndexOf("<");
 				if (lastIndex === -1) return false;
-				const name = z.string().trim().nonempty().parse(value.slice(0, lastIndex));
+				const name = z.string().trim().nonempty().safeParse(value.slice(0, lastIndex));
 				const email = z
 					.email()
 					.trim()
 					.nonempty()
-					.parse(value.slice(lastIndex + 1, -1));
-				return `${name} <${email}>`;
+					.safeParse(value.slice(lastIndex + 1, -1));
+				return name.success && email.success;
 			},
 			{ error: "Invalid FROM email format" },
 		),
