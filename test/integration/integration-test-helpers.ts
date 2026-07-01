@@ -52,7 +52,7 @@ export async function createTestOrganization(data: {
 }
 
 export async function getManagedEntity(data: {
-	managedEntityType: (typeof schema.managedEntityTypeEnum.enumValues)[number];
+	managedEntityType: ManagedEntityType;
 	refId: number;
 }) {
 	const entity = await db.query.managedEntity.findFirst({
@@ -126,7 +126,7 @@ export async function createTestWorkflowStep(data: {
 
 export async function createTestRole(data: {
 	name?: string;
-	managedEntityType: (typeof schema.managedEntityTypeEnum.enumValues)[number];
+	managedEntityType: ManagedEntityType;
 	typeRefId: number;
 }) {
 	const [newRole] = await db
@@ -142,7 +142,7 @@ export async function createTestRole(data: {
 }
 
 export async function createTestManagedEntity(data: {
-	managedEntityType: (typeof schema.managedEntityTypeEnum.enumValues)[number];
+	managedEntityType: ManagedEntityType;
 	refId: number;
 }) {
 	const [entity] = await db
