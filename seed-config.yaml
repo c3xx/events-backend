@@ -29,7 +29,6 @@ organizations:
     type: Club
     parent: TKM College of Engineering
 
-
 # ============================================================================
 # 3. VENUE TYPES
 # ============================================================================
@@ -141,6 +140,9 @@ roles:
   - name: Venue in-charge
     managed_entity_type: venue
     type_ref: Auditorium
+    permissions: []
+
+# to be removed:
 
 # ============================================================================
 # 7. USERS & USER ROLE ASSIGNMENTS (SAMPLE)
