@@ -1,10 +1,10 @@
-import { lstat } from "node:fs/promises";
+import { lstatSync } from "node:fs";
 import { loadEnvFile } from "node:process";
 import { defineConfig } from "drizzle-kit";
 
 try {
 	const envFilepath = "./.env";
-	await lstat(envFilepath);
+	lstatSync(envFilepath);
 	loadEnvFile(envFilepath);
 } catch {}
 
