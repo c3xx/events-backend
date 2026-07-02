@@ -31,7 +31,7 @@ export const findAncestorOrganizationManagedEntities = dbAction(
 				INNER JOIN ancestors a ON o.id = a.parent_organization_id
 				WHERE o.deleted_at IS NULL
 			)
-			SELECT me.id AS managed_entity_id, anc.organization_type_id AS type_ref_id
+			SELECT DISTINCT me.id AS managed_entity_id, anc.organization_type_id AS type_ref_id
 			FROM ancestors anc
 			INNER JOIN managed_entity me
 			  ON me.ref_id = anc.id
