@@ -11,7 +11,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1
         FROM event_type
-        WHERE workflow_template_id = OLD.workflow_template_id
+        WHERE workflow_template_id = OLD.template_id
     ) THEN
         RETURN OLD;
     END IF;
