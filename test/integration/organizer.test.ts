@@ -44,7 +44,7 @@ describe("Organizer Integration Tests", () => {
 				{ id: admin.id, type: "admin" },
 			)) as { id: number; role: string; organizationId: number };
 
-			expect(result.id).toBeDefined();
+			assert(result.id != null);
 			expect(result.role).toBe("resource_provider");
 			expect(result.organizationId).toBe(resourceProviderOrg.id);
 
@@ -156,7 +156,6 @@ describe("Organizer Integration Tests", () => {
 			);
 
 			assert(invitation != null);
-			expect(invitation.id).toBeDefined();
 
 			const invites = await getEventInvitations(event);
 			expect(invites).toHaveLength(1);
@@ -519,7 +518,7 @@ describe("Organizer Integration Tests", () => {
 				endsAt,
 			});
 
-			expect(result.id).toBeDefined();
+			assert(result.id != null);
 
 			const dbAllotment = await db.query.venueAllotment.findFirst({
 				where: eq(schema.venueAllotment.id, result.id),
