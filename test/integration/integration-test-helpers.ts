@@ -262,8 +262,27 @@ export async function createBasicEventSetup() {
 
 	const category = await createTestEventCategory();
 
+	const hostME = await getManagedEntity({
+		managedEntityType: "organization",
+		refId: hostOrg.id,
+	});
+	if (!hostME) throw new Error("Expected managed entity for host organization");
+
+	const endUser = await createTestUser({ type: "end_user" });
+	const endUserRole = await createTestRole({
+		managedEntityType: "organization",
+		typeRefId: orgType.id,
+	});
+	await grantPermissionToRole(endUserRole.id, "event:manage" as PermissionCode);
+	await createTestUserRole({
+		userId: endUser.id,
+		roleId: endUserRole.id,
+		managedEntityId: hostME.id,
+	});
+
 	return {
 		admin,
+		endUser,
 		orgType,
 		hostOrg,
 		eventType,

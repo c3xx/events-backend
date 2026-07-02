@@ -5,12 +5,16 @@ import { db, schema } from "@/db/index.js";
 import { findEventById } from "@/modules/event/repository.js";
 import { createEventSchema } from "@/modules/event/schema.js";
 import { createEvent, getEvent, submitEvent, updateEvent } from "@/modules/event/service.js";
-import { createBasicEventSetup, createTestEventBody } from "./integration-test-helpers.js";
+import {
+	createBasicEventSetup,
+	createTestEventBody,
+	createTestUser,
+} from "./integration-test-helpers.js";
 
 describe("Event Integration Tests", () => {
 	describe("event lifecycle", () => {
 		test("create event creates host organizer", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const { endUser, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			const eventBody = createTestEventBody({
 				organizationId: hostOrg.id,
@@ -20,7 +24,7 @@ describe("Event Integration Tests", () => {
 				requestDetails: "Testing host auto-creation",
 			});
 
-			const event = await createEvent({ id: admin.id, type: "admin" }, eventBody);
+			const event = await createEvent({ id: endUser.id, type: "end_user" }, eventBody);
 
 			const eventFound = await findEventById(event.id);
 			assert(eventFound != null);
@@ -36,10 +40,10 @@ describe("Event Integration Tests", () => {
 		});
 
 		test("update event works for draft status", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const { endUser, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			const event = await createEvent(
-				{ id: admin.id, type: "admin" },
+				{ id: endUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: hostOrg.id,
 					title: "Original Title",
@@ -53,7 +57,7 @@ describe("Event Integration Tests", () => {
 			assert(eventFound != null);
 
 			const updatedTitle = "Updated Title";
-			await updateEvent({ id: admin.id, type: "admin" }, eventFound, {
+			await updateEvent({ id: endUser.id, type: "end_user" }, eventFound, {
 				title: updatedTitle,
 				expectedParticipants: 20,
 			});
@@ -65,10 +69,10 @@ describe("Event Integration Tests", () => {
 		});
 
 		test("update event fails for non-draft status", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const { endUser, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			const event = await createEvent(
-				{ id: admin.id, type: "admin" },
+				{ id: endUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: hostOrg.id,
 					title: "Original Title",
@@ -83,10 +87,10 @@ describe("Event Integration Tests", () => {
 
 			const fullEvent = await getEvent(eventFound);
 
-			await submitEvent({ id: admin.id, type: "admin" }, fullEvent);
+			await submitEvent({ id: endUser.id, type: "end_user" }, fullEvent);
 
 			await expect(
-				updateEvent({ id: admin.id, type: "admin" }, eventFound, {
+				updateEvent({ id: endUser.id, type: "end_user" }, eventFound, {
 					title: "Should Not Update",
 					expectedParticipants: 99,
 				}),
@@ -99,10 +103,10 @@ describe("Event Integration Tests", () => {
 		});
 
 		test("submit event for approval", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const { endUser, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			const event = await createEvent(
-				{ id: admin.id, type: "admin" },
+				{ id: endUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: hostOrg.id,
 					title: "Submit Test Event",
@@ -121,7 +125,7 @@ describe("Event Integration Tests", () => {
 
 			const fullEvent = await getEvent(eventFound);
 
-			await submitEvent({ id: admin.id, type: "admin" }, fullEvent);
+			await submitEvent({ id: endUser.id, type: "end_user" }, fullEvent);
 
 			const afterSubmit = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
 			assert(afterSubmit != null);
@@ -138,11 +142,11 @@ describe("Event Integration Tests", () => {
 		});
 
 		test("create event with past dates should fail", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const { endUser, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			await expect(
 				createEvent(
-					{ id: admin.id, type: "admin" },
+					{ id: endUser.id, type: "end_user" },
 					createTestEventBody({
 						organizationId: hostOrg.id,
 						title: "Past Event",
@@ -157,11 +161,11 @@ describe("Event Integration Tests", () => {
 		});
 
 		test("create event where endsAt is before startsAt should fail", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const { endUser, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			await expect(
 				createEvent(
-					{ id: admin.id, type: "admin" },
+					{ id: endUser.id, type: "end_user" },
 					createTestEventBody({
 						organizationId: hostOrg.id,
 						title: "Invalid Date Event",
@@ -176,11 +180,11 @@ describe("Event Integration Tests", () => {
 		});
 
 		test("create event with zero participants should fail", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const { endUser, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			await expect(
 				createEvent(
-					{ id: admin.id, type: "admin" },
+					{ id: endUser.id, type: "end_user" },
 					createTestEventBody({
 						organizationId: hostOrg.id,
 						title: "Zero Participants Event",
@@ -194,7 +198,6 @@ describe("Event Integration Tests", () => {
 		});
 
 		test("createEventSchema validation for expectedParticipants", () => {
-			// Zero should fail positive check
 			const zeroResult = createEventSchema.safeParse(
 				createTestEventBody({
 					organizationId: 1,
@@ -208,7 +211,6 @@ describe("Event Integration Tests", () => {
 			assert(zeroIssue != null);
 			expect(zeroIssue.message).toBe("Expected participants must be positive");
 
-			// Negative should fail positive check
 			const negativeResult = createEventSchema.safeParse(
 				createTestEventBody({
 					organizationId: 1,
@@ -222,7 +224,6 @@ describe("Event Integration Tests", () => {
 			assert(negativeIssue != null);
 			expect(negativeIssue.message).toBe("Expected participants must be positive");
 
-			// Floating point should fail integer check
 			const floatResult = createEventSchema.safeParse(
 				createTestEventBody({
 					organizationId: 1,
@@ -236,7 +237,6 @@ describe("Event Integration Tests", () => {
 			assert(floatIssue != null);
 			expect(floatIssue.message).toBe("Invalid expected participants count");
 
-			// NaN should fail integer/number check
 			const nanResult = createEventSchema.safeParse(
 				createTestEventBody({
 					organizationId: 1,
@@ -252,7 +252,7 @@ describe("Event Integration Tests", () => {
 		});
 
 		test("create event with inactive event type should fail", async () => {
-			const { admin, hostOrg, category, eventType } = await createBasicEventSetup();
+			const { endUser, hostOrg, category, eventType } = await createBasicEventSetup();
 
 			const [inactiveEventType] = await db
 				.insert(schema.eventType)
@@ -268,7 +268,7 @@ describe("Event Integration Tests", () => {
 
 			await expect(
 				createEvent(
-					{ id: admin.id, type: "admin" },
+					{ id: endUser.id, type: "end_user" },
 					createTestEventBody({
 						organizationId: hostOrg.id,
 						title: "Inactive Type Event",
@@ -281,10 +281,10 @@ describe("Event Integration Tests", () => {
 		});
 
 		test("updating only one field leaves other fields unchanged", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const { endUser, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			const event = await createEvent(
-				{ id: admin.id, type: "admin" },
+				{ id: endUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: hostOrg.id,
 					title: "Original Title",
@@ -297,7 +297,7 @@ describe("Event Integration Tests", () => {
 			const eventFound = await findEventById(event.id);
 			assert(eventFound != null);
 
-			await updateEvent({ id: admin.id, type: "admin" }, eventFound, {
+			await updateEvent({ id: endUser.id, type: "end_user" }, eventFound, {
 				title: "New Title",
 			});
 
@@ -309,22 +309,22 @@ describe("Event Integration Tests", () => {
 		});
 
 		test("update event that does not exist should fail", async () => {
-			const { admin } = await createBasicEventSetup();
+			const { endUser } = await createBasicEventSetup();
 
 			await expect(
 				// biome-ignore lint/suspicious/noExplicitAny: testing purposes
-				updateEvent({ id: admin.id, type: "admin" }, { id: 9999999 } as any, {
+				updateEvent({ id: endUser.id, type: "end_user" }, { id: 9999999 } as any, {
 					title: "Ghost Event",
 				}),
 			).rejects.toThrow();
 		});
 
 		test("create event with invalid organization should fail", async () => {
-			const { admin, eventType, category } = await createBasicEventSetup();
+			const { endUser, eventType, category } = await createBasicEventSetup();
 
 			await expect(
 				createEvent(
-					{ id: admin.id, type: "admin" },
+					{ id: endUser.id, type: "end_user" },
 					createTestEventBody({
 						organizationId: 99999,
 						title: "Invalid Org Event",
@@ -334,6 +334,24 @@ describe("Event Integration Tests", () => {
 					}),
 				),
 			).rejects.toThrow();
+		});
+
+		test("create event with unauthorized user should fail", async () => {
+			const { hostOrg, eventType, category } = await createBasicEventSetup();
+			const unauthorizedUser = await createTestUser({ type: "end_user" });
+
+			await expect(
+				createEvent(
+					{ id: unauthorizedUser.id, type: "end_user" },
+					createTestEventBody({
+						organizationId: hostOrg.id,
+						title: "Unauthorized Event",
+						typeId: eventType.id,
+						categoryId: category.id,
+						requestDetails: "Testing unauthorized access",
+					}),
+				),
+			).rejects.toThrow("You do not have any required permission for this");
 		});
 	});
 });
