@@ -1,667 +1,450 @@
-import { and, eq, isNull } from "drizzle-orm";
-import { type db, schema } from "@/db/index.js";
-import { FLATTENED_PERMISSIONS } from "@/lib/constants.js";
-import { assert, getOrCreateManagedEntity } from "./helpers.js";
-import type { SeedConfig } from "./schemas.js";
+import { schema } from "@/db/index.js";
+import { isPermission } from "@/lib/helpers.js";
+import type { ExistingData } from "../seed-yaml.js";
+import type { PlanUpdatesResult } from "./diff.js";
+import { getOrCreateManagedEntity, ok, section } from "./helpers.js";
+import type { PlannedUpdate, ResolvedIds, SeedConfig, TxClient } from "./schema.js";
 
-type TxClient = typeof db | DbTransaction;
-
-export async function syncOrganizationTypes(
+export async function runSeedingSteps(
 	tx: TxClient,
-	orgTypes: NonNullable<SeedConfig["organization_types"]>,
-	confirmAction: (msg: string) => Promise<boolean>,
-): Promise<Map<string, number>> {
-	console.log("Syncing organization types...");
-	const orgTypeMap = new Map<string, number>();
+	config: SeedConfig,
+	approvedUpdates: PlannedUpdate[],
+	existing: ExistingData,
+	diffResult: PlanUpdatesResult,
+) {
+	const {
+		orgTypeByName,
+		orgByName,
+		orgTypeNameById,
+		venueTypeByName,
+		venueTypeNameById,
+		facilityByName,
+		venueByName,
+		userByEmail,
+		permissionIdByCode,
+		roleByKey,
+	} = diffResult;
 
-	const existing = await tx.select().from(schema.organizationType);
-	const existingMap = new Map(existing.map((ot) => [ot.name, ot]));
-
-	const toInsert: { name: string }[] = [];
-	const toRestore: typeof existing = [];
-
-	for (const ot of orgTypes) {
-		const match = existingMap.get(ot.name);
-		if (!match) {
-			toInsert.push({ name: ot.name });
-		} else if (match.deletedAt) {
-			toRestore.push(match);
-		} else {
-			orgTypeMap.set(ot.name, match.id);
-		}
+	// Organization Types
+	section("Organization types");
+	const orgTypeIdByName = new Map<string, number>();
+	for (const [name, row] of orgTypeByName.entries()) {
+		orgTypeIdByName.set(name, row.id);
 	}
 
-	if (toInsert.length > 0) {
-		console.log(`  * Creating organization types: ${toInsert.map((x) => x.name).join(", ")}`);
+	const orgTypesToInsert = config.organization_types.filter((ot) => !orgTypeIdByName.has(ot.name));
+	if (orgTypesToInsert.length > 0) {
 		const inserted = await tx
 			.insert(schema.organizationType)
-			.values(toInsert)
-			.returning({ id: schema.organizationType.id, name: schema.organizationType.name });
-		for (const item of inserted) {
-			orgTypeMap.set(item.name, item.id);
+			.values(orgTypesToInsert.map((ot) => ({ name: ot.name })))
+			.returning();
+		for (const row of inserted) {
+			orgTypeIdByName.set(row.name, row.id);
+			orgTypeNameById.set(row.id, row.name);
 		}
+		ok(`inserted ${inserted.length} new organization type(s)`);
 	}
 
-	for (const ot of toRestore) {
-		if (await confirmAction(`Restore soft-deleted organization type '${ot.name}'?`)) {
-			console.log(`  * Restoring organization type: ${ot.name}`);
-			await tx
-				.update(schema.organizationType)
-				.set({ deletedAt: null })
-				.where(eq(schema.organizationType.id, ot.id));
-			orgTypeMap.set(ot.name, ot.id);
-		} else {
-			orgTypeMap.set(ot.name, ot.id);
-		}
-	}
+	const existingPairs = await tx.select().from(schema.organizationTypeAllowedParent);
+	const existingPairKeys = new Set(existingPairs.map((p) => `${p.childTypeId}:${p.parentTypeId}`));
 
-	return orgTypeMap;
-}
+	const pairsToInsert: Array<{ childTypeId: number; parentTypeId: number }> = [];
+	for (const ot of config.organization_types) {
+		const childTypeId = orgTypeIdByName.get(ot.name);
+		if (childTypeId == null) continue;
 
-export async function syncAllowedParents(
-	tx: TxClient,
-	orgTypes: NonNullable<SeedConfig["organization_types"]>,
-	orgTypeMap: Map<string, number>,
-): Promise<void> {
-	console.log("Syncing organization type allowed parents...");
-	const relationsToInsert: { childTypeId: number; parentTypeId: number }[] = [];
-
-	for (const ot of orgTypes) {
-		if (!ot.allowed_parents || ot.allowed_parents.length === 0) continue;
-		const childId = orgTypeMap.get(ot.name);
-		assert(childId, `Missing child organization type id for: ${ot.name}`);
-
-		for (const parentName of ot.allowed_parents) {
-			const parentId = orgTypeMap.get(parentName);
-			assert(parentId, `Unknown parent organization type: ${parentName}`);
-			relationsToInsert.push({ childTypeId: childId, parentTypeId: parentId });
-		}
-	}
-
-	if (relationsToInsert.length > 0) {
-		await tx
-			.insert(schema.organizationTypeAllowedParent)
-			.values(relationsToInsert)
-			.onConflictDoNothing();
-	}
-}
-
-export async function syncOrganizations(
-	tx: TxClient,
-	orgs: NonNullable<SeedConfig["organizations"]>,
-	orgTypeMap: Map<string, number>,
-	confirmAction: (msg: string) => Promise<boolean>,
-): Promise<Map<string, number>> {
-	console.log("Syncing organizations...");
-	const orgMap = new Map<string, number>();
-
-	const existing = await tx.select().from(schema.organization);
-	const existingMap = new Map(existing.map((o) => [`${o.name}:${o.organizationTypeId}`, o]));
-
-	for (const org of orgs) {
-		const typeId = orgTypeMap.get(org.type);
-		assert(typeId, `Unknown organization type "${org.type}" for organization "${org.name}"`);
-
-		const parentId = org.parent ? orgMap.get(org.parent) : null;
-		assert(
-			!org.parent || parentId,
-			`Parent organization "${org.parent}" must be defined before "${org.name}"`,
-		);
-
-		const match = existingMap.get(`${org.name}:${typeId}`);
-
-		let id: number;
-		if (match) {
-			id = match.id;
-			const needsUpdate =
-				match.parentOrganizationId !== parentId || match.deletedAt != null || !match.isActive;
-			if (needsUpdate) {
-				let changeMsg = `Update organization '${org.name}'`;
-				if (match.parentOrganizationId !== parentId) {
-					changeMsg += ` parent to '${org.parent || "none"}'`;
-				}
-				if (match.deletedAt != null || !match.isActive) {
-					changeMsg += " (restore and activate)";
-				}
-
-				if (await confirmAction(`${changeMsg}?`)) {
-					console.log(`  * Updating organization: ${org.name}`);
-					await tx
-						.update(schema.organization)
-						.set({
-							parentOrganizationId: parentId,
-							isActive: true,
-							deletedAt: null,
-						})
-						.where(eq(schema.organization.id, id));
-				}
+		for (const parentName of ot.allowed_parents ?? []) {
+			const parentTypeId = orgTypeIdByName.get(parentName);
+			if (parentTypeId == null) {
+				throw new Error(
+					`organization_types: "${ot.name}" declares allowed_parent "${parentName}" which is not defined anywhere in organization_types`,
+				);
 			}
-		} else {
-			console.log(`  * Creating organization: ${org.name}`);
+			const key = `${childTypeId}:${parentTypeId}`;
+			if (!existingPairKeys.has(key)) {
+				pairsToInsert.push({ childTypeId, parentTypeId });
+				existingPairKeys.add(key);
+			}
+		}
+	}
+	if (pairsToInsert.length > 0) {
+		await tx.insert(schema.organizationTypeAllowedParent).values(pairsToInsert);
+		ok(`inserted ${pairsToInsert.length} new allowed-parent relationship(s)`);
+	}
+
+	// Organizations
+	section("Organizations");
+	const orgIdByName = new Map<string, number>();
+	for (const [name, row] of orgByName.entries()) {
+		orgIdByName.set(name, row.id);
+	}
+
+	const orgTypeIdByOrgName = new Map<string, number>();
+	for (const row of existing.orgs) {
+		orgTypeIdByOrgName.set(row.name, row.organizationTypeId);
+	}
+
+	let insertedOrgsCount = 0;
+	for (const org of config.organizations) {
+		if (!orgIdByName.has(org.name)) {
+			const typeId = orgTypeIdByName.get(org.type);
+			if (typeId == null) {
+				throw new Error(
+					`organizations: "${org.name}" has type "${org.type}" which is not defined in organization_types`,
+				);
+			}
+			let parentId: number | null = null;
+			if (org.parent) {
+				const resolvedParentId = orgIdByName.get(org.parent);
+				if (resolvedParentId == null) {
+					throw new Error(
+						`organizations: parent organization "${org.parent}" for "${org.name}" was not found`,
+					);
+				}
+				parentId = resolvedParentId;
+			}
 			const [inserted] = await tx
 				.insert(schema.organization)
 				.values({
 					name: org.name,
 					organizationTypeId: typeId,
 					parentOrganizationId: parentId,
-					isActive: true,
 				})
-				.returning({ id: schema.organization.id });
-			assert(inserted, "Failed to insert organization");
-			id = inserted.id;
-		}
-		orgMap.set(org.name, id);
-		await getOrCreateManagedEntity(tx, "organization", id);
-	}
-	return orgMap;
-}
-
-export async function syncVenueTypes(
-	tx: TxClient,
-	venueTypes: NonNullable<SeedConfig["venue_types"]>,
-	confirmAction: (msg: string) => Promise<boolean>,
-): Promise<Map<string, number>> {
-	console.log("Syncing venue types...");
-	const venueTypeMap = new Map<string, number>();
-
-	const existing = await tx.select().from(schema.venueType);
-	const existingMap = new Map(existing.map((vt) => [vt.name, vt]));
-
-	const toInsert: { name: string }[] = [];
-	const toRestore: typeof existing = [];
-
-	for (const vtName of venueTypes) {
-		const match = existingMap.get(vtName);
-		if (!match) {
-			toInsert.push({ name: vtName });
-		} else if (match.deletedAt) {
-			toRestore.push(match);
-		} else {
-			venueTypeMap.set(vtName, match.id);
+				.returning();
+			if (inserted == null) {
+				throw new Error(`Failed to insert organization "${org.name}"`);
+			}
+			orgIdByName.set(org.name, inserted.id);
+			orgTypeIdByOrgName.set(org.name, typeId);
+			insertedOrgsCount++;
 		}
 	}
+	if (insertedOrgsCount > 0) {
+		ok(`inserted ${insertedOrgsCount} new organization(s)`);
+	}
 
-	if (toInsert.length > 0) {
-		console.log(`  * Creating venue types: ${toInsert.map((x) => x.name).join(", ")}`);
+	// Venue Types
+	section("Venue types");
+	const venueTypeIdByName = new Map<string, number>();
+	for (const [name, row] of venueTypeByName.entries()) {
+		venueTypeIdByName.set(name, row.id);
+	}
+
+	const venueTypesToInsert = config.venue_types.filter((name) => !venueTypeIdByName.has(name));
+	if (venueTypesToInsert.length > 0) {
 		const inserted = await tx
 			.insert(schema.venueType)
-			.values(toInsert)
-			.returning({ id: schema.venueType.id, name: schema.venueType.name });
-		for (const item of inserted) {
-			venueTypeMap.set(item.name, item.id);
+			.values(venueTypesToInsert.map((name) => ({ name })))
+			.returning();
+		for (const row of inserted) {
+			venueTypeIdByName.set(row.name, row.id);
+			venueTypeNameById.set(row.id, row.name);
 		}
+		ok(`inserted ${inserted.length} new venue type(s)`);
 	}
 
-	for (const vt of toRestore) {
-		if (await confirmAction(`Restore soft-deleted venue type '${vt.name}'?`)) {
-			console.log(`  * Restoring venue type: ${vt.name}`);
-			await tx
-				.update(schema.venueType)
-				.set({ deletedAt: null })
-				.where(eq(schema.venueType.id, vt.id));
-			venueTypeMap.set(vt.name, vt.id);
-		} else {
-			venueTypeMap.set(vt.name, vt.id);
-		}
+	// Facilities
+	section("Facilities");
+	const facilityIdByName = new Map<string, number>();
+	for (const [name, row] of facilityByName.entries()) {
+		facilityIdByName.set(name, row.id);
 	}
 
-	return venueTypeMap;
-}
-
-export async function syncFacilities(
-	tx: TxClient,
-	facilities: NonNullable<SeedConfig["facilities"]>,
-	confirmAction: (msg: string) => Promise<boolean>,
-): Promise<Map<string, number>> {
-	console.log("Syncing facilities...");
-	const facilityMap = new Map<string, number>();
-
-	const existing = await tx.select().from(schema.facility);
-	const existingMap = new Map(existing.map((f) => [f.name, f]));
-
-	const toInsert: { name: string }[] = [];
-	const toRestore: typeof existing = [];
-
-	for (const facName of facilities) {
-		const match = existingMap.get(facName);
-		if (!match) {
-			toInsert.push({ name: facName });
-		} else if (match.deletedAt) {
-			toRestore.push(match);
-		} else {
-			facilityMap.set(facName, match.id);
-		}
-	}
-
-	if (toInsert.length > 0) {
-		console.log(`  * Creating facilities: ${toInsert.map((x) => x.name).join(", ")}`);
+	const facilitiesToInsert = config.facilities.filter((name) => !facilityIdByName.has(name));
+	if (facilitiesToInsert.length > 0) {
 		const inserted = await tx
 			.insert(schema.facility)
-			.values(toInsert)
-			.returning({ id: schema.facility.id, name: schema.facility.name });
-		for (const item of inserted) {
-			facilityMap.set(item.name, item.id);
+			.values(facilitiesToInsert.map((name) => ({ name })))
+			.returning();
+		for (const row of inserted) {
+			facilityIdByName.set(row.name, row.id);
 		}
+		ok(`inserted ${facilitiesToInsert.length} new facility/facilities`);
 	}
 
-	for (const f of toRestore) {
-		if (await confirmAction(`Restore soft-deleted facility '${f.name}'?`)) {
-			console.log(`  * Restoring facility: ${f.name}`);
-			await tx.update(schema.facility).set({ deletedAt: null }).where(eq(schema.facility.id, f.id));
-			facilityMap.set(f.name, f.id);
-		} else {
-			facilityMap.set(f.name, f.id);
-		}
+	// Venues
+	section("Venues");
+	const venueIdByName = new Map<string, number>();
+	for (const [name, row] of venueByName.entries()) {
+		venueIdByName.set(name, row.id);
 	}
 
-	return facilityMap;
-}
+	const venueTypeIdByVenueName = new Map<string, number>();
+	for (const row of existing.venues) {
+		venueTypeIdByVenueName.set(row.name, row.venueTypeId);
+	}
 
-export async function syncVenues(
-	tx: TxClient,
-	venues: NonNullable<SeedConfig["venues"]>,
-	venueTypeMap: Map<string, number>,
-	orgMap: Map<string, number>,
-	facilityMap: Map<string, number>,
-	confirmAction: (msg: string) => Promise<boolean>,
-): Promise<Map<string, number>> {
-	console.log("Syncing venues...");
-	const venueMap = new Map<string, number>();
-
-	const existing = await tx.select().from(schema.venue);
-	const existingMap = new Map(existing.map((v) => [`${v.name}:${v.venueTypeId}`, v]));
-
-	const existingRels = await tx.select().from(schema.venueFacility);
-	const existingRelsMap = new Map(existingRels.map((r) => [`${r.venueId}:${r.facilityId}`, r]));
-
-	const relsToInsert: { venueId: number; facilityId: number; isActive: boolean }[] = [];
-
-	for (const v of venues) {
-		const vtId = venueTypeMap.get(v.type);
-		assert(vtId, `Unknown venue type "${v.type}" for venue "${v.name}"`);
-
-		const orgId = v.organization ? orgMap.get(v.organization) : null;
-		assert(
-			!v.organization || orgId,
-			`Unknown organization "${v.organization}" for venue "${v.name}"`,
-		);
-
-		const match = existingMap.get(`${v.name}:${vtId}`);
-
-		let id: number;
-		const targetValues = {
-			organizationId: orgId,
-			accessLevel: v.access_level,
-			isAvailable: v.is_available,
-			unavailabilityReason: v.is_available ? null : (v.unavailability_reason ?? ""),
-			maxCapacity: v.max_capacity,
-			isActive: true,
-			deletedAt: null,
-		};
-
-		if (match) {
-			id = match.id;
-			const needsUpdate =
-				match.organizationId !== orgId ||
-				match.accessLevel !== v.access_level ||
-				match.isAvailable !== v.is_available ||
-				match.unavailabilityReason !== targetValues.unavailabilityReason ||
-				match.maxCapacity !== v.max_capacity ||
-				match.deletedAt != null ||
-				!match.isActive;
-
-			if (needsUpdate) {
-				if (await confirmAction(`Update venue config for '${v.name}'?`)) {
-					console.log(`  * Updating venue: ${v.name}`);
-					await tx.update(schema.venue).set(targetValues).where(eq(schema.venue.id, id));
-				}
+	const venuesToInsert: Array<typeof schema.venue.$inferInsert> = [];
+	for (const venue of config.venues) {
+		if (!venueIdByName.has(venue.name)) {
+			const venueTypeId = venueTypeIdByName.get(venue.type);
+			if (venueTypeId == null) {
+				throw new Error(
+					`venues: "${venue.name}" has type "${venue.type}" which is not defined in venue_types`,
+				);
 			}
-		} else {
-			console.log(`  * Creating venue: ${v.name}`);
-			const [inserted] = await tx
-				.insert(schema.venue)
-				.values({
-					name: v.name,
-					venueTypeId: vtId,
-					organizationId: orgId,
-					accessLevel: v.access_level,
-					isAvailable: v.is_available,
-					unavailabilityReason: targetValues.unavailabilityReason,
-					maxCapacity: v.max_capacity,
-					isActive: true,
-				})
-				.returning({ id: schema.venue.id });
-			assert(inserted, "Failed to insert venue");
-			id = inserted.id;
+			const orgId = venue.organization ? orgIdByName.get(venue.organization) : null;
+			venuesToInsert.push({
+				name: venue.name,
+				venueTypeId,
+				organizationId: orgId,
+				accessLevel: venue.access_level ?? "public",
+				isAvailable: venue.is_available,
+				unavailabilityReason: venue.unavailability_reason ?? null,
+				maxCapacity: venue.max_capacity,
+			});
 		}
-		venueMap.set(v.name, id);
-		await getOrCreateManagedEntity(tx, "venue", id);
+	}
 
-		// Sync venue facilities (in-memory mapping checks)
-		for (const facName of v.facilities ?? []) {
-			const facId = facilityMap.get(facName);
-			assert(facId, `Unknown facility "${facName}" for venue "${v.name}"`);
+	if (venuesToInsert.length > 0) {
+		const inserted = await tx.insert(schema.venue).values(venuesToInsert).returning();
+		for (const row of inserted) {
+			venueIdByName.set(row.name, row.id);
+			venueTypeIdByVenueName.set(row.name, row.venueTypeId);
+		}
+		ok(`inserted ${inserted.length} new venue(s)`);
+	}
 
-			const matchRel = existingRelsMap.get(`${id}:${facId}`);
+	const existingLinks = await tx.select().from(schema.venueFacility);
+	const existingLinkKeys = new Set(existingLinks.map((l) => `${l.venueId}:${l.facilityId}`));
 
-			if (matchRel) {
-				if (!matchRel.isActive) {
-					if (await confirmAction(`Re-activate facility '${facName}' on venue '${v.name}'?`)) {
-						console.log(`  * Re-activating facility '${facName}' on venue '${v.name}'`);
-						await tx
-							.update(schema.venueFacility)
-							.set({ isActive: true })
-							.where(eq(schema.venueFacility.id, matchRel.id));
-					}
-				}
-			} else {
-				relsToInsert.push({
-					venueId: id,
-					facilityId: facId,
-					isActive: true,
-				});
+	const linksToInsert: Array<{ venueId: number; facilityId: number }> = [];
+	for (const venue of config.venues) {
+		const venueId = venueIdByName.get(venue.name);
+		if (venueId == null) continue;
+
+		for (const facilityName of venue.facilities ?? []) {
+			const facilityId = facilityIdByName.get(facilityName);
+			if (facilityId == null) {
+				throw new Error(
+					`venues: "${venue.name}" references facility "${facilityName}", which is not defined in facilities`,
+				);
+			}
+			const key = `${venueId}:${facilityId}`;
+			if (!existingLinkKeys.has(key)) {
+				linksToInsert.push({ venueId, facilityId });
+				existingLinkKeys.add(key);
 			}
 		}
 	}
-
-	if (relsToInsert.length > 0) {
-		await tx.insert(schema.venueFacility).values(relsToInsert).onConflictDoNothing();
+	if (linksToInsert.length > 0) {
+		await tx.insert(schema.venueFacility).values(linksToInsert);
+		ok(`linked ${linksToInsert.length} new venue-facility association(s)`);
 	}
 
-	return venueMap;
-}
-
-export async function syncPermissions(tx: TxClient): Promise<Map<string, number>> {
-	console.log("Syncing hardcoded system permissions...");
-	const permissionMap = new Map<string, number>();
-
-	const existingPerms = await tx.select().from(schema.permission);
-	const existingCodes = new Map<string, (typeof existingPerms)[number]>();
-	for (const p of existingPerms) {
-		existingCodes.set(p.code, p);
+	// --- 6. Roles & Permissions
+	section("Roles & permissions");
+	const roleIdByKey = new Map<string, number>();
+	for (const [key, row] of roleByKey.entries()) {
+		roleIdByKey.set(key, row.id);
 	}
 
-	for (const [code, description] of Object.entries(FLATTENED_PERMISSIONS)) {
-		const existing = existingCodes.get(code);
+	let insertedRolesCount = 0;
+	const permissionLinksToInsert: Array<{
+		roleId: number;
+		permissionId: number;
+	}> = [];
 
-		if (existing) {
-			permissionMap.set(code, existing.id);
-			if (existing.description !== description) {
-				console.log(`  * Updating description for permission: ${code}`);
-				await tx
-					.update(schema.permission)
-					.set({ description })
-					.where(eq(schema.permission.id, existing.id));
-			}
-		} else {
-			console.log(`  * Registering hardcoded system permission: ${code}`);
-			const [inserted] = await tx
-				.insert(schema.permission)
-				.values({
-					code: code as PermissionCode,
-					description,
-				})
-				.returning({ id: schema.permission.id });
-			assert(inserted, "Failed to register permission");
-			permissionMap.set(code, inserted.id);
-		}
-	}
-	return permissionMap;
-}
+	for (const role of config.roles) {
+		const typeRefId =
+			role.managed_entity_type === "organization"
+				? orgTypeIdByName.get(role.type_ref)
+				: venueTypeIdByName.get(role.type_ref);
 
-export async function syncRoles(
-	tx: TxClient,
-	roles: NonNullable<SeedConfig["roles"]>,
-	orgTypeMap: Map<string, number>,
-	venueTypeMap: Map<string, number>,
-	permissionMap: Map<string, number>,
-	confirmAction: (msg: string) => Promise<boolean>,
-): Promise<Map<string, number>> {
-	console.log("Syncing roles...");
-	const roleMap = new Map<string, number>();
-
-	const existing = await tx.select().from(schema.role);
-	const existingMap = new Map(
-		existing.map((r) => [`${r.name}:${r.managedEntityType}:${r.typeRefId}`, r]),
-	);
-
-	const existingRels = await tx.select().from(schema.rolePermission);
-	const existingRelsMap = new Set(existingRels.map((r) => `${r.roleId}:${r.permissionId}`));
-
-	const relsToInsert: { roleId: number; permissionId: number }[] = [];
-
-	for (const r of roles) {
-		let typeRefId: number;
-		if (r.managed_entity_type === "organization") {
-			const id = orgTypeMap.get(r.type_ref);
-			assert(id, `Unknown organization type "${r.type_ref}" for role "${r.name}"`);
-			typeRefId = id;
-		} else if (r.managed_entity_type === "venue") {
-			const id = venueTypeMap.get(r.type_ref);
-			assert(id, `Unknown venue type "${r.type_ref}" for role "${r.name}"`);
-			typeRefId = id;
-		} else {
+		if (typeRefId == null) {
 			throw new Error(
-				`Invalid managed_entity_type "${r.managed_entity_type}" for role "${r.name}"`,
+				`roles: "${role.name}" has type_ref "${role.type_ref}" which is not defined in ` +
+					(role.managed_entity_type === "organization" ? "organization_types" : "venue_types"),
 			);
 		}
 
-		const match = existingMap.get(`${r.name}:${r.managed_entity_type}:${typeRefId}`);
+		const key = `${role.managed_entity_type}:${role.type_ref}:${role.name}`;
+		let roleId: number;
 
-		let id: number;
-		if (match) {
-			id = match.id;
-			if (match.deletedAt) {
-				if (await confirmAction(`Restore soft-deleted role '${r.name}'?`)) {
-					console.log(`  * Restoring role: ${r.name}`);
-					await tx.update(schema.role).set({ deletedAt: null }).where(eq(schema.role.id, id));
-				}
-			}
-		} else {
-			console.log(`  * Creating role: ${r.name}`);
+		if (!roleIdByKey.has(key)) {
 			const [inserted] = await tx
 				.insert(schema.role)
 				.values({
-					name: r.name,
-					managedEntityType: r.managed_entity_type,
+					name: role.name,
+					managedEntityType: role.managed_entity_type,
 					typeRefId,
 				})
-				.returning({ id: schema.role.id });
-			assert(inserted, "Failed to insert role");
-			id = inserted.id;
+				.returning();
+			if (inserted == null) {
+				throw new Error(`Failed to insert role "${role.name}"`);
+			}
+			roleId = inserted.id;
+			roleIdByKey.set(key, roleId);
+			insertedRolesCount++;
+		} else {
+			const id = roleIdByKey.get(key);
+			if (id == null) {
+				throw new Error(`Role ID not found for key "${key}"`);
+			}
+			roleId = id;
 		}
 
-		const key = `${r.name}:${r.managed_entity_type}:${r.type_ref}`;
-		roleMap.set(key, id);
+		const existingRolePermissions = await tx.select().from(schema.rolePermission);
+		const existingRolePermissionKeys = new Set(
+			existingRolePermissions.map((rp) => `${rp.roleId}:${rp.permissionId}`),
+		);
 
-		// Sync role permissions (using bulk buffer)
-		for (const permCode of r.permissions ?? []) {
-			const permId = permissionMap.get(permCode);
-			assert(
-				permId,
-				`Permission "${permCode}" used by role "${r.name}" is not a valid system permission. Must be one of the hardcoded permissions in constants.ts.`,
-			);
-
-			if (!existingRelsMap.has(`${id}:${permId}`)) {
-				relsToInsert.push({
-					roleId: id,
-					permissionId: permId,
-				});
+		for (const permissionCode of role.permissions ?? []) {
+			if (!isPermission(permissionCode)) {
+				throw new Error(
+					`roles: "${role.name}" references unknown permission "${permissionCode}". ` +
+						`Check for typos, or add it to PERMISSION in src/lib/constants.ts.`,
+				);
+			}
+			const permissionId = permissionIdByCode.get(permissionCode);
+			if (permissionId == null) {
+				throw new Error(
+					`roles: "${role.name}" references permission "${permissionCode}", which does not exist in the ` +
+						`database yet. Run "pnpm db:populate" first to sync permissions.`,
+				);
+			}
+			const linkKey = `${roleId}:${permissionId}`;
+			if (!existingRolePermissionKeys.has(linkKey)) {
+				permissionLinksToInsert.push({ roleId, permissionId });
+				existingRolePermissionKeys.add(linkKey);
 			}
 		}
 	}
 
-	if (relsToInsert.length > 0) {
-		await tx.insert(schema.rolePermission).values(relsToInsert).onConflictDoNothing();
+	if (insertedRolesCount > 0) {
+		ok(`inserted ${insertedRolesCount} new role(s)`);
+	}
+	if (permissionLinksToInsert.length > 0) {
+		await tx.insert(schema.rolePermission).values(permissionLinksToInsert);
+		ok(`linked ${permissionLinksToInsert.length} new role-permission association(s)`);
 	}
 
-	return roleMap;
-}
+	// Users
+	section("Users");
+	const userIdByEmail = new Map<string, number>();
+	for (const [email, row] of userByEmail.entries()) {
+		userIdByEmail.set(email, row.id);
+	}
 
-export async function syncUsers(
-	tx: TxClient,
-	users: NonNullable<SeedConfig["users"]>,
-	_orgMap: Map<string, number>,
-	roleMap: Map<string, number>,
-	confirmAction: (msg: string) => Promise<boolean>,
-): Promise<void> {
-	console.log("Syncing users...");
+	const usersToInsert: Array<typeof schema.user.$inferInsert> = [];
+	for (const user of config.users) {
+		if (!userIdByEmail.has(user.email)) {
+			usersToInsert.push({
+				fullName: user.full_name,
+				email: user.email,
+				type: user.type,
+			});
+		}
+	}
 
-	const existing = await tx.select().from(schema.user);
-	const existingMap = new Map(existing.map((u) => [u.email, u]));
+	if (usersToInsert.length > 0) {
+		const inserted = await tx.insert(schema.user).values(usersToInsert).returning();
+		for (const row of inserted) {
+			userIdByEmail.set(row.email, row.id);
+		}
+		ok(`inserted ${inserted.length} new user(s)`);
+	}
 
+	// Apply Updates & Restores
+	const resolvedIds: ResolvedIds = {
+		orgTypes: orgTypeIdByName,
+		orgs: orgIdByName,
+		venueTypes: venueTypeIdByName,
+		facilities: facilityIdByName,
+		venues: venueIdByName,
+		roles: roleIdByKey,
+		users: userIdByEmail,
+	};
+
+	for (const update of approvedUpdates) {
+		await update.apply(tx, resolvedIds);
+	}
+	if (approvedUpdates.length > 0) {
+		ok(`applied ${approvedUpdates.length} update/restore operation(s)`);
+	}
+
+	// User Role Assignments
 	const existingUserRoles = await tx.select().from(schema.userRole);
-	const existingUserRolesMap = new Map(
-		existingUserRoles.map((ur) => [`${ur.userId}:${ur.roleId}:${ur.managedEntityId}`, ur]),
+	const existingUserRoleKeys = new Set(
+		existingUserRoles.map((ur) => `${ur.userId}:${ur.roleId}:${ur.managedEntityId}`),
 	);
 
-	const relsToInsert: {
+	const managedEntityIdCache = new Map<string, number>();
+	async function resolveManagedEntityId(
+		type: "organization" | "venue",
+		refId: number,
+	): Promise<number> {
+		const cacheKey = `${type}:${refId}`;
+		const cached = managedEntityIdCache.get(cacheKey);
+		if (cached != null) return cached;
+
+		const id = await getOrCreateManagedEntity(tx, type, refId);
+		managedEntityIdCache.set(cacheKey, id);
+		return id;
+	}
+
+	const assignmentsToInsert: Array<{
 		userId: number;
 		roleId: number;
 		managedEntityId: number;
-		isActive: boolean;
-	}[] = [];
+	}> = [];
 
-	for (const u of users) {
-		const match = existingMap.get(u.email);
+	for (const user of config.users) {
+		const userId = userIdByEmail.get(user.email);
+		if (userId == null) continue;
 
-		let userId: number;
-		if (match) {
-			userId = match.id;
-			const needsUpdate =
-				match.fullName !== u.full_name ||
-				match.type !== u.type ||
-				match.deletedAt != null ||
-				!match.isActive;
-			if (needsUpdate) {
-				if (await confirmAction(`Update user account: '${u.email}'?`)) {
-					console.log(`  * Updating user: ${u.email}`);
-					await tx
-						.update(schema.user)
-						.set({
-							fullName: u.full_name,
-							type: u.type,
-							isActive: true,
-							deletedAt: null,
-						})
-						.where(eq(schema.user.id, userId));
-				}
+		for (const assignment of user.roles ?? []) {
+			let entityId: number | undefined;
+			let entityTypeRefId: number | undefined;
+
+			if (assignment.managed_entity_type === "organization") {
+				entityId = orgIdByName.get(assignment.entity_name);
+				entityTypeRefId =
+					entityId != null ? orgTypeIdByOrgName.get(assignment.entity_name) : undefined;
+			} else {
+				entityId = venueIdByName.get(assignment.entity_name);
+				entityTypeRefId =
+					entityId != null ? venueTypeIdByVenueName.get(assignment.entity_name) : undefined;
 			}
-		} else {
-			console.log(`  * Creating user: ${u.email}`);
-			const [inserted] = await tx
-				.insert(schema.user)
-				.values({
-					fullName: u.full_name,
-					email: u.email,
-					type: u.type,
-					isActive: true,
-				})
-				.returning({ id: schema.user.id });
-			assert(inserted, "Failed to insert user");
-			userId = inserted.id;
-		}
 
-		// Sync user roles
-		for (const ur of u.roles ?? []) {
-			let typeRef: string;
-			let entityRefId: number;
-
-			if (ur.managed_entity_type === "organization") {
-				const org = await tx
-					.select({
-						id: schema.organization.id,
-						typeId: schema.organization.organizationTypeId,
-					})
-					.from(schema.organization)
-					.where(
-						and(
-							eq(schema.organization.name, ur.entity_name),
-							isNull(schema.organization.deletedAt),
-						),
-					)
-					.limit(1);
-
-				assert(
-					org[0],
-					`Organization "${ur.entity_name}" for user role assignment not found or is deleted`,
+			if (entityId == null || entityTypeRefId == null) {
+				throw new Error(
+					`users: "${user.email}" has a role assignment referencing ${assignment.managed_entity_type} ` +
+						`"${assignment.entity_name}", which was not found`,
 				);
-				entityRefId = org[0].id;
-
-				const orgType = await tx
-					.select({ name: schema.organizationType.name })
-					.from(schema.organizationType)
-					.where(eq(schema.organizationType.id, org[0].typeId))
-					.limit(1);
-
-				assert(orgType[0], `Organization type for organization "${ur.entity_name}" not found`);
-				typeRef = orgType[0].name;
-			} else if (ur.managed_entity_type === "venue") {
-				const v = await tx
-					.select({
-						id: schema.venue.id,
-						typeId: schema.venue.venueTypeId,
-					})
-					.from(schema.venue)
-					.where(and(eq(schema.venue.name, ur.entity_name), isNull(schema.venue.deletedAt)))
-					.limit(1);
-
-				assert(v[0], `Venue "${ur.entity_name}" for user role assignment not found or is deleted`);
-				entityRefId = v[0].id;
-
-				const venueType = await tx
-					.select({ name: schema.venueType.name })
-					.from(schema.venueType)
-					.where(eq(schema.venueType.id, v[0].typeId))
-					.limit(1);
-
-				assert(venueType[0], `Venue type for venue "${ur.entity_name}" not found`);
-				typeRef = venueType[0].name;
-			} else {
-				throw new Error(`Invalid managed_entity_type "${ur.managed_entity_type}"`);
 			}
 
-			const roleKey = `${ur.role}:${ur.managed_entity_type}:${typeRef}`;
-			const roleId = roleMap.get(roleKey);
-			assert(roleId, `Role "${ur.role}" with entity type "${typeRef}" not found in seeded roles`);
+			const typeRefName =
+				assignment.managed_entity_type === "organization"
+					? orgTypeNameById.get(entityTypeRefId)
+					: venueTypeNameById.get(entityTypeRefId);
 
-			const managedEntityId = await getOrCreateManagedEntity(
-				tx,
-				ur.managed_entity_type,
-				entityRefId,
+			if (typeRefName == null) {
+				throw new Error(`Type name not found for type ID ${entityTypeRefId}`);
+			}
+
+			const roleKey = `${assignment.managed_entity_type}:${typeRefName}:${assignment.role}`;
+			const roleId = roleIdByKey.get(roleKey);
+			if (roleId == null) {
+				throw new Error(
+					`users: "${user.email}" has a role assignment referencing role "${assignment.role}" for ` +
+						`${assignment.managed_entity_type} type of "${assignment.entity_name}", which is not defined in roles`,
+				);
+			}
+
+			const managedEntityId = await resolveManagedEntityId(
+				assignment.managed_entity_type,
+				entityId,
 			);
-
-			const matchUserRole = existingUserRolesMap.get(`${userId}:${roleId}:${managedEntityId}`);
-
-			if (matchUserRole) {
-				if (!matchUserRole.isActive || matchUserRole.deletedAt != null) {
-					if (
-						await confirmAction(
-							`Re-activate role '${ur.role}' for '${u.email}' on '${ur.entity_name}'?`,
-						)
-					) {
-						console.log(
-							`  * Restoring/Activating user role relation for user: ${u.email}, role: ${ur.role}, entity: ${ur.entity_name}`,
-						);
-						await tx
-							.update(schema.userRole)
-							.set({ isActive: true, deletedAt: null })
-							.where(eq(schema.userRole.id, matchUserRole.id));
-					}
-				}
-			} else {
-				relsToInsert.push({
-					userId,
-					roleId,
-					managedEntityId,
-					isActive: true,
-				});
+			const key = `${userId}:${roleId}:${managedEntityId}`;
+			if (!existingUserRoleKeys.has(key)) {
+				assignmentsToInsert.push({ userId, roleId, managedEntityId });
+				existingUserRoleKeys.add(key);
 			}
 		}
 	}
-
-	if (relsToInsert.length > 0) {
-		console.log(`  * Creating user role mappings...`);
-		await tx.insert(schema.userRole).values(relsToInsert).onConflictDoNothing();
+	if (assignmentsToInsert.length > 0) {
+		await tx.insert(schema.userRole).values(assignmentsToInsert);
+		ok(`assigned ${assignmentsToInsert.length} new user-role association(s)`);
 	}
 }
