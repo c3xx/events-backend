@@ -1,3 +1,4 @@
+import { NotFoundError } from "@/lib/errors.js";
 import { sendEmail } from "@/lib/email.js";
 import { getAccountCreatedContent } from "@/lib/email-templates.js";
 import { env } from "@/lib/env.js";
@@ -23,4 +24,15 @@ export async function createUser(input: schemas.CreateUserSchema) {
 
 export async function getUsers() {
 	return await repository.getUsers();
+}
+
+export async function updateUser(userId: number, input: schemas.UpdateUserSchema) {
+	const updated = await repository.updateUserActiveStatus(userId, input.isActive);
+	if (updated == null) throw new NotFoundError("User not found");
+	return updated;
+}
+
+export async function deleteUser(userId: number) {
+	const result = await repository.softDeleteUser(userId);
+	if ((result.rowCount ?? 0) === 0) throw new NotFoundError("User not found");
 }

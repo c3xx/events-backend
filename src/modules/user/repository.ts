@@ -217,3 +217,20 @@ export const updateUser = dbAction(async (id: number, data: { fullName?: string 
 		.returning({ id: schema.user.id });
 	return updated;
 });
+
+export const updateUserActiveStatus = dbAction(async (id: number, isActive: boolean) => {
+	const [updated] = await db
+		.update(schema.user)
+		.set({ isActive })
+		.where(and(eq(schema.user.id, id), isNull(schema.user.deletedAt)))
+		.returning({ id: schema.user.id });
+	return updated;
+});
+
+export const softDeleteUser = dbAction(async (id: number) => {
+	const result = await db
+		.update(schema.user)
+		.set({ deletedAt: sql`NOW()` })
+		.where(and(eq(schema.user.id, id), isNull(schema.user.deletedAt)));
+	return result;
+});
