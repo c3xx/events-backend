@@ -14,9 +14,11 @@ import {
 	// createApprovalWorkflowSetup,
 	createBasicEventSetup,
 	createTestEventBody,
+	createTestEventCategory,
+	createTestEventType,
 	createTestUser,
-	// getWorkflowAssignmentForUser,
-	// getWorkflowForEvent,
+	createTestWorkflowStep,
+	createTestWorkflowTemplate,
 } from "./integration-test-helpers.js";
 
 describe("Event Integration Tests", () => {
@@ -400,6 +402,13 @@ describe("Workflow Instance Management", () => {
 
 	test("Submit event that does not exist should fail", async () => {
 		const { admin } = await createBasicEventSetup();
+		const workflowTemplate = await createTestWorkflowTemplate();
+		await createTestWorkflowStep({ templateId: workflowTemplate.id });
+		const eventType = await createTestEventType({
+			name: "TestEventType",
+			workflowTemplateId: workflowTemplate.id,
+		});
+		const category = await createTestEventCategory();
 		await expect(
 			submitEvent(
 				{ id: admin.id, type: "admin" },
@@ -413,12 +422,12 @@ describe("Workflow Instance Management", () => {
 					startsAt: "new Date(Date.now() + 86400000).toISOString()",
 					endsAt: "new Date(Date.now() + 172800000).toISOString()",
 					type: {
-						id: 1,
-						name: "",
+						id: eventType.id,
+						name: "event",
 					},
 					category: {
-						id: 1,
-						name: "",
+						id: category.id,
+						name: "test catgeory",
 					},
 					parentEvent: null,
 					organizers: [],
