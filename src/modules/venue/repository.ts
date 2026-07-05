@@ -86,12 +86,12 @@ export const updateVenue = dbAction(
 	async (
 		id: number,
 		data: {
-			name?: string;
-			maxCapacity?: number;
-			accessLevel?: VenueAccessLevel;
-			isAvailable?: boolean;
-			unavailabilityReason?: string | null;
-			isActive?: boolean;
+			name?: string | undefined;
+			maxCapacity?: number | undefined;
+			accessLevel?: VenueAccessLevel | undefined;
+			isAvailable?: boolean | undefined;
+			unavailabilityReason?: string | null | undefined;
+			isActive?: boolean | undefined;
 		},
 	) => {
 		const [updated] = await db

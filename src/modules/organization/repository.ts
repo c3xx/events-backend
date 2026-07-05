@@ -68,7 +68,7 @@ export const findOrganizationManagedEntity = dbAction(async (organizationId: num
 });
 
 export const updateOrganization = dbAction(
-	async (id: number, data: { name?: string; isActive?: boolean }) => {
+	async (id: number, data: { name?: string | undefined; isActive?: boolean | undefined }) => {
 		const [updated] = await db
 			.update(schema.organization)
 			.set(data)

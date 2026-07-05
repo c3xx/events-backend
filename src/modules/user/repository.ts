@@ -209,7 +209,7 @@ export const getFullUser = dbAction(async (userId: number) => {
 	};
 });
 
-export const updateUser = dbAction(async (id: number, data: { fullName?: string }) => {
+export const updateUser = dbAction(async (id: number, data: { fullName?: string | undefined }) => {
 	const [updated] = await db
 		.update(schema.user)
 		.set(data)
