@@ -24,9 +24,7 @@ export const updateUserSchema = z
 
 export const userScopedSchema = z
 	.object({
-		userId: z.coerce
-			.number({ error: "Invalid user ID" })
-			.int({ error: "Invalid user ID" }),
+		userId: z.coerce.number({ error: "Invalid user ID" }).int({ error: "Invalid user ID" }),
 	})
 	.strict();
 

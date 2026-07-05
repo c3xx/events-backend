@@ -75,11 +75,9 @@ export const updateVenueSchema = z
 		isActive: z.boolean({ error: "isActive must be a boolean" }).optional(),
 	})
 	.strict()
-	.refine(
-		(data) =>
-			Object.values(data).some((v) => v !== undefined),
-		{ error: "At least one field must be provided" },
-	)
+	.refine((data) => Object.values(data).some((v) => v !== undefined), {
+		error: "At least one field must be provided",
+	})
 	.refine(
 		(data) => {
 			if (data.isAvailable === false)

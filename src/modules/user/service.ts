@@ -1,7 +1,7 @@
-import { NotFoundError } from "@/lib/errors.js";
 import { sendEmail } from "@/lib/email.js";
 import { getAccountCreatedContent } from "@/lib/email-templates.js";
 import { env } from "@/lib/env.js";
+import { NotFoundError } from "@/lib/errors.js";
 import * as repository from "./repository.js";
 import type * as schemas from "./schema.js";
 

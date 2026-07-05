@@ -22,9 +22,7 @@ export const updateFacilitySchema = z.object({
 
 export const facilityScopedSchema = z
 	.object({
-		id: z.coerce
-			.number({ error: "Invalid facility ID" })
-			.int({ error: "Invalid facility ID" }),
+		id: z.coerce.number({ error: "Invalid facility ID" }).int({ error: "Invalid facility ID" }),
 	})
 	.strict();
 
