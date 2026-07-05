@@ -10,6 +10,8 @@ router.get("/", controller.getOrganizations);
 router.post("/", requireUserType("admin"), controller.createOrganization);
 
 router.get("/:id", controller.getOrganization);
+router.patch("/:id", requireUserType("admin"), controller.updateOrganization);
+router.delete("/:id", requireUserType("admin"), controller.deleteOrganization);
 
 router.use("/:id/members", membersRouter);
 
