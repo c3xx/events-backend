@@ -23,3 +23,21 @@ export async function getVenue(venueId: number) {
 	if (venue == null) throw new NotFoundError("Could not find the venue");
 	return venue;
 }
+
+export async function updateVenue(id: number, input: schemas.UpdateVenueSchema) {
+	const updated = await repository.updateVenue(id, {
+		name: input.name,
+		maxCapacity: input.maxCapacity,
+		accessLevel: input.accessLevel,
+		isAvailable: input.isAvailable,
+		unavailabilityReason: input.isAvailable === true ? null : input.unavailabilityReason,
+		isActive: input.isActive,
+	});
+	if (updated == null) throw new NotFoundError("Venue not found");
+	return updated;
+}
+
+export async function deleteVenue(id: number) {
+	const result = await repository.softDeleteVenue(id);
+	if ((result.rowCount ?? 0) === 0) throw new NotFoundError("Venue not found");
+}
