@@ -174,20 +174,10 @@ export async function createTestUserRole(data: {
 }
 
 export async function grantPermissionToRole(roleId: number, permissionCode: PermissionCode) {
-	let [perm] = await db
+	const [perm] = await db
 		.select()
 		.from(schema.permission)
 		.where(eq(schema.permission.code, permissionCode));
-
-	if (!perm) {
-		[perm] = await db
-			.insert(schema.permission)
-			.values({
-				code: permissionCode,
-				description: `Description for ${permissionCode}`,
-			})
-			.returning();
-	}
 
 	if (!perm) throw new Error(`Failed to ensure permission ${permissionCode} exists`);
 
@@ -203,7 +193,7 @@ export async function grantPermissionToRole(roleId: number, permissionCode: Perm
 export async function createTestWorkflowStepRole(data: {
 	stepId: number;
 	roleId: number;
-	targetGroupApprovalCriteria?: (typeof schema.workflowTargetGroupApprovalCriteriaEnum.enumValues)[number];
+	targetGroupApprovalCriteria?: WorkflowTargetGroupApprovalCriteria;
 }) {
 	const [stepRole] = await db
 		.insert(schema.workflowTemplateStepRole)
@@ -284,8 +274,8 @@ export async function createOrganizerTestSetup() {
 		typeRefId: setup.orgType.id,
 	});
 
-	await grantPermissionToRole(mockRole.id, "event_organizer_invitation:respond" as PermissionCode);
-	await grantPermissionToRole(mockRole.id, "event_organizer:manage" as PermissionCode);
+	await grantPermissionToRole(mockRole.id, "event_organizer_invitation:respond");
+	await grantPermissionToRole(mockRole.id, "event:manage");
 
 	const userRole = await createTestUserRole({
 		userId: setup.admin.id,
@@ -293,10 +283,9 @@ export async function createOrganizerTestSetup() {
 		managedEntityId: hostME.id,
 	});
 
-	const actor = {
+	const actor: AuthenticatedUser = {
 		id: setup.admin.id,
-		type: "admin" as UserType,
-		permissions: [] as PermissionCode[],
+		type: "admin",
 	};
 
 	const createdEvent = await createEvent(
@@ -382,7 +371,7 @@ export async function createTestVenueType(data?: Partial<typeof schema.venueType
 export async function createTestVenue(data: {
 	venueTypeId: number;
 	name?: string;
-	accessLevel?: (typeof schema.venueAccessLevelEnum.enumValues)[number];
+	accessLevel?: VenueAccessLevel;
 	isAvailable?: boolean;
 	maxCapacity?: number;
 }) {

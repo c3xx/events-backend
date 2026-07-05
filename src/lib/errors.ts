@@ -89,13 +89,9 @@ export const POSTGRESQL_ERROR_CODES = {
 } as const;
 
 export function handleDbError(error: DrizzleQueryError): never {
-	if (
-		error.cause instanceof NeonDbError ||
-		(error.cause instanceof Error && "code" in error.cause)
-	) {
-		// biome-ignore lint/suspicious/noExplicitAny: pg client DatabaseError contains custom error properties
-		const neonError = error.cause as Record<string, any>;
-		const pgErrorCode = neonError.code as string | undefined;
+	if (error.cause instanceof NeonDbError) {
+		const neonError = error.cause;
+		const pgErrorCode = neonError.code;
 		const pgErrorClass = pgErrorCode?.slice(0, 2);
 
 		if (pgErrorClass === POSTGRESQL_ERROR_CLASSES.integrity_constraint_violation) {
@@ -110,10 +106,10 @@ export function handleDbError(error: DrizzleQueryError): never {
 					throw new ConflictError(`Value for ${snakeToNormalCase(neonError.column)} is missing`);
 
 				case POSTGRESQL_ERROR_CODES.foreign_key_violation:
-					throw new ConflictError(parseForeignKeyDetail(neonError.detail));
+					throw new ConflictError(parseForeignKeyDetail(error.cause.detail));
 
 				case POSTGRESQL_ERROR_CODES.unique_violation:
-					throw new ConflictError(parseUniqueViolationDetail(neonError.detail));
+					throw new ConflictError(parseUniqueViolationDetail(error.cause.detail));
 
 				case POSTGRESQL_ERROR_CODES.check_violation: {
 					const constraint = neonError.constraint;

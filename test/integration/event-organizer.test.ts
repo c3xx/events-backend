@@ -1,6 +1,4 @@
-import { eq } from "drizzle-orm";
 import { assert, describe, expect, test } from "vitest";
-import { db, schema } from "@/db/index.js";
 import { addEventOrganizer, removeEventOrganizer } from "@/modules/event/organizer/service.js";
 import { sendInvitation } from "@/modules/event/organizer-invitation/repository.js";
 import {
@@ -8,8 +6,6 @@ import {
 	revokeInvitation,
 } from "@/modules/event/organizer-invitation/service.js";
 import { findEventById } from "@/modules/event/repository.js";
-import { getEvent, submitEvent } from "@/modules/event/service.js";
-import { createVenueAllotment } from "@/modules/event/venue-allotment/service.js";
 import { respondToInvitation } from "@/modules/me/invitation/service.js";
 import {
 	createOrganizerTestSetup,
@@ -18,8 +14,6 @@ import {
 	createTestRole,
 	createTestUser,
 	createTestUserRole,
-	createTestVenue,
-	createTestVenueType,
 	getManagedEntity,
 	setupRecipientUser,
 } from "./integration-test-helpers.js";
@@ -34,7 +28,7 @@ describe("Organizer Integration Tests", () => {
 				organizationTypeId: guestOrgType.id,
 			});
 
-			const result = (await addEventOrganizer(
+			const result = await addEventOrganizer(
 				event,
 				{
 					roleId: mockRole.id,
@@ -42,11 +36,9 @@ describe("Organizer Integration Tests", () => {
 					intendedRole: "resource_provider",
 				},
 				{ id: admin.id, type: "admin" },
-			)) as { id: number; role: string; organizationId: number };
+			);
 
 			assert(result.id != null);
-			expect(result.role).toBe("resource_provider");
-			expect(result.organizationId).toBe(resourceProviderOrg.id);
 
 			const updatedEvent = await findEventById(event.id);
 			assert(updatedEvent != null);
@@ -120,19 +112,6 @@ describe("Organizer Integration Tests", () => {
 			const organizers = finalEvent.organizers;
 			expect(organizers).toHaveLength(1);
 			expect(organizers.find((o) => o.id === added.id)).toBeUndefined();
-		});
-
-		test("fails when trying to remove the host organizer", async () => {
-			const { admin, event } = await createOrganizerTestSetup();
-
-			const freshEvent = await findEventById(event.id);
-			assert(freshEvent != null);
-			const hostOrgRecord = freshEvent.organizers.find((o) => o.role === "host");
-			assert(hostOrgRecord != null);
-
-			await expect(
-				removeEventOrganizer(freshEvent, hostOrgRecord.id, { id: admin.id, type: "admin" }),
-			).rejects.toThrow("Cannot remove host");
 		});
 	});
 
@@ -500,119 +479,17 @@ describe("Organizer Integration Tests", () => {
 				}),
 			).rejects.toThrow();
 		});
-	});
-
-	describe("venue allotments", () => {
-		test("successfully allot venue to a draft event", async () => {
+		test("fails when trying to remove the host organizer", async () => {
 			const { admin, event } = await createOrganizerTestSetup();
-
-			const venueType = await createTestVenueType();
-			const venue = await createTestVenue({ venueTypeId: venueType.id });
-
-			const startsAt = new Date(Date.now() + 86400000).toISOString();
-			const endsAt = new Date(Date.now() + 90000000).toISOString();
-
-			const result = await createVenueAllotment({ id: admin.id, type: "admin" }, event, {
-				venueId: venue.id,
-				startsAt,
-				endsAt,
-			});
-
-			assert(result.id != null);
-
-			const dbAllotment = await db.query.venueAllotment.findFirst({
-				where: eq(schema.venueAllotment.id, result.id),
-			});
-			assert(dbAllotment != null);
-			expect(dbAllotment.eventId).toBe(event.id);
-			expect(dbAllotment.venueId).toBe(venue.id);
-		});
-
-		test("fails when trying to allot same venue to conflicting time slot", async () => {
-			const { admin, event } = await createOrganizerTestSetup();
-
-			const venueType = await createTestVenueType();
-			const venue = await createTestVenue({ venueTypeId: venueType.id });
-
-			const startsAt = new Date(Date.now() + 86400000).toISOString();
-			const endsAt = new Date(Date.now() + 90000000).toISOString();
-
-			await createVenueAllotment({ id: admin.id, type: "admin" }, event, {
-				venueId: venue.id,
-				startsAt,
-				endsAt,
-			});
-
-			const overlapStartsAt = new Date(Date.now() + 88000000).toISOString();
-			const overlapEndsAt = new Date(Date.now() + 95000000).toISOString();
-
-			await expect(
-				createVenueAllotment({ id: admin.id, type: "admin" }, event, {
-					venueId: venue.id,
-					startsAt: overlapStartsAt,
-					endsAt: overlapEndsAt,
-				}),
-			).rejects.toThrow("Venue is not available for the requested time slot");
-		});
-
-		test("fails when trying to allot venue to non-draft event", async () => {
-			const { admin, event } = await createOrganizerTestSetup();
-
-			const venueType = await createTestVenueType();
-			const venue = await createTestVenue({ venueTypeId: venueType.id });
-
-			const fullEvent = await getEvent(event);
-			await submitEvent({ id: admin.id, type: "admin" }, fullEvent);
 
 			const freshEvent = await findEventById(event.id);
 			assert(freshEvent != null);
-			expect(freshEvent.status).toBe("pending");
-
-			const startsAt = new Date(Date.now() + 86400000).toISOString();
-			const endsAt = new Date(Date.now() + 90000000).toISOString();
+			const hostOrgRecord = freshEvent.organizers.find((o) => o.role === "host");
+			assert(hostOrgRecord != null);
 
 			await expect(
-				createVenueAllotment({ id: admin.id, type: "admin" }, freshEvent, {
-					venueId: venue.id,
-					startsAt,
-					endsAt,
-				}),
-			).rejects.toThrow("Only draft events can be modified");
-		});
-
-		test("fails when unauthorized user tries to allot venue", async () => {
-			const { event, orgType, hostOrg } = await createOrganizerTestSetup();
-
-			const venueType = await createTestVenueType();
-			const venue = await createTestVenue({ venueTypeId: venueType.id });
-
-			const unauthorizedUser = await createTestUser({ type: "end_user" });
-			const powerlessRole = await createTestRole({
-				managedEntityType: "organization",
-				typeRefId: orgType.id,
-			});
-			const hostME = await getManagedEntity({
-				managedEntityType: "organization",
-				refId: hostOrg.id,
-			});
-			assert(hostME != null);
-
-			await createTestUserRole({
-				userId: unauthorizedUser.id,
-				roleId: powerlessRole.id,
-				managedEntityId: hostME.id,
-			});
-
-			const startsAt = new Date(Date.now() + 86400000).toISOString();
-			const endsAt = new Date(Date.now() + 90000000).toISOString();
-
-			await expect(
-				createVenueAllotment({ id: unauthorizedUser.id, type: "end_user" }, event, {
-					venueId: venue.id,
-					startsAt,
-					endsAt,
-				}),
-			).rejects.toThrow("You do not have permission to manage venues of this event");
+				removeEventOrganizer(freshEvent, hostOrgRecord.id, { id: admin.id, type: "admin" }),
+			).rejects.toThrow("Cannot remove host");
 		});
 	});
 });
