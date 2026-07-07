@@ -51,7 +51,7 @@ export function planUpdates(config: SeedConfig, existing: ExistingData): PlanUpd
 
 	const plannedUpdates: PlannedUpdate[] = [];
 
-	// --- 1. Diff: Organization Types
+	//Organization Types
 	for (const ot of config.organization_types) {
 		const existingRec = orgTypeByName.get(ot.name);
 		if (existingRec && existingRec.deletedAt != null) {
@@ -70,7 +70,7 @@ export function planUpdates(config: SeedConfig, existing: ExistingData): PlanUpd
 		}
 	}
 
-	// --- 2. Diff: Organizations
+	//Organizations
 	for (const org of config.organizations) {
 		const existingRec = orgByName.get(org.name);
 		if (existingRec) {
@@ -117,7 +117,7 @@ export function planUpdates(config: SeedConfig, existing: ExistingData): PlanUpd
 		}
 	}
 
-	// --- 3. Diff: Venue Types
+	//Venue Types
 	for (const name of config.venue_types) {
 		const existingRec = venueTypeByName.get(name);
 		if (existingRec && existingRec.deletedAt != null) {
@@ -136,7 +136,7 @@ export function planUpdates(config: SeedConfig, existing: ExistingData): PlanUpd
 		}
 	}
 
-	// --- 4. Diff: Facilities
+	//Facilities
 	for (const name of config.facilities) {
 		const existingRec = facilityByName.get(name);
 		if (existingRec && existingRec.deletedAt != null) {
@@ -155,7 +155,7 @@ export function planUpdates(config: SeedConfig, existing: ExistingData): PlanUpd
 		}
 	}
 
-	// --- 5. Diff: Venues
+	//Venues
 	for (const venue of config.venues) {
 		const existingRec = venueByName.get(venue.name);
 		if (existingRec) {
@@ -243,7 +243,7 @@ export function planUpdates(config: SeedConfig, existing: ExistingData): PlanUpd
 		}
 	}
 
-	// --- 6. Diff: Roles
+	//Roles
 	for (const role of config.roles) {
 		const key = getRoleKey(role.name, role.managed_entity_type, role.type_ref);
 		const existingRec = roleByKey.get(key);
@@ -263,7 +263,7 @@ export function planUpdates(config: SeedConfig, existing: ExistingData): PlanUpd
 		}
 	}
 
-	// --- 7. Diff: Users
+	//Users
 	for (const user of config.users) {
 		const existingRec = userByEmail.get(user.email);
 		if (existingRec) {

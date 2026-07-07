@@ -3,8 +3,6 @@ import { and, eq } from "drizzle-orm";
 import { schema } from "@/db/index.js";
 import type { TxClient } from "./schema.js";
 
-// === Logging helpers =========================================================
-
 export function section(title: string) {
 	console.log(util.styleText(["bold", "cyan"], `\n=== ${title} ===`));
 }

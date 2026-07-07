@@ -11,8 +11,6 @@ import type { PlannedUpdate, SeedConfig } from "./seed-yaml/schema.js";
 import { seedConfigSchema } from "./seed-yaml/schema.js";
 import { runSeedingSteps } from "./seed-yaml/steps.js";
 
-// === Types ==================================================================
-
 export interface ExistingData {
 	orgTypes: (typeof schema.organizationType.$inferSelect)[];
 	orgs: (typeof schema.organization.$inferSelect)[];
@@ -23,8 +21,6 @@ export interface ExistingData {
 	users: (typeof schema.user.$inferSelect)[];
 	permissions: (typeof schema.permission.$inferSelect)[];
 }
-
-// === Main =======================================================
 
 async function main() {
 	const args = process.argv.slice(2);

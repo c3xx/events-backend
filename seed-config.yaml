@@ -3,6 +3,7 @@
 # ============================================================================
 # 1. ORGANIZATION TYPES
 # ============================================================================
+
 organization_types:
   - name: Institution
   - name: Department
@@ -13,18 +14,49 @@ organization_types:
 # ============================================================================
 # 2. ORGANIZATIONS
 # ============================================================================
+
 organizations:
   - name: TKM College of Engineering
     type: Institution
+
+  # Departments  
   - name: Computer Science Department
     type: Department
     parent: TKM College of Engineering
+
+  - name: Electronics and Communication
+    type: Department
+    parent: TKM College of Engineering
+
+  - name: Mechanical
+    type: Department
+    parent: TKM College of Engineering
+
+  - name: Electrical
+    type: Department
+    parent: TKM College of Engineering
+
+  - name: Chemical
+    type: Department
+    parent: TKM College of Engineering
+
+  - name: Civil
+    type: Department
+    parent: TKM College of Engineering
+
+  - name: Architecture
+    type: Department
+    parent: TKM College of Engineering
+  
+  #Clubs
   - name: CSI TKMCE
     type: Club
     parent: Computer Science Department
+
   - name: Coding Club TKMCE
     type: Club
     parent: TKM College of Engineering
+
   - name: NSS Unit
     type: Club
     parent: TKM College of Engineering
@@ -32,6 +64,7 @@ organizations:
 # ============================================================================
 # 3. VENUE TYPES
 # ============================================================================
+
 venue_types:
   - Auditorium
   - Ground / Courts
@@ -56,6 +89,8 @@ facilities:
   - Sound system
   - Stage / platform
   - Desks / tables
+  - Mic
+  - White board
 
 # ============================================================================
 # 5. VENUES
@@ -72,8 +107,98 @@ venues:
     type: Ground / Courts
     is_available: false
     unavailability_reason: Under renovation
-    max_capacity: 2000
+    max_capacity: 1000
 
+  - name: Open Gallery Hall
+    type: Halls
+    is_available: true
+    max_capacity: 150
+
+  - name: Computer Lab 1
+    type: Labs
+    organization: Electronics and Communication
+    is_available: true
+    max_capacity: 40
+    facilities: [A/C, Chairs, Computers, Smart TV]
+
+  - name: Computer Lab 2
+    type: Labs
+    organization: Electronics and Communication
+    is_available: true
+    max_capacity: 26
+    facilities: [A/C, Chairs, Computers, Smart TV]
+
+  - name: CS Seminar Hall
+    type: Seminar halls
+    organization: Computer Science Department
+    is_available: true
+    max_capacity: 50
+    facilities: [A/C, Projector, Chairs, Computers, Charging sockets, Dining, Sound system, Mic, Sound System]
+  
+  - name: Software Systems Lab
+    type: Labs
+    organization: Computer Science Department
+    is_available: true
+    max_capacity: 80
+    facilities: [A/C, Projector, Chairs, Computers, Charging sockets, Smart TV, Sound system]
+ 
+  - name: Operating System Lab
+    type: Labs
+    organization: Computer Science Department
+    is_available: true
+    max_capacity: 40
+    facilities: [A/C, Chairs, Computers, Charging sockets, Smart TV]
+  
+  - name: Computing Lab
+    type: Labs
+    organization: Computer Science Department
+    is_available: true
+    max_capacity: 70
+    facilities: [A/C, Projector, Chairs, Computers, Charging sockets, Smart TV, Sound system]
+ 
+  - name: AI LAB
+    type: Labs
+    organization: Computer Science Department
+    is_available: true
+    max_capacity: 75
+    facilities: [A/C, Chairs, Computers, Charging sockets, Smart TV]
+ 
+  - name: Mechanical CAD Lab
+    type: Labs
+    organization: Mechanical
+    is_available: true
+    max_capacity: 75
+    facilities: [A/C, Projector, Chairs, Computers, Charging sockets, Smart TV, Sound system, Stage / platform, Desks / tables]
+  
+  - name: Civil CAD Lab
+    type: Labs
+    organization: Civil
+    is_available: true
+    max_capacity: 40
+    facilities: [A/C, Projector, Chairs, Computers, Chalkboard, Charging sockets, Desks / tables]
+  
+  - name: EEE Seminar Hall 1
+    type: Seminar halls
+    organization: Electrical
+    is_available: true
+    max_capacity: 120
+    facilities: [Projector, Chairs, Charging sockets, Smart TV, Sound system, Stage / platform]
+  
+  - name: EEE Seminar Hall 2
+    type: Seminar halls
+    organization: Electrical
+    is_available: true
+    max_capacity: 100
+    facilities: [Projector, Chairs, Chalkboard, Charging sockets, Smart TV, Sound system, Stage / platform]
+  
+  - name: Electrical Software Lab
+    type: Labs
+    organization: Electrical
+    is_available: true
+    max_capacity: 80
+    facilities: [A/C, Projector, Chairs, Computers, Charging sockets, Desks / tables, White board]
+
+    
 # ============================================================================
 # 6. ROLES & PERMISSIONS
 # ============================================================================
@@ -129,7 +254,7 @@ roles:
       - event:view_own
       - organization:add_member
 
-  - name: Club head
+  - name: Club Head
     managed_entity_type: organization
     type_ref: Club
     permissions:
@@ -150,8 +275,12 @@ roles:
 users:
   - full_name: Alan SJ
     email: c3xxalan@tkmce.ac.in
-    type: admin
+    type: end_user
     roles:
-      - role: Club head
+      - role: Club Head
         managed_entity_type: organization
         entity_name: Coding Club TKMCE
+
+  - full_name: Test Assistant
+    email: assistant@tkmce.ac.in
+    type: end_user

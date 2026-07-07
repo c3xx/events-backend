@@ -232,7 +232,7 @@ export async function runSeedingSteps(
 		ok(`linked ${linksToInsert.length} new venue-facility association(s)`);
 	}
 
-	// --- 6. Roles & Permissions
+	// Roles & Permissions
 	section("Roles & permissions");
 	const roleIdByKey = new Map<string, number>();
 	for (const [key, row] of roleByKey.entries()) {
