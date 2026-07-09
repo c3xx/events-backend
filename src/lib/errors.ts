@@ -13,6 +13,7 @@ export const ERROR_CODES = {
 	internal_server_error: "INTERNAL_SERVER_ERROR",
 	forbidden: "FORBIDDEN",
 	conflict: "CONFLICT",
+	too_many_requests: "TOO_MANY_REQUESTS",
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
@@ -71,7 +72,11 @@ export class ValidationError extends AppError {
 		super(422, ERROR_CODES.validation_error, message);
 	}
 }
-
+export class RateLimitError extends AppError {
+	constructor(message: string, public retryAfterSeconds: number) {
+		super(429, ERROR_CODES.too_many_requests, message);
+	}
+}
 export const POSTGRESQL_ERROR_CLASSES = {
 	integrity_constraint_violation: "23",
 	pl_pgsql_error: "P0",
