@@ -73,7 +73,10 @@ export class ValidationError extends AppError {
 	}
 }
 export class RateLimitError extends AppError {
-	constructor(message: string, public retryAfterSeconds: number) {
+	constructor(
+		message: string,
+		public retryAfterSeconds: number,
+	) {
 		super(429, ERROR_CODES.too_many_requests, message);
 	}
 }
