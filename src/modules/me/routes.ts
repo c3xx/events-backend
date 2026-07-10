@@ -2,13 +2,26 @@ import { Router } from "express";
 import approvalAssignmentsRouter from "./approval-assignments/routes.js";
 import * as controller from "./controller.js";
 import invitationRouter from "./invitation/routes.js";
+import { rateLimiter } from "@/middlewares/index.js";
 
 const router: Router = Router();
 
-router.get("/", controller.userDetails);
-router.patch("/", controller.updateProfile);
+router.get(
+	"/",
+	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "me:read" }),
+	controller.userDetails,
+);
+router.patch(
+	"/",
+	rateLimiter({ maxRequests: 60, windowMs: 15 * 60 * 1000, prefix: "me:write" }),
+	controller.updateProfile,
+);
 
-router.get("/organizations/event-creatable", controller.getEventCreatableOrganizations);
+router.get(
+	"/organizations/event-creatable",
+	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "me:read" }),
+	controller.getEventCreatableOrganizations,
+);
 
 router.use("/approval-assignments", approvalAssignmentsRouter);
 
