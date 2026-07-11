@@ -6,13 +6,21 @@ const router: Router = Router({ mergeParams: true });
 
 router.get(
 	"/",
-	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "event_organizer_invitation:read" }),
+	rateLimiter({
+		maxRequests: 200,
+		windowMs: 15 * 60 * 1000,
+		prefix: "event_organizer_invitation:read",
+	}),
 	controller.getEventInvitations,
 );
 
 router.delete(
 	"/:invitationId",
-	rateLimiter({ maxRequests: 60, windowMs: 15 * 60 * 1000, prefix: "event_organizer_invitation:write" }),
+	rateLimiter({
+		maxRequests: 60,
+		windowMs: 15 * 60 * 1000,
+		prefix: "event_organizer_invitation:write",
+	}),
 	controller.revokeInvitation,
 );
 

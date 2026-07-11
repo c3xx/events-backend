@@ -9,12 +9,20 @@ const router: Router = Router();
 
 router.get(
 	"/",
-	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "workflow_template_step:read" }),
+	rateLimiter({
+		maxRequests: 200,
+		windowMs: 15 * 60 * 1000,
+		prefix: "workflow_template_step:read",
+	}),
 	controller.getAllWorkflowTemplateSteps,
 );
 router.post(
 	"/",
-	rateLimiter({ maxRequests: 30, windowMs: 15 * 60 * 1000, prefix: "workflow_template_step:write" }),
+	rateLimiter({
+		maxRequests: 30,
+		windowMs: 15 * 60 * 1000,
+		prefix: "workflow_template_step:write",
+	}),
 	requireUserType("admin"),
 	controller.createWorkflowTemplateStep,
 );
@@ -23,7 +31,11 @@ router.param("stepId", stepIdParamHandler);
 
 router.get(
 	"/:stepId",
-	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "workflow_template_step:read" }),
+	rateLimiter({
+		maxRequests: 200,
+		windowMs: 15 * 60 * 1000,
+		prefix: "workflow_template_step:read",
+	}),
 	controller.getWorkflowTemplateStep,
 );
 
