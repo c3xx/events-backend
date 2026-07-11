@@ -1,10 +1,15 @@
 import { sql } from "drizzle-orm";
-import { beforeAll } from "vitest";
+import type { RequestHandler } from "express";
+import { beforeAll, vi } from "vitest";
 import { db, schema } from "@/db/index.js";
 import { hashPassword } from "@/lib/argon2.js";
 import { FLATTENED_PERMISSIONS } from "@/lib/constants.js";
 import { env } from "@/lib/env.js";
 import { isPermission, unreachable } from "@/lib/helpers.js";
+
+vi.mock("@/middlewares/rate-limiter.js", () => ({
+	rateLimiter: (): RequestHandler => (_req, _res, next) => next(),
+}));
 
 beforeAll(async () => {
 	const tables = await db.execute<{ tablename: string }>(
