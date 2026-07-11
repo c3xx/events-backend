@@ -1,8 +1,8 @@
 import { Router } from "express";
+import { rateLimiter } from "@/middlewares/index.js";
 import approvalAssignmentsRouter from "./approval-assignments/routes.js";
 import * as controller from "./controller.js";
 import invitationRouter from "./invitation/routes.js";
-import { rateLimiter } from "@/middlewares/index.js";
 
 const router: Router = Router();
 

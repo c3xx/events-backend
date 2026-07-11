@@ -1,6 +1,5 @@
 import { Router } from "express";
-import { requireUserType } from "@/middlewares/index.js";
-import { rateLimiter } from "@/middlewares/index.js";
+import { rateLimiter, requireUserType } from "@/middlewares/index.js";
 import * as controller from "./controller.js";
 
 const router: Router = Router({ mergeParams: true });

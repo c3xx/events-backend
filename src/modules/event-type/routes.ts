@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { requireUserType } from "@/middlewares/require-user-type.js";
 import { rateLimiter } from "@/middlewares/index.js";
+import { requireUserType } from "@/middlewares/require-user-type.js";
 import childrenRouter from "./children/routes.js";
 import * as controller from "./controller.js";
 

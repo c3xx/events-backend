@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { requireUserType } from "@/middlewares/require-user-type.js";
 import { rateLimiter } from "@/middlewares/index.js";
+import { requireUserType } from "@/middlewares/require-user-type.js";
 import { stepIdParamHandler } from "@/modules/workflow-template/scopes.js";
 import * as controller from "./controller.js";
 import roleRouter from "./role/routes.js";
