@@ -20,6 +20,9 @@ export const findPendingInvitationsForUser = dbAction(
 				event: {
 					id: schema.event.id,
 					title: schema.event.title,
+					createdAt: schema.event.createdAt,
+					startsAt: schema.event.startsAt,
+					endsAt: schema.event.endsAt,
 					type: jsonBuildObject({
 						id: schema.eventType.id,
 						name: schema.eventType.name,
@@ -138,6 +141,7 @@ export const findPendingInvitationById = dbAction(async (invitationId: number) =
 				title: schema.event.title,
 				requestDetails: schema.event.requestDetails,
 				expectedParticipants: schema.event.expectedParticipants,
+				createdAt: schema.event.createdAt,
 				startsAt: schema.event.startsAt,
 				endsAt: schema.event.endsAt,
 				parentEvent: jsonBuildObjectNullable(
@@ -150,6 +154,8 @@ export const findPendingInvitationById = dbAction(async (invitationId: number) =
 				type: jsonBuildObject({
 					id: schema.eventType.id,
 					name: schema.eventType.name,
+					collaborationPolicy: schema.eventType.collaborationPolicy,
+					venuePolicy: schema.eventType.venuePolicy,
 				}),
 				category: jsonBuildObject({
 					id: schema.eventCategory.id,

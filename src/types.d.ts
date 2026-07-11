@@ -47,8 +47,10 @@ declare global {
 		initialStepId: number | null;
 		status: WorkflowInstanceStatus;
 		completedAt: string | null;
-		eventId: number;
-		submittedBy: number;
+		submitter: {
+			id: number;
+			fullName: string;
+		};
 		steps: {
 			id: number;
 			name: string;
@@ -91,16 +93,6 @@ declare global {
 			}[];
 		}[];
 	};
-
-	export type WorkflowInstances = {
-		id: number;
-		createdAt: string;
-		initialStepId: number | null;
-		status: WorkflowInstanceStatus;
-		completedAt: string | null;
-		eventId: number;
-		submittedBy: number;
-	}[];
 
 	type AuthenticatedUser = Pick<User, "id" | "type">;
 
