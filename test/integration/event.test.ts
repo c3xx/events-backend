@@ -4,7 +4,15 @@ import { assert, describe, expect, test } from "vitest";
 import { db, schema } from "@/db/index.js";
 import { findEventById } from "@/modules/event/repository.js";
 import { createEventSchema } from "@/modules/event/schema.js";
-import { createEvent, getEvent, submitEvent, updateEvent } from "@/modules/event/service.js";
+import {
+	cancelApprovedEvent,
+	createEvent,
+	discardDraftEvent,
+	getEvent,
+	getParentableEvents,
+	submitEvent,
+	updateEvent,
+} from "@/modules/event/service.js";
 import { createBasicEventSetup, createTestEventBody } from "./integration-test-helpers.js";
 
 describe("Event Integration Tests", () => {
@@ -334,6 +342,125 @@ describe("Event Integration Tests", () => {
 					}),
 				),
 			).rejects.toThrow();
+		});
+	});
+
+	describe("discardDraftEvent", () => {
+		test("successfully discards a draft event", async () => {
+			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const event = await createEvent(
+				{ id: admin.id, type: "admin" },
+				createTestEventBody({
+					organizationId: hostOrg.id,
+					title: "To Be Discarded",
+					typeId: eventType.id,
+					categoryId: category.id,
+				}),
+			);
+			const fullEvent = await findEventById(event.id);
+			assert(fullEvent != null);
+
+			await expect(
+				discardDraftEvent({ id: admin.id, type: "admin" }, fullEvent),
+			).resolves.not.toThrow();
+
+			const dbEvent = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
+			assert(dbEvent != null);
+			expect(dbEvent.deletedAt).not.toBeNull();
+		});
+
+		test("fails to discard a non-draft event", async () => {
+			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const event = await createEvent(
+				{ id: admin.id, type: "admin" },
+				createTestEventBody({
+					organizationId: hostOrg.id,
+					title: "To Be Discarded",
+					typeId: eventType.id,
+					categoryId: category.id,
+				}),
+			);
+			const fullEvent = await findEventById(event.id);
+			assert(fullEvent != null);
+
+			const freshEvent = await getEvent(fullEvent);
+			await submitEvent({ id: admin.id, type: "admin" }, freshEvent);
+
+			const submittedEvent = await findEventById(event.id);
+			assert(submittedEvent != null);
+
+			await expect(
+				discardDraftEvent({ id: admin.id, type: "admin" }, submittedEvent),
+			).rejects.toThrow();
+		});
+
+		test("fails to discard when unauthorized", async () => {
+			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const event = await createEvent(
+				{ id: admin.id, type: "admin" },
+				createTestEventBody({
+					organizationId: hostOrg.id,
+					title: "Unauthorized Discard",
+					typeId: eventType.id,
+					categoryId: category.id,
+				}),
+			);
+			const fullEvent = await findEventById(event.id);
+			assert(fullEvent != null);
+
+			await expect(discardDraftEvent({ id: 9999, type: "end_user" }, fullEvent)).rejects.toThrow();
+		});
+	});
+
+	describe("cancelApprovedEvent", () => {
+		test("fails to cancel non-approved event", async () => {
+			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const event = await createEvent(
+				{ id: admin.id, type: "admin" },
+				createTestEventBody({
+					organizationId: hostOrg.id,
+					title: "To Be Cancelled",
+					typeId: eventType.id,
+					categoryId: category.id,
+				}),
+			);
+			const fullEvent = await findEventById(event.id);
+			assert(fullEvent != null);
+
+			await expect(
+				cancelApprovedEvent({ id: admin.id, type: "admin" }, fullEvent),
+			).rejects.toThrow();
+		});
+
+		test("successfully cancels an approved event", async () => {
+			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const event = await createEvent(
+				{ id: admin.id, type: "admin" },
+				createTestEventBody({
+					organizationId: hostOrg.id,
+					title: "To Be Cancelled",
+					typeId: eventType.id,
+					categoryId: category.id,
+					startsAt: new Date(Date.now() + 86400000).toISOString(),
+					endsAt: new Date(Date.now() + 90000000).toISOString(),
+				}),
+			);
+
+			await db
+				.update(schema.event)
+				.set({ status: "approved" })
+				.where(eq(schema.event.id, event.id));
+
+			const fullEvent = await findEventById(event.id);
+			assert(fullEvent != null);
+
+			await expect(
+				cancelApprovedEvent({ id: admin.id, type: "admin" }, fullEvent),
+			).resolves.not.toThrow();
+
+			const dbEvent = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
+			assert(dbEvent != null);
+			expect(dbEvent.status).toBe("cancelled");
 		});
 	});
 });

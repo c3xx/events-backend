@@ -371,8 +371,9 @@ export async function createTestVenueType(data?: Partial<typeof schema.venueType
 export async function createTestVenue(data: {
 	venueTypeId: number;
 	name?: string;
-	accessLevel?: VenueAccessLevel;
+	accessLevel?: "public" | "private";
 	isAvailable?: boolean;
+	unavailabilityReason?: string;
 	maxCapacity?: number;
 }) {
 	const [venue] = await db
@@ -382,6 +383,7 @@ export async function createTestVenue(data: {
 			venueTypeId: data.venueTypeId,
 			accessLevel: data.accessLevel ?? "public",
 			isAvailable: data.isAvailable ?? true,
+			unavailabilityReason: data.unavailabilityReason ?? null,
 			maxCapacity: data.maxCapacity ?? 100,
 		})
 		.returning();
