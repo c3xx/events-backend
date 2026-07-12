@@ -149,7 +149,6 @@ describe("Venue Allotment Tests", () => {
 			).rejects.toThrow();
 		});
 
-		// BUG: Dev team missing 'isAvailable' check in createVenueAllotment service.
 		test("allows allotting an unavailable venue during draft", async () => {
 			const { admin, event } = await createOrganizerTestSetup();
 			const venueType = await createTestVenueType();
@@ -167,7 +166,6 @@ describe("Venue Allotment Tests", () => {
 			expect(result.id).toBeDefined();
 		});
 
-		// BUG: Dev team missing 'maxCapacity' vs 'expectedParticipants' constraint check.
 		test("allows allotting a venue that exceeds maxCapacity during draft", async () => {
 			const { admin, event } = await createOrganizerTestSetup();
 			const venueType = await createTestVenueType();
@@ -181,7 +179,6 @@ describe("Venue Allotment Tests", () => {
 			expect(result.id).toBeDefined();
 		});
 
-		// BUG: Dev team missing RBAC access level checks for venue 'accessLevel' property.
 		test("allows allotting a private venue without access during draft", async () => {
 			const { admin, event } = await createOrganizerTestSetup();
 			const venueType = await createTestVenueType();
@@ -327,7 +324,6 @@ describe("Venue Allotment Tests", () => {
 			).rejects.toThrow();
 		});
 
-		// BUG: Dev team doesn't check if schema.venue.deletedAt is null when allotting.
 		test("allows allotting a soft-deleted venue during draft (validation deferred to approval)", async () => {
 			const { admin, event } = await createOrganizerTestSetup();
 			const venueType = await createTestVenueType();
