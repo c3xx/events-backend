@@ -10,10 +10,7 @@ export async function getEventCategories() {
 	return await repository.findMany();
 }
 
-export async function updateEventCategory(
-	id: number,
-	input: schemas.UpdateEventCategorySchema,
-) {
+export async function updateEventCategory(id: number, input: schemas.UpdateEventCategorySchema) {
 	const updated = await repository.updateEventCategory(id, input);
 	if (updated == null) throw new NotFoundError("Event category not found");
 	return updated;

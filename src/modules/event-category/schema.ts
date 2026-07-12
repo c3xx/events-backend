@@ -25,9 +25,7 @@ export const updateEventCategorySchema = z
 
 export const eventCategoryScopedSchema = z
 	.object({
-		id: z
-			.coerce.number({ error: "Invalid category ID" })
-			.int({ error: "Invalid category ID" }),
+		id: z.coerce.number({ error: "Invalid category ID" }).int({ error: "Invalid category ID" }),
 	})
 	.strict();
 

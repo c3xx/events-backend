@@ -29,9 +29,7 @@ export const updateEventTypeSchema = z
 			.max(256, { error: "Name cannot exceed 256 characters" })
 			.optional(),
 		isActive: z.boolean({ error: "isActive must be a boolean" }).optional(),
-		venuePolicy: z
-			.enum(EVENT_TYPE_VENUE_POLICY, { error: "Invalid venue policy" })
-			.optional(),
+		venuePolicy: z.enum(EVENT_TYPE_VENUE_POLICY, { error: "Invalid venue policy" }).optional(),
 		collaborationPolicy: z
 			.enum(EVENT_TYPE_COLLABORATION_POLICY, { error: "Invalid collaboration policy" })
 			.optional(),
