@@ -14,10 +14,7 @@ export async function updateEventCategory(
 	id: number,
 	input: schemas.UpdateEventCategorySchema,
 ) {
-	const updated = await repository.updateEventCategory(id, {
-		name: input.name,
-		isActive: input.isActive,
-	});
+	const updated = await repository.updateEventCategory(id, input);
 	if (updated == null) throw new NotFoundError("Event category not found");
 	return updated;
 }
