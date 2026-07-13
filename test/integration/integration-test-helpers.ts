@@ -390,3 +390,97 @@ export async function createTestVenue(data: {
 	if (!venue) throw new Error("Failed to create test venue");
 	return venue;
 }
+
+export async function setupWorkflowTestEnvironment(options?: { noInitialStep?: boolean }) {
+	const admin = await createTestUser({ type: "admin" });
+
+	const orgType = await createTestOrganizationType();
+	const eventOrg = await createTestOrganization({ organizationTypeId: orgType.id });
+	const orgME = await getManagedEntity({ managedEntityType: "organization", refId: eventOrg.id });
+	if (!orgME) throw new Error("Org ME missing");
+
+	const roleCoord = await createTestRole({
+		managedEntityType: "organization",
+		typeRefId: orgType.id,
+		name: "coordinator",
+	});
+	const roleFaculty = await createTestRole({
+		managedEntityType: "organization",
+		typeRefId: orgType.id,
+		name: "faculty",
+	});
+
+	// Workflow Template
+	const template = await createTestWorkflowTemplate();
+	const step1 = await createTestWorkflowStep({ templateId: template.id, name: "Step1 ANY" });
+	const step2 = await createTestWorkflowStep({ templateId: template.id, name: "Step2 ALL" });
+
+	await db
+		.update(schema.workflowTemplateStep)
+		.set({ nextStepId: step2.id })
+		.where(eq(schema.workflowTemplateStep.id, step1.id));
+
+	if (!options?.noInitialStep) {
+		await db
+			.update(schema.workflowTemplate)
+			.set({ initialStepId: step1.id })
+			.where(eq(schema.workflowTemplate.id, template.id));
+	}
+
+	await createTestWorkflowStepRole({
+		stepId: step1.id,
+		roleId: roleCoord.id,
+		targetGroupApprovalCriteria: "any",
+	});
+	await createTestWorkflowStepRole({
+		stepId: step2.id,
+		roleId: roleFaculty.id,
+		targetGroupApprovalCriteria: "all",
+	});
+
+	const eventType = await createTestEventType({ workflowTemplateId: template.id });
+	const category = await createTestEventCategory();
+
+	// Assignees
+	const coord1 = await createTestUser({ type: "end_user" });
+	const coord2 = await createTestUser({ type: "end_user" });
+	const faculty1 = await createTestUser({ type: "end_user" });
+	const faculty2 = await createTestUser({ type: "end_user" });
+
+	await createTestUserRole({ userId: coord1.id, roleId: roleCoord.id, managedEntityId: orgME.id });
+	await createTestUserRole({ userId: coord2.id, roleId: roleCoord.id, managedEntityId: orgME.id });
+	await createTestUserRole({
+		userId: faculty1.id,
+		roleId: roleFaculty.id,
+		managedEntityId: orgME.id,
+	});
+	await createTestUserRole({
+		userId: faculty2.id,
+		roleId: roleFaculty.id,
+		managedEntityId: orgME.id,
+	});
+
+	// Add manage event permission to hostUser so they can act as host
+	const hostUser = await createTestUser({ type: "end_user" });
+	const hostRole = await createTestRole({
+		managedEntityType: "organization",
+		typeRefId: orgType.id,
+	});
+	await createTestUserRole({ userId: hostUser.id, roleId: hostRole.id, managedEntityId: orgME.id });
+
+	// Provide permission to hostUser to prevent setup failures
+	await grantPermissionToRole(hostRole.id, "event:manage");
+
+	return {
+		admin,
+		hostUser,
+		eventOrg,
+		eventType,
+		category,
+		template,
+		coord1,
+		coord2,
+		faculty1,
+		faculty2,
+	};
+}
