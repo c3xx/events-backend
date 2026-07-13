@@ -57,7 +57,7 @@ describe("Type Hierarchy Validation", () => {
 
 			await expect(
 				addOrgAllowedChild({ id: parentOrg.id, childId: childOrg.id }),
-			).rejects.toThrow(); 
+			).rejects.toThrow();
 		});
 
 		test("allows one childId to have multiple different allowed parentTypeIds (M:1)", async () => {
