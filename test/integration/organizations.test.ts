@@ -112,14 +112,13 @@ describe("Organization Integration Tests", () => {
 			});
 
 			const me = await findOrganizationManagedEntity(org.id);
-			// This assertion proves managedEntity mapping is successfully handled natively by DB!
 			expect(me).toBeDefined();
 			expect(me?.id).toBeDefined();
 		});
 
 		test("rejects creating org with (type, parentType) not in allowed parent list (DB trigger enforced)", async () => {
 			const parentType = await createTestOrganizationType();
-			const childType = await createTestOrganizationType(); // we purposefully do NOT link these in allowed parents
+			const childType = await createTestOrganizationType();
 
 			const parentOrg = await createTestOrganization({ organizationTypeId: parentType.id });
 
@@ -129,7 +128,7 @@ describe("Organization Integration Tests", () => {
 					name: `PermissiveChild-${nanoid()}`,
 					parentOrganizationId: parentOrg.id,
 				}),
-			).rejects.toThrow(); // Successfully caught by Postgres triggers
+			).rejects.toThrow();
 		});
 	});
 
@@ -184,7 +183,7 @@ describe("Organization Integration Tests", () => {
 			const ids = orgs.map((o) => o.id);
 
 			expect(ids).toContain(org1.id);
-			expect(ids).not.toContain(org2.id); // Soft-deleted orgs are excluded correctly
+			expect(ids).not.toContain(org2.id);
 
 			const fetchedOrg1 = orgs.find((o) => o.id === org1.id);
 			assert(fetchedOrg1 != null);
@@ -207,8 +206,6 @@ describe("Organization Integration Tests", () => {
 			const orgType = await createTestOrganizationType();
 			const org = await createTestOrganization({ organizationTypeId: orgType.id });
 
-			// Let's soft-delete the org to theoretically cascade or delete the ME
-			// For testing finding soft-deleted ME, we'll soft delete the auto-generated ME row manually
 			await db
 				.update(schema.managedEntity)
 				.set({ deletedAt: new Date().toISOString() })
@@ -238,21 +235,47 @@ describe("Organization Integration Tests", () => {
 				parentOrganizationId: parentOrg.id,
 			});
 
-			// Confirm independent fetchable status initially
 			const fetchedParent = await getOrganization(parentOrg.id);
 			const fetchedChild = await getOrganization(childOrg.id);
 			expect(fetchedParent.id).toBe(parentOrg.id);
 			expect(fetchedChild.parentOrganizationId).toBe(parentOrg.id);
 
-			// Soft-delete parent
 			await db
 				.update(schema.organization)
 				.set({ deletedAt: new Date().toISOString() })
 				.where(eq(schema.organization.id, parentOrg.id));
 
-			// Child still holds stale parent, still fetchable without cascades
 			const postDeleteChild = await getOrganization(childOrg.id);
 			expect(postDeleteChild.parentOrganizationId).toBe(parentOrg.id);
+		});
+	});
+
+	describe("Soft-Delete Cascades", () => {
+		test("BUG: soft-deleting an organization does NOT cascade to its auto-generated managedEntity", async () => {
+			const orgType = await createTestOrganizationType();
+			const org = await createTestOrganization({ organizationTypeId: orgType.id });
+
+			// Confirm managedEntity exists initially via DB triggers
+			const initialMe = await findOrganizationManagedEntity(org.id);
+			expect(initialMe).toBeDefined();
+
+			// Soft-delete the organization
+			await db
+				.update(schema.organization)
+				.set({ deletedAt: new Date().toISOString() })
+				.where(eq(schema.organization.id, org.id));
+
+			// Check if the soft-delete cascaded down to the `managedEntity`
+			const postDeleteMe = await db.query.managedEntity.findFirst({
+				where: and(
+					eq(schema.managedEntity.managedEntityType, "organization"),
+					eq(schema.managedEntity.refId, org.id),
+				),
+			});
+
+			// Assert that the native postgres ON DELETE CASCADE didn't trigger because it's a soft delete
+			// Meaning: The DB leaves a floating active `managedEntity` for a deleted organization!
+			expect(postDeleteMe?.deletedAt).toBeNull();
 		});
 	});
 });
