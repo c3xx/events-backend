@@ -255,17 +255,14 @@ describe("Organization Integration Tests", () => {
 			const orgType = await createTestOrganizationType();
 			const org = await createTestOrganization({ organizationTypeId: orgType.id });
 
-			// Confirm managedEntity exists initially via DB triggers
 			const initialMe = await findOrganizationManagedEntity(org.id);
 			expect(initialMe).toBeDefined();
 
-			// Soft-delete the organization
 			await db
 				.update(schema.organization)
 				.set({ deletedAt: new Date().toISOString() })
 				.where(eq(schema.organization.id, org.id));
 
-			// Check if the soft-delete cascaded down to the `managedEntity`
 			const postDeleteMe = await db.query.managedEntity.findFirst({
 				where: and(
 					eq(schema.managedEntity.managedEntityType, "organization"),
@@ -273,8 +270,6 @@ describe("Organization Integration Tests", () => {
 				),
 			});
 
-			// Assert that the native postgres ON DELETE CASCADE didn't trigger because it's a soft delete
-			// Meaning: The DB leaves a floating active `managedEntity` for a deleted organization!
 			expect(postDeleteMe?.deletedAt).toBeNull();
 		});
 	});

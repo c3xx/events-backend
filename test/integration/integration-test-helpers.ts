@@ -501,3 +501,46 @@ export function createMockExpressContext(headers: Record<string, string> = {}) {
 	} as any;
 	return { req, res };
 }
+
+export async function createTestPermission(data?: { code?: PermissionCode; description?: string }) {
+	const [p] = await db
+		.insert(schema.permission)
+		.values({
+			code: data?.code ?? (`PERM_${nanoid()}` as PermissionCode),
+			description: data?.description ?? "Test permission",
+		})
+		.returning();
+	if (!p) throw new Error("Failed to create test permission");
+	return p;
+}
+
+export async function assignUserRole(data: {
+	userId: number;
+	roleId: number;
+	managedEntityId: number;
+	isActive?: boolean;
+}) {
+	const [ur] = await db
+		.insert(schema.userRole)
+		.values({
+			userId: data.userId,
+			roleId: data.roleId,
+			managedEntityId: data.managedEntityId,
+			isActive: data.isActive ?? true,
+		})
+		.returning();
+	if (!ur) throw new Error("Failed to assign user role");
+	return ur;
+}
+
+export async function assignRolePermission(data: { roleId: number; permissionId: number }) {
+	const [rp] = await db
+		.insert(schema.rolePermission)
+		.values({
+			roleId: data.roleId,
+			permissionId: data.permissionId,
+		})
+		.returning();
+	if (!rp) throw new Error("Failed to assign role permission");
+	return rp;
+}
