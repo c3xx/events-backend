@@ -9,7 +9,6 @@ import {
 	createEvent,
 	discardDraftEvent,
 	getEvent,
-	getParentableEvents,
 	submitEvent,
 	updateEvent,
 } from "@/modules/event/service.js";
@@ -345,7 +344,7 @@ describe("Event Integration Tests", () => {
 		});
 	});
 
-	describe("discardDraftEvent", () => {
+	describe("Discarding Events", () => {
 		test("successfully discards a draft event", async () => {
 			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
 			const event = await createEvent(
@@ -412,7 +411,7 @@ describe("Event Integration Tests", () => {
 		});
 	});
 
-	describe("cancelApprovedEvent", () => {
+	describe("Cancelling Events", () => {
 		test("fails to cancel non-approved event", async () => {
 			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
 			const event = await createEvent(
