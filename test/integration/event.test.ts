@@ -829,8 +829,6 @@ describe("Workflow Approval Execution", () => {
 	test("ALL approval requires every approver before advancing", async () => {
 		const { approvers, fullEvent } = await createApprovalWorkflowSetup();
 
-
-
 		const advisorAssignment = await getWorkflowAssignmentForUser(
 			approvers.advisor.id,
 			fullEvent.id,
@@ -841,16 +839,12 @@ describe("Workflow Approval Execution", () => {
 			decision: "approved",
 		});
 
-
-
 		const hod1Assignment = await getWorkflowAssignmentForUser(approvers.hod1.id, fullEvent.id);
 
 		await respondToAssignments(approvers.hod1, fullEvent.id, {
 			assignmentIds: [hod1Assignment.id],
 			decision: "approved",
 		});
-
-
 
 		let workflow = await getWorkflowForEvent(fullEvent.id);
 
@@ -870,8 +864,6 @@ describe("Workflow Approval Execution", () => {
 
 		expect(updatedHod1Assignment.status).toBe("approved");
 		expect(updatedHod2Assignment.status).toBe("pending");
-
-	
 
 		await respondToAssignments(approvers.hod2, fullEvent.id, {
 			assignmentIds: [updatedHod2Assignment.id],
