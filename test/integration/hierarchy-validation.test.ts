@@ -61,28 +61,28 @@ describe("Type Hierarchy Validation", () => {
 		});
 
 		test("allows one childId to have multiple different allowed parentTypeIds (M:1)", async () => {
-			const parent1 = await createTestOrganizationType();
-			const parent2 = await createTestOrganizationType();
-			const child = await createTestOrganizationType();
+			const parentType1 = await createTestOrganizationType();
+			const parentType2 = await createTestOrganizationType();
+			const childType = await createTestOrganizationType();
 
 			await expect(
-				addOrgAllowedChild({ id: parent1.id, childId: child.id }),
+				addOrgAllowedChild({ id: parentType1.id, childId: childType.id }),
 			).resolves.not.toThrow();
 			await expect(
-				addOrgAllowedChild({ id: parent2.id, childId: child.id }),
+				addOrgAllowedChild({ id: parentType2.id, childId: childType.id }),
 			).resolves.not.toThrow();
 		});
 
 		test("allows one parentTypeId to be allowed-parent for multiple different childIds (1:M)", async () => {
-			const parent = await createTestOrganizationType();
-			const child1 = await createTestOrganizationType();
-			const child2 = await createTestOrganizationType();
+			const parentType = await createTestOrganizationType();
+			const childType1 = await createTestOrganizationType();
+			const childType2 = await createTestOrganizationType();
 
 			await expect(
-				addOrgAllowedChild({ id: parent.id, childId: child1.id }),
+				addOrgAllowedChild({ id: parentType.id, childId: childType1.id }),
 			).resolves.not.toThrow();
 			await expect(
-				addOrgAllowedChild({ id: parent.id, childId: child2.id }),
+				addOrgAllowedChild({ id: parentType.id, childId: childType2.id }),
 			).resolves.not.toThrow();
 		});
 
@@ -333,7 +333,7 @@ describe("Type Hierarchy Validation", () => {
 				}),
 			).rejects.toThrow();
 		});
-		test("self-reference guard: triggers event:unique_to_program", async () => {
+		test("rejects setting an event as its own parent (self-reference guard)", async () => {
 			const setup = await createOrganizerTestSetup();
 			const actor = { id: setup.admin.id, type: "admin" as const };
 			const template = await createTestWorkflowTemplate();
