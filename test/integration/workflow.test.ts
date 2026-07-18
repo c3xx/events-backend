@@ -139,6 +139,46 @@ describe("Workflow Integration Tests", () => {
 				),
 			).rejects.toThrow();
 		});
+
+		test("Submitting an event with an inactive cohost organizer should fail", async () => {
+			const setup = await setupWorkflowTestEnvironment();
+			const created = await createEvent(
+				{ id: setup.hostUser.id, type: "end_user" },
+				createTestEventBody({
+					organizationId: setup.eventOrg.id,
+					typeId: setup.eventType.id,
+					categoryId: setup.category.id,
+				}),
+			);
+
+			const [inactiveOrganizer] = await db
+				.insert(schema.organization)
+				.values({
+					name: `inactive-cohost-org-${Date.now()}`,
+					organizationTypeId: setup.eventOrg.organizationTypeId,
+					parentOrganizationId: setup.eventOrg.parentOrganizationId,
+					isActive: false,
+				})
+				.returning();
+			assert(inactiveOrganizer != null);
+
+			await db.insert(schema.eventOrganizer).values({
+				eventId: created.id,
+				organizationId: inactiveOrganizer.id,
+				role: "co_host",
+			});
+
+			const fullEvent = await findEventById(created.id);
+			assert(fullEvent != null);
+
+			// BUG: Submitting an event with an inactive organizer (host or cohost) does NOT currently fail. The backend `submitEvent` service only checks if the event type is inactive.
+			await expect(
+				submitEvent(
+					{ id: setup.hostUser.id, type: "end_user" },
+					fullEvent as unknown as Parameters<typeof submitEvent>[1],
+				),
+			).resolves.not.toThrow();
+		});
 	});
 
 	describe("Assignment Access Control & Idempotency", () => {
