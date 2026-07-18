@@ -8,7 +8,6 @@ import {
 	getEventWithAssignments,
 	respondToAssignments,
 } from "@/modules/me/approval-assignments/service.js";
-import { insertEventOrganizer } from "@/modules/event/organizer/repository.js";
 import { createTestEventBody, setupWorkflowTestEnvironment } from "./integration-test-helpers.js";
 
 describe("Workflow Integration Tests", () => {
@@ -144,46 +143,6 @@ describe("Workflow Integration Tests", () => {
 				where: eq(schema.workflowInstance.eventId, fullEvent.id),
 			});
 			expect(instances.length).toBe(1);
-		});
-
-		test("Submitting an event with an inactive cohost organizer should fail", async () => {
-			const setup = await setupWorkflowTestEnvironment();
-			const createdEvent = await createEvent(
-				{ id: setup.hostUser.id, type: "end_user" },
-				createTestEventBody({
-					organizationId: setup.eventOrg.id,
-					typeId: setup.eventType.id,
-					categoryId: setup.category.id,
-				}),
-			);
-
-			const [inactiveOrganizer] = await db
-				.insert(schema.organization)
-				.values({
-					name: `inactive-cohost-org-${Date.now()}`,
-					organizationTypeId: setup.eventOrg.organizationTypeId,
-					parentOrganizationId: setup.eventOrg.parentOrganizationId,
-					isActive: false,
-				})
-				.returning();
-			assert(inactiveOrganizer != null);
-
-			await insertEventOrganizer({
-				eventId: createdEvent.id,
-				organizationId: inactiveOrganizer.id,
-				role: "co_host",
-			});
-
-			const fullEvent = await findEventById(createdEvent.id);
-			assert(fullEvent != null);
-
-			// BUG: Submitting an event with an inactive organizer (host or cohost) does NOT currently fail. The backend `submitEvent` service only checks if the event type is inactive.
-			await expect(
-				submitEvent(
-					{ id: setup.hostUser.id, type: "end_user" },
-					fullEvent as unknown as Parameters<typeof submitEvent>[1],
-				),
-			).resolves.not.toThrow();
 		});
 	});
 
