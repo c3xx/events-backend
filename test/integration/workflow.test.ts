@@ -14,7 +14,7 @@ describe("Workflow Integration Tests", () => {
 	describe("Instance Creation (on submission)", () => {
 		test("successfully creates a workflow_instance from event submission", async () => {
 			const setup = await setupWorkflowTestEnvironment();
-			const created = await createEvent(
+			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: setup.eventOrg.id,
@@ -23,7 +23,7 @@ describe("Workflow Integration Tests", () => {
 				}),
 			);
 
-			const fullEvent = await findEventById(created.id);
+			const fullEvent = await findEventById(createdEvent.id);
 			assert(fullEvent != null);
 
 			await expect(
@@ -46,7 +46,7 @@ describe("Workflow Integration Tests", () => {
 
 		test("correctly sets submittedBy to the submitting user and points initialStepId", async () => {
 			const setup = await setupWorkflowTestEnvironment();
-			const created = await createEvent(
+			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: setup.eventOrg.id,
@@ -54,7 +54,7 @@ describe("Workflow Integration Tests", () => {
 					categoryId: setup.category.id,
 				}),
 			);
-			const fullEvent = await findEventById(created.id);
+			const fullEvent = await findEventById(createdEvent.id);
 			assert(fullEvent != null);
 
 			await submitEvent(
@@ -72,7 +72,7 @@ describe("Workflow Integration Tests", () => {
 
 		test("allows creating a new active instance for an event after the prior instance is completed", async () => {
 			const setup = await setupWorkflowTestEnvironment();
-			const created = await createEvent(
+			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: setup.eventOrg.id,
@@ -80,7 +80,7 @@ describe("Workflow Integration Tests", () => {
 					categoryId: setup.category.id,
 				}),
 			);
-			const fullEvent = await findEventById(created.id);
+			const fullEvent = await findEventById(createdEvent.id);
 			assert(fullEvent != null);
 
 			await submitEvent(
@@ -116,7 +116,7 @@ describe("Workflow Integration Tests", () => {
 
 		test("rejects creating a second active workflow_instance for the same event", async () => {
 			const setup = await setupWorkflowTestEnvironment();
-			const created = await createEvent(
+			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: setup.eventOrg.id,
@@ -125,7 +125,7 @@ describe("Workflow Integration Tests", () => {
 				}),
 			);
 
-			const fullEvent = await findEventById(created.id);
+			const fullEvent = await findEventById(createdEvent.id);
 			assert(fullEvent != null);
 			await submitEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
@@ -147,7 +147,7 @@ describe("Workflow Integration Tests", () => {
 
 		test("Submitting an event with an inactive cohost organizer should fail", async () => {
 			const setup = await setupWorkflowTestEnvironment();
-			const created = await createEvent(
+			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: setup.eventOrg.id,
@@ -168,12 +168,12 @@ describe("Workflow Integration Tests", () => {
 			assert(inactiveOrganizer != null);
 
 			await db.insert(schema.eventOrganizer).values({
-				eventId: created.id,
+				eventId: createdEvent.id,
 				organizationId: inactiveOrganizer.id,
 				role: "co_host",
 			});
 
-			const fullEvent = await findEventById(created.id);
+			const fullEvent = await findEventById(createdEvent.id);
 			assert(fullEvent != null);
 
 			// BUG: Submitting an event with an inactive organizer (host or cohost) does NOT currently fail. The backend `submitEvent` service only checks if the event type is inactive.
@@ -189,7 +189,7 @@ describe("Workflow Integration Tests", () => {
 	describe("Assignment Access Control & Idempotency", () => {
 		test("rejects unauthorized users from responding to assignments and limits visibility", async () => {
 			const setup = await setupWorkflowTestEnvironment();
-			const created = await createEvent(
+			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: setup.eventOrg.id,
@@ -197,7 +197,7 @@ describe("Workflow Integration Tests", () => {
 					categoryId: setup.category.id,
 				}),
 			);
-			const fullEvent = await findEventById(created.id);
+			const fullEvent = await findEventById(createdEvent.id);
 			assert(fullEvent != null);
 			await submitEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
@@ -207,20 +207,20 @@ describe("Workflow Integration Tests", () => {
 			// BUG: The backend prematurely leaks future unactivated assignments to end-users on fetch.
 			const faculty1View = await getEventWithAssignments(
 				{ id: setup.faculty1.id, type: "end_user" },
-				created.id,
+				createdEvent.id,
 			);
 			expect(faculty1View.assignments.length).toBeGreaterThan(0);
 
 			const coord1View = await getEventWithAssignments(
 				{ id: setup.coord1.id, type: "end_user" },
-				created.id,
+				createdEvent.id,
 			);
 			expect(coord1View.assignments.length).toBe(1);
 			if (!coord1View.assignments[0]) throw new Error("Assignment expected");
 			const assignmentId = coord1View.assignments[0].id;
 
 			await expect(
-				respondToAssignments({ id: setup.faculty1.id, type: "end_user" }, created.id, {
+				respondToAssignments({ id: setup.faculty1.id, type: "end_user" }, createdEvent.id, {
 					assignmentIds: [assignmentId],
 					decision: "approved",
 					remarks: "Hack",
@@ -228,7 +228,7 @@ describe("Workflow Integration Tests", () => {
 			).rejects.toThrow();
 
 			await expect(
-				respondToAssignments({ id: setup.coord2.id, type: "end_user" }, created.id, {
+				respondToAssignments({ id: setup.coord2.id, type: "end_user" }, createdEvent.id, {
 					assignmentIds: [assignmentId],
 					decision: "approved",
 					remarks: "Hijack",
@@ -238,7 +238,7 @@ describe("Workflow Integration Tests", () => {
 
 		test("rejects double-responding and responding to moot assignments", async () => {
 			const setup = await setupWorkflowTestEnvironment();
-			const created = await createEvent(
+			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: setup.eventOrg.id,
@@ -246,7 +246,7 @@ describe("Workflow Integration Tests", () => {
 					categoryId: setup.category.id,
 				}),
 			);
-			const fullEvent = await findEventById(created.id);
+			const fullEvent = await findEventById(createdEvent.id);
 			assert(fullEvent != null);
 			await submitEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
@@ -255,23 +255,23 @@ describe("Workflow Integration Tests", () => {
 
 			const coord1View = await getEventWithAssignments(
 				{ id: setup.coord1.id, type: "end_user" },
-				created.id,
+				createdEvent.id,
 			);
 			const coord2View = await getEventWithAssignments(
 				{ id: setup.coord2.id, type: "end_user" },
-				created.id,
+				createdEvent.id,
 			);
 			if (!coord1View.assignments[0] || !coord2View.assignments[0])
 				throw new Error("Assignment expected");
 
-			await respondToAssignments({ id: setup.coord1.id, type: "end_user" }, created.id, {
+			await respondToAssignments({ id: setup.coord1.id, type: "end_user" }, createdEvent.id, {
 				assignmentIds: [coord1View.assignments[0].id],
 				decision: "approved",
 				remarks: "Approved initially",
 			});
 
 			await expect(
-				respondToAssignments({ id: setup.coord1.id, type: "end_user" }, created.id, {
+				respondToAssignments({ id: setup.coord1.id, type: "end_user" }, createdEvent.id, {
 					assignmentIds: [coord1View.assignments[0].id],
 					decision: "approved",
 					remarks: "Double tap",
@@ -279,7 +279,7 @@ describe("Workflow Integration Tests", () => {
 			).rejects.toThrow();
 
 			await expect(
-				respondToAssignments({ id: setup.coord2.id, type: "end_user" }, created.id, {
+				respondToAssignments({ id: setup.coord2.id, type: "end_user" }, createdEvent.id, {
 					assignmentIds: [coord2View.assignments[0].id],
 					decision: "approved",
 					remarks: "Too late",
@@ -291,7 +291,7 @@ describe("Workflow Integration Tests", () => {
 	describe("Rejection / Failure Path", () => {
 		test("rejects the entire workflow and flips event to draft if any assignment is denied", async () => {
 			const setup = await setupWorkflowTestEnvironment();
-			const created = await createEvent(
+			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: setup.eventOrg.id,
@@ -299,7 +299,7 @@ describe("Workflow Integration Tests", () => {
 					categoryId: setup.category.id,
 				}),
 			);
-			const fullEvent = await findEventById(created.id);
+			const fullEvent = await findEventById(createdEvent.id);
 			assert(fullEvent != null);
 			await submitEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
@@ -308,13 +308,13 @@ describe("Workflow Integration Tests", () => {
 
 			const coord1View = await getEventWithAssignments(
 				{ id: setup.coord1.id, type: "end_user" },
-				created.id,
+				createdEvent.id,
 			);
 			expect(coord1View.assignments.length).toBe(1);
 			const assignment = coord1View.assignments[0];
 			if (!assignment) throw new Error("Assignment expected");
 
-			await respondToAssignments({ id: setup.coord1.id, type: "end_user" }, created.id, {
+			await respondToAssignments({ id: setup.coord1.id, type: "end_user" }, createdEvent.id, {
 				assignmentIds: [assignment.id],
 				decision: "denied",
 				remarks: "Insufficient details",
@@ -334,7 +334,7 @@ describe("Workflow Integration Tests", () => {
 
 		test("denial partway through a multi-step chain instantly drops instance and event", async () => {
 			const setup = await setupWorkflowTestEnvironment();
-			const created = await createEvent(
+			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: setup.eventOrg.id,
@@ -342,7 +342,7 @@ describe("Workflow Integration Tests", () => {
 					categoryId: setup.category.id,
 				}),
 			);
-			const fullEvent = await findEventById(created.id);
+			const fullEvent = await findEventById(createdEvent.id);
 			assert(fullEvent != null);
 			await submitEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
@@ -351,20 +351,20 @@ describe("Workflow Integration Tests", () => {
 
 			const coord1View = await getEventWithAssignments(
 				{ id: setup.coord1.id, type: "end_user" },
-				created.id,
+				createdEvent.id,
 			);
 			if (!coord1View.assignments[0]) throw new Error("Assignment expected");
-			await respondToAssignments({ id: setup.coord1.id, type: "end_user" }, created.id, {
+			await respondToAssignments({ id: setup.coord1.id, type: "end_user" }, createdEvent.id, {
 				assignmentIds: [coord1View.assignments[0].id],
 				decision: "approved",
 			});
 
 			const faculty1View = await getEventWithAssignments(
 				{ id: setup.faculty1.id, type: "end_user" },
-				created.id,
+				createdEvent.id,
 			);
 			if (!faculty1View.assignments[0]) throw new Error("Assignment expected");
-			await respondToAssignments({ id: setup.faculty1.id, type: "end_user" }, created.id, {
+			await respondToAssignments({ id: setup.faculty1.id, type: "end_user" }, createdEvent.id, {
 				assignmentIds: [faculty1View.assignments[0].id],
 				decision: "denied",
 				remarks: "Blocked partway through",
@@ -382,7 +382,7 @@ describe("Workflow Integration Tests", () => {
 
 		test("allows resubmission and fresh instance generation after a denial", async () => {
 			const setup = await setupWorkflowTestEnvironment();
-			const created = await createEvent(
+			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: setup.eventOrg.id,
@@ -390,7 +390,7 @@ describe("Workflow Integration Tests", () => {
 					categoryId: setup.category.id,
 				}),
 			);
-			const fullEvent = await findEventById(created.id);
+			const fullEvent = await findEventById(createdEvent.id);
 			assert(fullEvent != null);
 			await submitEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
@@ -399,10 +399,10 @@ describe("Workflow Integration Tests", () => {
 
 			const coord1View = await getEventWithAssignments(
 				{ id: setup.coord1.id, type: "end_user" },
-				created.id,
+				createdEvent.id,
 			);
 			if (!coord1View.assignments[0]) throw new Error("Assignment expected");
-			await respondToAssignments({ id: setup.coord1.id, type: "end_user" }, created.id, {
+			await respondToAssignments({ id: setup.coord1.id, type: "end_user" }, createdEvent.id, {
 				assignmentIds: [coord1View.assignments[0].id],
 				decision: "denied",
 				remarks: "Denied structurally",
@@ -430,7 +430,7 @@ describe("Workflow Integration Tests", () => {
 	describe("Step Progression & Target Group Criteria", () => {
 		test("progresses step-by-step applying ANY and ALL criteria sequentially", async () => {
 			const setup = await setupWorkflowTestEnvironment();
-			const created = await createEvent(
+			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: setup.eventOrg.id,
@@ -438,7 +438,7 @@ describe("Workflow Integration Tests", () => {
 					categoryId: setup.category.id,
 				}),
 			);
-			const fullEvent = await findEventById(created.id);
+			const fullEvent = await findEventById(createdEvent.id);
 			assert(fullEvent != null);
 			await submitEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
@@ -447,12 +447,12 @@ describe("Workflow Integration Tests", () => {
 
 			const coord1View = await getEventWithAssignments(
 				{ id: setup.coord1.id, type: "end_user" },
-				created.id,
+				createdEvent.id,
 			);
 			expect(coord1View.assignments.length).toBe(1);
 
 			if (!coord1View.assignments[0]) throw new Error("Assignment expected");
-			await respondToAssignments({ id: setup.coord1.id, type: "end_user" }, created.id, {
+			await respondToAssignments({ id: setup.coord1.id, type: "end_user" }, createdEvent.id, {
 				assignmentIds: [coord1View.assignments[0].id],
 				decision: "approved",
 				remarks: "Looks good",
@@ -466,12 +466,12 @@ describe("Workflow Integration Tests", () => {
 
 			const faculty1View = await getEventWithAssignments(
 				{ id: setup.faculty1.id, type: "end_user" },
-				created.id,
+				createdEvent.id,
 			);
 			expect(faculty1View.assignments.length).toBe(1);
 			const faculty2View = await getEventWithAssignments(
 				{ id: setup.faculty2.id, type: "end_user" },
-				created.id,
+				createdEvent.id,
 			);
 			expect(faculty2View.assignments.length).toBe(1);
 
@@ -483,7 +483,7 @@ describe("Workflow Integration Tests", () => {
 			expect(instanceCheck2.steps.find((s) => s.name === "Step1 ANY")?.completedAt).not.toBeNull();
 
 			if (!faculty1View.assignments[0]) throw new Error("Assignment expected");
-			await respondToAssignments({ id: setup.faculty1.id, type: "end_user" }, created.id, {
+			await respondToAssignments({ id: setup.faculty1.id, type: "end_user" }, createdEvent.id, {
 				assignmentIds: [faculty1View.assignments[0].id],
 				decision: "approved",
 				remarks: "Approved by F1",
@@ -491,7 +491,7 @@ describe("Workflow Integration Tests", () => {
 
 			const faculty1Check = await getEventWithAssignments(
 				{ id: setup.faculty1.id, type: "end_user" },
-				created.id,
+				createdEvent.id,
 			);
 			expect(
 				faculty1Check.assignments.find((a) => a.id === faculty1View.assignments[0]?.id)?.remarks,
@@ -504,7 +504,7 @@ describe("Workflow Integration Tests", () => {
 			expect(dbInstanceCheck2.status).toBe("active");
 
 			if (!faculty2View.assignments[0]) throw new Error("Assignment expected");
-			await respondToAssignments({ id: setup.faculty2.id, type: "end_user" }, created.id, {
+			await respondToAssignments({ id: setup.faculty2.id, type: "end_user" }, createdEvent.id, {
 				assignmentIds: [faculty2View.assignments[0].id],
 				decision: "approved",
 				remarks: "Approved by F2",
