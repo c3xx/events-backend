@@ -8,6 +8,7 @@ import {
 	getEventWithAssignments,
 	respondToAssignments,
 } from "@/modules/me/approval-assignments/service.js";
+import { insertEventOrganizer } from "@/modules/event/organizer/repository.js";
 import { createTestEventBody, setupWorkflowTestEnvironment } from "./integration-test-helpers.js";
 
 describe("Workflow Integration Tests", () => {
@@ -167,7 +168,7 @@ describe("Workflow Integration Tests", () => {
 				.returning();
 			assert(inactiveOrganizer != null);
 
-			await db.insert(schema.eventOrganizer).values({
+			await insertEventOrganizer({
 				eventId: createdEvent.id,
 				organizationId: inactiveOrganizer.id,
 				role: "co_host",
