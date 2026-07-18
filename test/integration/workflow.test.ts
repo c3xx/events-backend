@@ -138,6 +138,11 @@ describe("Workflow Integration Tests", () => {
 					fullEvent as unknown as Parameters<typeof submitEvent>[1],
 				),
 			).rejects.toThrow();
+
+			const instances = await db.query.workflowInstance.findMany({
+				where: eq(schema.workflowInstance.eventId, fullEvent.id),
+			});
+			expect(instances.length).toBe(1);
 		});
 
 		test("Submitting an event with an inactive cohost organizer should fail", async () => {
