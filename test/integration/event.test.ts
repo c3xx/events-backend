@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import { assert, describe, expect, test } from "vitest";
 import { db, schema } from "@/db/index.js";
 import { orderWorkflowSteps } from "@/lib/helpers.js";
+import { insertEventOrganizer } from "@/modules/event/organizer/repository.js";
 import { findEventById } from "@/modules/event/repository.js";
 import { createEventSchema } from "@/modules/event/schema.js";
 import { createEvent, getEvent, submitEvent, updateEvent } from "@/modules/event/service.js";
@@ -661,6 +662,46 @@ describe("Workflow Instance Management", () => {
 
 		expect(fulfilled).toHaveLength(1);
 		expect(rejected).toHaveLength(1);
+	});
+
+	test("Submitting an event with an inactive cohost organizer should fail", async () => {
+		const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+		const createdEvent = await createEvent(
+			{ id: admin.id, type: "admin" },
+			createTestEventBody({
+				organizationId: hostOrg.id,
+				typeId: eventType.id,
+				categoryId: category.id,
+			}),
+		);
+
+		const [inactiveOrganizer] = await db
+			.insert(schema.organization)
+			.values({
+				name: `inactive-cohost-org-${Date.now()}`,
+				organizationTypeId: hostOrg.organizationTypeId,
+				parentOrganizationId: hostOrg.parentOrganizationId,
+				isActive: false,
+			})
+			.returning();
+		assert(inactiveOrganizer != null);
+
+		await insertEventOrganizer({
+			eventId: createdEvent.id,
+			organizationId: inactiveOrganizer.id,
+			role: "co_host",
+		});
+
+		const fullEvent = await findEventById(createdEvent.id);
+		assert(fullEvent != null);
+
+		// BUG: Submitting an event with an inactive organizer (host or cohost) does NOT currently fail. The backend `submitEvent` service only checks if the event type is inactive.
+		await expect(
+			submitEvent(
+				{ id: admin.id, type: "admin" },
+				fullEvent as unknown as Parameters<typeof submitEvent>[1],
+			),
+		).resolves.not.toThrow();
 	});
 });
 describe("Workflow Approval Execution", () => {
