@@ -320,13 +320,13 @@ describe("Workflow Integration Tests", () => {
 				remarks: "Insufficient details",
 			});
 
-			const dbInstance = await db.query.workflowInstance.findFirst({
+			const wfInstance = await db.query.workflowInstance.findFirst({
 				where: eq(schema.workflowInstance.eventId, fullEvent.id),
 			});
-			assert(dbInstance != null);
+			assert(wfInstance != null);
 
-			expect(dbInstance.status).toBe("denied");
-			expect(dbInstance.completedAt).not.toBeNull();
+			expect(wfInstance.status).toBe("denied");
+			expect(wfInstance.completedAt).not.toBeNull();
 
 			const dbEvent = await db.query.event.findFirst({ where: eq(schema.event.id, fullEvent.id) });
 			expect(dbEvent?.status).toBe("draft");
@@ -397,6 +397,11 @@ describe("Workflow Integration Tests", () => {
 				fullEvent as unknown as Parameters<typeof submitEvent>[1],
 			);
 
+			const initialInstance = await db.query.workflowInstance.findFirst({
+				where: eq(schema.workflowInstance.eventId, fullEvent.id),
+			});
+			assert(initialInstance != null);
+
 			const coord1View = await getEventWithAssignments(
 				{ id: setup.coord1.id, type: "end_user" },
 				createdEvent.id,
@@ -424,6 +429,7 @@ describe("Workflow Integration Tests", () => {
 			expect(newInstances.length).toBe(2);
 			const activeInstances = newInstances.filter((i) => i.status === "active");
 			expect(activeInstances.length).toBe(1);
+			expect(activeInstances[0]?.id).not.toBe(initialInstance.id);
 		});
 	});
 
