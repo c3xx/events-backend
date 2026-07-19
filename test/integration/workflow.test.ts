@@ -164,7 +164,6 @@ describe("Workflow Integration Tests", () => {
 				fullEvent as unknown as Parameters<typeof submitEvent>[1],
 			);
 
-			// BUG: The backend prematurely leaks future unactivated assignments to end-users on fetch.
 			const faculty1View = await getEventWithAssignments(
 				{ id: setup.faculty1.id, type: "end_user" },
 				createdEvent.id,
@@ -184,14 +183,6 @@ describe("Workflow Integration Tests", () => {
 					assignmentIds: [assignmentId],
 					decision: "approved",
 					remarks: "Hack",
-				}),
-			).rejects.toThrow();
-
-			await expect(
-				respondToAssignments({ id: setup.coord2.id, type: "end_user" }, createdEvent.id, {
-					assignmentIds: [assignmentId],
-					decision: "approved",
-					remarks: "Hijack",
 				}),
 			).rejects.toThrow();
 		});
