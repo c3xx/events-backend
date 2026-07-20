@@ -2,8 +2,8 @@ import { type HasDefault, isNull, type NotNull, relations, sql } from "drizzle-o
 import {
 	type AnyPgColumn,
 	bigint,
-	boolean,
-	integer,
+	boolean, inet,
+	integer, jsonb,
 	pgEnum,
 	pgTable,
 	primaryKey,
@@ -11,9 +11,10 @@ import {
 	text,
 	timestamp,
 	unique,
-	uniqueIndex,
+	uniqueIndex, varchar,
 } from "drizzle-orm/pg-core";
 import {
+	AUDIT_ACTION_TYPE_ENUM,
 	EVENT_ORGANIZER_INVITATION_ROLES,
 	EVENT_ORGANIZER_INVITATION_STATUS,
 	EVENT_ORGANIZER_ROLES,
@@ -71,7 +72,27 @@ export const workflowTargetGroupApprovalCriteriaEnum = pgEnum(
 	WORKFLOW_TARGET_GROUP_APPROVAL_CRITERIA,
 );
 
+export const auditActionEnum = pgEnum(
+	"auditActionEnum",
+	AUDIT_ACTION_TYPE_ENUM,
+);
+
 // === Tables
+export const auditLog = pgTable("audit_log", {
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+	tableName: varchar().notNull(),
+	recordId: bigint({mode: "number"}).notNull(),
+	actionType: auditActionEnum().notNull(),
+	actorId: bigint({ mode: "number" }),
+	actorRole: varchar(),
+	oldValues: jsonb(),
+	newValues: jsonb(),
+	requestId: bigint({mode: "number"}).notNull(),
+	ipAddress: inet(),
+	userAgent: text(),
+	...fields("common"),
+});
+
 export const managedEntity = pgTable(
 	"managed_entity",
 	{
