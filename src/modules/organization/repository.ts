@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
@@ -65,4 +65,21 @@ export const findOrganizationManagedEntity = dbAction(async (organizationId: num
 		.limit(1);
 
 	return relatedManagedEntity;
+});
+
+export const getOrganizationsByIds = dbAction(async (organizationIds: number[]) => {
+	return await db.query.organization.findMany({
+		where: and(
+			inArray(schema.organization.id, organizationIds),
+			isNull(schema.organization.deletedAt),
+		),
+		columns: {
+			id: true,
+			name: true,
+			organizationTypeId: true,
+			parentOrganizationId: true,
+			isActive: true,
+			createdAt: true,
+		},
+	});
 });

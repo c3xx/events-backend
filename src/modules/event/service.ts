@@ -126,6 +126,20 @@ export async function submitEvent(user: AuthenticatedUser, event: EventScope["ev
 	if (!host) {
 		throw new NotFoundError("Host organizer not found");
 	}
+
+	const organizerOrganizationIds = event.organizers.map((organizer) => organizer.organization.id);
+
+	const organizerOrganization =
+		await organizationRepository.getOrganizationsByIds(organizerOrganizationIds);
+
+	const inactiveOrganizerOrganizations = organizerOrganization.filter((org) => !org.isActive);
+
+	if (inactiveOrganizerOrganizations.length > 0) {
+		throw new ConflictError(
+			`Inactive organizations: ${inactiveOrganizerOrganizations.map((org) => org.name).join(", ")}`,
+		);
+	}
+
 	// Only host organization can submit event
 	const hasPermission = await permissionRepository.hasPermissionInManagedEntity(
 		user,
@@ -145,6 +159,10 @@ export async function submitEvent(user: AuthenticatedUser, event: EventScope["ev
 	const eventType = await eventTypeRepository.getEventType(event.type.id);
 	if (!eventType) {
 		throw new NotFoundError("Event type not found");
+	}
+
+	if (!eventType.isActive) {
+		throw new ForbiddenError("Event typee is not active");
 	}
 
 	const template = await workflowTemplateRepository.findByIdWithRoles(
