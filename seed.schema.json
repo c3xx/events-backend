@@ -1,0 +1,139 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"organization_types": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"allowed_parents": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					}
+				},
+				"required": ["name"]
+			}
+		},
+		"organizations": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"type": {
+						"type": "string"
+					},
+					"parent": {
+						"type": "string"
+					}
+				},
+				"required": ["name", "type"],
+				"additionalProperties": false
+			}
+		},
+		"venue_types": {
+			"type": "array",
+			"items": {
+				"type": "string"
+			}
+		},
+		"facilities": {
+			"type": "array",
+			"items": {
+				"type": "string"
+			}
+		},
+		"venues": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"type": {
+						"type": "string"
+					},
+					"organization": {
+						"type": "string"
+					},
+					"is_available": {
+						"type": "boolean"
+					},
+					"unavailability_reason": {
+						"type": "string"
+					},
+					"max_capacity": {
+						"type": "integer"
+					},
+					"facilities": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					}
+				},
+				"required": ["name", "type", "is_available", "max_capacity"],
+				"additionalProperties": false
+			}
+		},
+		"roles": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"managed_entity_type": {
+						"type": "string",
+						"enum": ["organization", "venue"]
+					},
+					"type_ref": {
+						"type": "string"
+					},
+					"permissions": {
+						"type": "array",
+						"items": {
+							"type": "string",
+							"enum": [
+								"organization:create",
+								"organization:add_member",
+								"venue:create",
+								"venue:add_member",
+								"venue:modify_facilities",
+								"facility:create",
+								"organization_type:create",
+								"organization_type:modify_hierarchy",
+								"organization_type:create_role",
+								"role:modify_permissions",
+								"user:create",
+								"venue_type:create",
+								"venue_type:create_role",
+								"event_type:create",
+								"event_type:modify_hierarchy",
+								"event_type:delete",
+								"event_category:create",
+								"event:manage",
+								"event:view_own",
+								"event_organizer_invitation:respond"
+							]
+						}
+					}
+				},
+				"required": ["name", "managed_entity_type", "type_ref", "permissions"],
+				"additionalProperties": false
+			}
+		}
+	},
+	"required": ["organization_types", "organizations"],
+	"additionalProperties": false
+}
