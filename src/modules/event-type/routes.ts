@@ -9,6 +9,7 @@ router.get("/", controller.getEventTypes);
 router.post("/", requireUserType("admin"), controller.createEventType);
 
 router.get("/:id", controller.getEventType);
+router.patch("/:id", requireUserType("admin"), controller.updateEventType);
 router.delete("/:id", requireUserType("admin"), controller.deleteEventType);
 
 router.use("/:id/children", childrenRouter);

@@ -22,3 +22,20 @@ export const organizationScopedSchema = z
 
 export type CreateOrganizationSchema = z.output<typeof createOrganizationSchema>;
 export type OrganizationScopedSchema = z.output<typeof organizationScopedSchema>;
+
+export const updateOrganizationSchema = z
+	.object({
+		name: z
+			.string({ error: "Invalid name value" })
+			.trim()
+			.nonempty({ error: "Name cannot be empty" })
+			.max(256, { error: "Name cannot exceed 256 characters" })
+			.optional(),
+		isActive: z.boolean({ error: "isActive must be a boolean" }).optional(),
+	})
+	.strict()
+	.refine((data) => data.name !== undefined || data.isActive !== undefined, {
+		error: "At least one field must be provided",
+	});
+
+export type UpdateOrganizationSchema = z.output<typeof updateOrganizationSchema>;

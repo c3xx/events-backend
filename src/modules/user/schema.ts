@@ -15,3 +15,18 @@ export const createUserSchema = z
 	.strict();
 
 export type CreateUserSchema = z.output<typeof createUserSchema>;
+
+export const updateUserSchema = z
+	.object({
+		isActive: z.boolean({ error: "isActive must be a boolean" }),
+	})
+	.strict();
+
+export const userScopedSchema = z
+	.object({
+		userId: z.coerce.number({ error: "Invalid user ID" }).int({ error: "Invalid user ID" }),
+	})
+	.strict();
+
+export type UpdateUserSchema = z.output<typeof updateUserSchema>;
+export type UserScopedSchema = z.output<typeof userScopedSchema>;

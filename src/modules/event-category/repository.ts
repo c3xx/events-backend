@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
@@ -23,4 +23,29 @@ export const findMany = dbAction(async () => {
 		.from(schema.eventCategory)
 		.where(and(eq(schema.eventCategory.isActive, true), isNull(schema.eventCategory.deletedAt)))
 		.orderBy(asc(schema.eventCategory.name));
+});
+
+export const updateEventCategory = dbAction(
+	async (
+		id: number,
+		data: {
+			name?: string | undefined;
+			isActive?: boolean | undefined;
+		},
+	) => {
+		const [updated] = await db
+			.update(schema.eventCategory)
+			.set(data)
+			.where(and(eq(schema.eventCategory.id, id), isNull(schema.eventCategory.deletedAt)))
+			.returning({ id: schema.eventCategory.id });
+		return updated;
+	},
+);
+
+export const deleteEventCategory = dbAction(async (id: number) => {
+	const result = await db
+		.update(schema.eventCategory)
+		.set({ deletedAt: sql`NOW()` })
+		.where(and(eq(schema.eventCategory.id, id), isNull(schema.eventCategory.deletedAt)));
+	return result;
 });

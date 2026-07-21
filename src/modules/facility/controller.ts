@@ -16,10 +16,19 @@ export const createFacility: ApiRequestHandler<{
 	id: number;
 }> = async (req, res) => {
 	const body = schemas.createFacilitySchema.parse(req.body);
-
-	const result = await service.createFacility({
-		name: body.name,
-	});
-
+	const result = await service.createFacility({ name: body.name });
 	return ok(res, result);
+};
+
+export const updateFacility: ApiRequestHandler<{ id: number }> = async (req, res) => {
+	const params = schemas.facilityScopedSchema.parse(req.params);
+	const body = schemas.updateFacilitySchema.parse(req.body);
+	const result = await service.renameFacility(params.id, body);
+	return ok(res, result);
+};
+
+export const deleteFacility: ApiRequestHandler<true> = async (req, res) => {
+	const params = schemas.facilityScopedSchema.parse(req.params);
+	await service.deleteFacility(params.id);
+	return ok(res, true);
 };

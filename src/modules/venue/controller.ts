@@ -43,3 +43,16 @@ export const getVenue: ApiRequestHandler<{
 	const result = await service.getVenue(params.id);
 	return ok(res, result);
 };
+
+export const updateVenue: ApiRequestHandler<{ id: number }> = async (req, res) => {
+	const params = schemas.venueScopedSchema.parse(req.params);
+	const body = schemas.updateVenueSchema.parse(req.body);
+	const result = await service.updateVenue(params.id, body);
+	return ok(res, result);
+};
+
+export const deleteVenue: ApiRequestHandler<true> = async (req, res) => {
+	const params = schemas.venueScopedSchema.parse(req.params);
+	await service.deleteVenue(params.id);
+	return ok(res, true);
+};

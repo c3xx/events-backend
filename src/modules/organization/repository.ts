@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
@@ -65,4 +65,23 @@ export const findOrganizationManagedEntity = dbAction(async (organizationId: num
 		.limit(1);
 
 	return relatedManagedEntity;
+});
+
+export const updateOrganization = dbAction(
+	async (id: number, data: { name?: string | undefined; isActive?: boolean | undefined }) => {
+		const [updated] = await db
+			.update(schema.organization)
+			.set(data)
+			.where(and(eq(schema.organization.id, id), isNull(schema.organization.deletedAt)))
+			.returning({ id: schema.organization.id });
+		return updated;
+	},
+);
+
+export const softDeleteOrganization = dbAction(async (id: number) => {
+	const result = await db
+		.update(schema.organization)
+		.set({ deletedAt: sql`NOW()` })
+		.where(and(eq(schema.organization.id, id), isNull(schema.organization.deletedAt)));
+	return result;
 });

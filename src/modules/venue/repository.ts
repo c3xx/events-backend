@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
@@ -80,4 +80,33 @@ export const findVenueManagedEntity = dbAction(async (venueId: number) => {
 		.limit(1);
 
 	return relatedManagedEntity;
+});
+
+export const updateVenue = dbAction(
+	async (
+		id: number,
+		data: {
+			name?: string | undefined;
+			maxCapacity?: number | undefined;
+			accessLevel?: VenueAccessLevel | undefined;
+			isAvailable?: boolean | undefined;
+			unavailabilityReason?: string | null | undefined;
+			isActive?: boolean | undefined;
+		},
+	) => {
+		const [updated] = await db
+			.update(schema.venue)
+			.set(data)
+			.where(and(eq(schema.venue.id, id), isNull(schema.venue.deletedAt)))
+			.returning({ id: schema.venue.id });
+		return updated;
+	},
+);
+
+export const softDeleteVenue = dbAction(async (id: number) => {
+	const result = await db
+		.update(schema.venue)
+		.set({ deletedAt: sql`NOW()` })
+		.where(and(eq(schema.venue.id, id), isNull(schema.venue.deletedAt)));
+	return result;
 });
