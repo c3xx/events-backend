@@ -38,6 +38,9 @@ export async function createEvent(user: AuthenticatedUser, input: schemas.Create
 	) {
 		throw new NotFoundError("Parent event not found");
 	}
+	if (Date.parse(input.startsAt) < Date.now() || Date.parse(input.endsAt) < Date.now()) {
+		throw new BadRequestError("Must not be able to create events in the past");
+	}
 
 	return await repository.createEvent({
 		organizationId: input.organizationId,
