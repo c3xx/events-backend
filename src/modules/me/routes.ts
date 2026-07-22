@@ -6,20 +6,12 @@ import invitationRouter from "./invitation/routes.js";
 
 const router: Router = Router();
 
-router.get(
-	"/",
-	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "me:read" }),
-	controller.userDetails,
-);
-router.patch(
-	"/",
-	rateLimiter({ maxRequests: 60, windowMs: 15 * 60 * 1000, prefix: "me:write" }),
-	controller.updateProfile,
-);
+router.get("/", rateLimiter(), controller.userDetails);
+router.patch("/", rateLimiter(), controller.updateProfile);
 
 router.get(
 	"/organizations/event-creatable",
-	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "me:read" }),
+	rateLimiter(),
 	controller.getEventCreatableOrganizations,
 );
 

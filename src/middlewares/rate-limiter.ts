@@ -63,14 +63,79 @@ async function attemptRateLimit(
 	};
 }
 
-export function rateLimiter(config: RateLimitTierConfig): RequestHandler {
-	const { maxRequests, windowMs, prefix } = config;
+export type MethodRateLimitOptions = {
+	read?: Partial<RateLimitTierConfig>;
+	write?: Partial<RateLimitTierConfig>;
+	adminWrite?: Partial<RateLimitTierConfig>;
+};
 
-	const middleware: RequestHandler = async (req, res, next) => {
-		const key = resolveKey(req, prefix);
+export type RateLimiterConfig = RateLimitTierConfig | MethodRateLimitOptions;
+
+function isExplicitConfig(config: RateLimiterConfig): config is RateLimitTierConfig {
+	return config != null && "prefix" in config;
+}
+
+export function rateLimiter(config?: RateLimiterConfig): RequestHandler {
+	if (config !== undefined && isExplicitConfig(config)) {
+		const { maxRequests, windowMs, prefix } = config;
+		return async (req, res, next) => {
+			const key = resolveKey(req, prefix);
+			try {
+				const { allowed, retryAfterSeconds } = await attemptRateLimit(key, maxRequests, windowMs);
+				if (!allowed) {
+					res.setHeader("Retry-After", retryAfterSeconds);
+					throw new RateLimitError(
+						`Too many requests. Please try again after ${retryAfterSeconds} seconds.`,
+						retryAfterSeconds,
+					);
+				}
+				next();
+			} catch (error) {
+				if (error instanceof RateLimitError) return next(error);
+				console.error("Rate limiter Redis failure:", error);
+				return next(error);
+			}
+		};
+	}
+
+	const methodOptions = config as MethodRateLimitOptions | undefined;
+
+	const readConfig: RateLimitTierConfig = {
+		maxRequests: methodOptions?.read?.maxRequests ?? 200,
+		windowMs: methodOptions?.read?.windowMs ?? 15 * 60 * 1000,
+		prefix: methodOptions?.read?.prefix ?? "api:read",
+	};
+
+	const writeConfig: RateLimitTierConfig = {
+		maxRequests: methodOptions?.write?.maxRequests ?? 60,
+		windowMs: methodOptions?.write?.windowMs ?? 15 * 60 * 1000,
+		prefix: methodOptions?.write?.prefix ?? "api:write",
+	};
+
+	const adminWriteConfig: RateLimitTierConfig = {
+		maxRequests: methodOptions?.adminWrite?.maxRequests ?? 30,
+		windowMs: methodOptions?.adminWrite?.windowMs ?? 15 * 60 * 1000,
+		prefix: methodOptions?.adminWrite?.prefix ?? "api:write:admin",
+	};
+
+	return async (req, res, next) => {
+		const method = req.method.toUpperCase();
+		const isRead = method === "GET" || method === "HEAD" || method === "OPTIONS";
+
+		const activeConfig = isRead
+			? readConfig
+			: req.user?.type === "admin"
+				? adminWriteConfig
+				: writeConfig;
+
+		const key = resolveKey(req, activeConfig.prefix);
 
 		try {
-			const { allowed, retryAfterSeconds } = await attemptRateLimit(key, maxRequests, windowMs);
+			const { allowed, retryAfterSeconds } = await attemptRateLimit(
+				key,
+				activeConfig.maxRequests,
+				activeConfig.windowMs,
+			);
 			if (!allowed) {
 				res.setHeader("Retry-After", retryAfterSeconds);
 				throw new RateLimitError(
@@ -78,17 +143,11 @@ export function rateLimiter(config: RateLimitTierConfig): RequestHandler {
 					retryAfterSeconds,
 				);
 			}
-
 			next();
 		} catch (error) {
-			if (error instanceof RateLimitError) {
-				return next(error);
-			}
-
+			if (error instanceof RateLimitError) return next(error);
 			console.error("Rate limiter Redis failure:", error);
 			return next(error);
 		}
 	};
-
-	return middleware;
 }

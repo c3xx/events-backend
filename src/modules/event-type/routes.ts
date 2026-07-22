@@ -6,29 +6,11 @@ import * as controller from "./controller.js";
 
 const router: Router = Router();
 
-router.get(
-	"/",
-	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "event_type:read" }),
-	controller.getEventTypes,
-);
-router.post(
-	"/",
-	rateLimiter({ maxRequests: 30, windowMs: 15 * 60 * 1000, prefix: "event_type:write" }),
-	requireUserType("admin"),
-	controller.createEventType,
-);
+router.get("/", rateLimiter(), controller.getEventTypes);
+router.post("/", rateLimiter(), requireUserType("admin"), controller.createEventType);
 
-router.get(
-	"/:id",
-	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "event_type:read" }),
-	controller.getEventType,
-);
-router.delete(
-	"/:id",
-	rateLimiter({ maxRequests: 30, windowMs: 15 * 60 * 1000, prefix: "event_type:write" }),
-	requireUserType("admin"),
-	controller.deleteEventType,
-);
+router.get("/:id", rateLimiter(), controller.getEventType);
+router.delete("/:id", rateLimiter(), requireUserType("admin"), controller.deleteEventType);
 
 router.use("/:id/children", childrenRouter);
 

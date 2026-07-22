@@ -4,15 +4,7 @@ import * as controller from "./controller.js";
 
 const router: Router = Router({ mergeParams: true });
 
-router.post(
-	"/",
-	rateLimiter({ maxRequests: 60, windowMs: 15 * 60 * 1000, prefix: "event_venue_allotment:write" }),
-	controller.createVenueAllotment,
-);
-router.delete(
-	"/:allotmentId",
-	rateLimiter({ maxRequests: 60, windowMs: 15 * 60 * 1000, prefix: "event_venue_allotment:write" }),
-	controller.deleteVenueAllotment,
-);
+router.post("/", rateLimiter(), controller.createVenueAllotment);
+router.delete("/:allotmentId", rateLimiter(), controller.deleteVenueAllotment);
 
 export default router;

@@ -7,23 +7,10 @@ import membersRouter from "./member/routes.js";
 
 const router: Router = Router();
 
-router.get(
-	"/",
-	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "venue:read" }),
-	controller.getVenues,
-);
-router.post(
-	"/",
-	rateLimiter({ maxRequests: 30, windowMs: 15 * 60 * 1000, prefix: "venue:write" }),
-	requireUserType("admin"),
-	controller.createVenue,
-);
+router.get("/", rateLimiter(), controller.getVenues);
+router.post("/", rateLimiter(), requireUserType("admin"), controller.createVenue);
 
-router.get(
-	"/:id",
-	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "venue:read" }),
-	controller.getVenue,
-);
+router.get("/:id", rateLimiter(), controller.getVenue);
 
 router.use("/:id/members", membersRouter);
 

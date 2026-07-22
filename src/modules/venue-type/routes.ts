@@ -6,23 +6,10 @@ import roleRouter from "./role/routes.js";
 
 const router: Router = Router();
 
-router.get(
-	"/",
-	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "venue_type:read" }),
-	controller.getVenueTypes,
-);
-router.post(
-	"/",
-	rateLimiter({ maxRequests: 30, windowMs: 15 * 60 * 1000, prefix: "venue_type:write" }),
-	requireUserType("admin"),
-	controller.createVenueType,
-);
+router.get("/", rateLimiter(), controller.getVenueTypes);
+router.post("/", rateLimiter(), requireUserType("admin"), controller.createVenueType);
 
-router.get(
-	"/:id",
-	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "venue_type:read" }),
-	controller.getVenueType,
-);
+router.get("/:id", rateLimiter(), controller.getVenueType);
 
 router.use("/:id/roles", roleRouter);
 

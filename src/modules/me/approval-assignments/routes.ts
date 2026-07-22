@@ -4,20 +4,8 @@ import * as controller from "./controller.js";
 
 const router: Router = Router();
 
-router.get(
-	"/events",
-	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "me_approval:read" }),
-	controller.getPendingApprovalEvents,
-);
-router.get(
-	"/events/:eventId",
-	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "me_approval:read" }),
-	controller.getEventAssignments,
-);
-router.patch(
-	"/events/:eventId",
-	rateLimiter({ maxRequests: 60, windowMs: 15 * 60 * 1000, prefix: "me_approval:write" }),
-	controller.respondToAssignments,
-);
+router.get("/events", rateLimiter(), controller.getPendingApprovalEvents);
+router.get("/events/:eventId", rateLimiter(), controller.getEventAssignments);
+router.patch("/events/:eventId", rateLimiter(), controller.respondToAssignments);
 
 export default router;

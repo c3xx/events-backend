@@ -4,16 +4,7 @@ import * as controller from "./controller.js";
 
 const router: Router = Router();
 
-router.get(
-	"/",
-	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "user:read" }),
-	controller.getUsers,
-);
-router.post(
-	"/",
-	rateLimiter({ maxRequests: 30, windowMs: 15 * 60 * 1000, prefix: "user:write" }),
-	requireUserType("admin"),
-	controller.createUser,
-);
+router.get("/", rateLimiter(), controller.getUsers);
+router.post("/", rateLimiter(), requireUserType("admin"), controller.createUser);
 
 export default router;

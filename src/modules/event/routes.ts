@@ -9,51 +9,19 @@ import workflowInstanceRouter from "./workflow-instance/routes.js";
 
 const router: Router = Router();
 
-router.get(
-	"/parentable",
-	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "event:read" }),
-	controller.getParentableEvents,
-);
+router.get("/parentable", rateLimiter(), controller.getParentableEvents);
 
-router.get(
-	"/",
-	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "event:read" }),
-	controller.getEvents,
-);
-router.post(
-	"/",
-	rateLimiter({ maxRequests: 60, windowMs: 15 * 60 * 1000, prefix: "event:write" }),
-	controller.createEvent,
-);
+router.get("/", rateLimiter(), controller.getEvents);
+router.post("/", rateLimiter(), controller.createEvent);
 
 router.param("eventId", eventIdParamHandler);
 
-router.get(
-	"/:eventId",
-	rateLimiter({ maxRequests: 200, windowMs: 15 * 60 * 1000, prefix: "event:read" }),
-	controller.getEvent,
-);
-router.patch(
-	"/:eventId",
-	rateLimiter({ maxRequests: 60, windowMs: 15 * 60 * 1000, prefix: "event:write" }),
-	controller.updateEvent,
-);
-router.post(
-	"/:eventId/submit",
-	rateLimiter({ maxRequests: 60, windowMs: 15 * 60 * 1000, prefix: "event:write" }),
-	controller.submitEvent,
-);
+router.get("/:eventId", rateLimiter(), controller.getEvent);
+router.patch("/:eventId", rateLimiter(), controller.updateEvent);
+router.post("/:eventId/submit", rateLimiter(), controller.submitEvent);
 
-router.delete(
-	"/:eventId",
-	rateLimiter({ maxRequests: 60, windowMs: 15 * 60 * 1000, prefix: "event:write" }),
-	controller.discardEvent,
-);
-router.post(
-	"/:eventId/cancel",
-	rateLimiter({ maxRequests: 60, windowMs: 15 * 60 * 1000, prefix: "event:write" }),
-	controller.cancelEvent,
-);
+router.delete("/:eventId", rateLimiter(), controller.discardEvent);
+router.post("/:eventId/cancel", rateLimiter(), controller.cancelEvent);
 
 // todo: adjust the following router to utilize the eventId scope handler
 router.use("/:eventId/venue-allotments", venueAllotmentRouter);
