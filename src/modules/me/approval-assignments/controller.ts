@@ -36,88 +36,81 @@ export const getPendingApprovalEvents: ApiRequestHandler<
 	return ok(res, result);
 };
 
-export const getEventAssignments: ApiRequestHandler<
-	{
+export const getEventAssignments: ApiRequestHandler<{
+	id: number;
+	title: string;
+	createdAt: string;
+	expectedParticipants: number;
+	requestDetails: string;
+	status: EventStatus;
+	parentEventId: number | null;
+	startsAt: string;
+	endsAt: string;
+	type: {
+		id: number;
+		name: string;
+		collaborationPolicy: EventTypeCollaborationPolicy;
+		venuePolicy: EventTypeVenuePolicy;
+	};
+	category: {
+		id: number;
+		name: string;
+	};
+	parentEvent: {
 		id: number;
 		title: string;
-		createdAt: string;
-		expectedParticipants: number;
-		requestDetails: string;
-		status: EventStatus;
-		parentEventId: number | null;
+	} | null;
+	venueAllotments: {
+		id: number;
 		startsAt: string;
 		endsAt: string;
-		type: {
-			id: number;
-			name: string;
-			collaborationPolicy: EventTypeCollaborationPolicy;
-			venuePolicy: EventTypeVenuePolicy;
-		};
-		category: {
+		venue: {
 			id: number;
 			name: string;
 		};
-		parentEvent: {
+	}[];
+	organizers: {
+		id: number;
+		role: EventOrganizerRole;
+		organization: {
 			id: number;
-			title: string;
-		} | null;
-		venueAllotments: {
+			name: string;
+		};
+	}[];
+	assignments: {
+		id: number;
+		status: WorkflowInstanceStepAssignmentStatus;
+		remarks: string | null;
+		createdAt: string;
+		completedAt: string | null;
+		step: {
 			id: number;
-			startsAt: string;
-			endsAt: string;
-			venue: {
-				id: number;
-				name: string;
-			};
-		}[];
-		organizers: {
+			name: string;
+			status: WorkflowInstanceStepStatus;
+		};
+		role: {
 			id: number;
-			role: EventOrganizerRole;
-			organization: {
-				id: number;
-				name: string;
-			};
-		}[];
-		assignments: {
-			id: number;
-			status: WorkflowInstanceStepAssignmentStatus;
-			remarks: string | null;
-			createdAt: string;
-			completedAt: string | null;
-			step: {
-				id: number;
-				name: string;
-				status: WorkflowInstanceStepStatus;
-			};
-			role: {
-				id: number;
-				name: string;
-				scope: {
-					type: ManagedEntityType;
-					kindId: number;
-					kindName: string;
-				};
-			};
+			name: string;
 			scope: {
 				type: ManagedEntityType;
-				id: number;
-				name: string;
+				kindId: number;
+				kindName: string;
 			};
-		}[];
-	},
-	schemas.EventParamsSchema
-> = async (req, res) => {
+		};
+		scope: {
+			type: ManagedEntityType;
+			id: number;
+			name: string;
+		};
+	}[];
+}> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
 	const params = schemas.eventParamsSchema.parse(req.params);
 	const result = await service.getEventWithAssignments(user, params.eventId);
 	return ok(res, result);
 };
 
-export const respondToAssignments: ApiRequestHandler<
-	true,
-	schemas.EventParamsSchema,
-	schemas.RespondToAssignmentsSchema
-> = async (req, res) => {
+export const respondToAssignments: ApiRequestHandler<true> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
 	const params = schemas.eventParamsSchema.parse(req.params);
 	const body = schemas.respondToAssignmentsSchema.parse(req.body);

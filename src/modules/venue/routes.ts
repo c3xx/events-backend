@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireUserType } from "@/middlewares/index.js";
+import { rateLimiter, requireUserType } from "@/middlewares/index.js";
 import * as controller from "./controller.js";
 
 import facilitiesRouter from "./facility/routes.js";
@@ -7,10 +7,10 @@ import membersRouter from "./member/routes.js";
 
 const router: Router = Router();
 
-router.get("/", controller.getVenues);
-router.post("/", requireUserType("admin"), controller.createVenue);
+router.get("/", rateLimiter(), controller.getVenues);
+router.post("/", rateLimiter(), requireUserType("admin"), controller.createVenue);
 
-router.get("/:id", controller.getVenue);
+router.get("/:id", rateLimiter(), controller.getVenue);
 
 router.use("/:id/members", membersRouter);
 

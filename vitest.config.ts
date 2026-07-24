@@ -22,6 +22,8 @@ export default defineConfig({
 			FRONTEND_ORIGIN: "https://events.tkmce.ac.in",
 			PORT: "3912",
 			QUIET: "1",
+			UPSTASH_REDIS_REST_URL: "https://mock-redis.upstash.io",
+			UPSTASH_REDIS_REST_TOKEN: "mock-token",
 		},
 	},
 });
