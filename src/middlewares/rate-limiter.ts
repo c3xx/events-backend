@@ -101,7 +101,7 @@ export function rateLimiter(config?: RateLimiterConfig): RequestHandler {
 	const methodOptions = config as MethodRateLimitOptions | undefined;
 
 	const readConfig: RateLimitTierConfig = {
-		maxRequests: methodOptions?.read?.maxRequests ?? 200,
+		maxRequests: methodOptions?.read?.maxRequests ?? 500,
 		windowMs: methodOptions?.read?.windowMs ?? 15 * 60 * 1000,
 		prefix: methodOptions?.read?.prefix ?? "api:read",
 	};
