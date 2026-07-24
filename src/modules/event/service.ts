@@ -162,7 +162,7 @@ export async function submitEvent(user: AuthenticatedUser, event: EventScope["ev
 	}
 
 	if (!eventType.isActive) {
-		throw new ForbiddenError("Event typee is not active");
+		throw new ForbiddenError("Event type is not active");
 	}
 
 	const template = await workflowTemplateRepository.findByIdWithRoles(
