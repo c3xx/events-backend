@@ -39,5 +39,5 @@ export async function updateVenue(id: number, input: schemas.UpdateVenueSchema) 
 
 export async function deleteVenue(id: number) {
 	const result = await repository.softDeleteVenue(id);
-	if ((result.rowCount ?? 0) === 0) throw new NotFoundError("Venue not found");
+	if (result == null) throw new NotFoundError("Venue not found");
 }

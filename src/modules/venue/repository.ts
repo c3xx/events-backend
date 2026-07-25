@@ -104,9 +104,50 @@ export const updateVenue = dbAction(
 );
 
 export const softDeleteVenue = dbAction(async (id: number) => {
-	const result = await db
-		.update(schema.venue)
-		.set({ deletedAt: sql`NOW()` })
-		.where(and(eq(schema.venue.id, id), isNull(schema.venue.deletedAt)));
-	return result;
+	return await db.transaction(async (tx) => {
+		const [result] = await tx
+			.update(schema.venue)
+			.set({ deletedAt: sql`NOW()` })
+			.where(and(eq(schema.venue.id, id), isNull(schema.venue.deletedAt)))
+			.returning({ id: schema.venue.id });
+
+		if (result == null) return null;
+
+		const [managedEntity] = await tx
+			.select({ id: schema.managedEntity.id })
+			.from(schema.managedEntity)
+			.where(
+				and(
+					eq(schema.managedEntity.managedEntityType, "venue"),
+					eq(schema.managedEntity.refId, id),
+					isNull(schema.managedEntity.deletedAt),
+				),
+			);
+
+		if (managedEntity != null) {
+			await tx
+				.update(schema.managedEntity)
+				.set({ deletedAt: sql`NOW()` })
+				.where(eq(schema.managedEntity.id, managedEntity.id));
+
+			await tx
+				.update(schema.userRole)
+				.set({ deletedAt: sql`NOW()` })
+				.where(
+					and(
+						eq(schema.userRole.managedEntityId, managedEntity.id),
+						isNull(schema.userRole.deletedAt),
+					),
+				);
+		}
+
+		await tx.delete(schema.venueFacility).where(eq(schema.venueFacility.venueId, id));
+
+		await tx
+			.update(schema.venueAllotment)
+			.set({ deletedAt: sql`NOW()` })
+			.where(and(eq(schema.venueAllotment.venueId, id), isNull(schema.venueAllotment.deletedAt)));
+
+		return result;
+	});
 });
