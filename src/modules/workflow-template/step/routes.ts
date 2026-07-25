@@ -12,6 +12,8 @@ router.post("/", requireUserType("admin"), controller.createWorkflowTemplateStep
 router.param("stepId", stepIdParamHandler);
 
 router.get("/:stepId", controller.getWorkflowTemplateStep);
+router.patch("/:stepId", requireUserType("admin"), controller.updateWorkflowTemplateStep);
+router.delete("/:stepId", requireUserType("admin"), controller.deleteWorkflowTemplateStep);
 
 router.use("/:stepId/roles", roleRouter);
 

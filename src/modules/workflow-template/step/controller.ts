@@ -62,3 +62,24 @@ export const createWorkflowTemplateStep: ScopedApiRequestHandler<
 	const result = await service.createWorkflowTemplateStep(res.locals.template, body);
 	return ok(res, result);
 };
+
+export const updateWorkflowTemplateStep: ScopedApiRequestHandler<
+	WorkflowTemplateStepScope,
+	{ id: number }
+> = async (req, res) => {
+	const body = schemas.updateWorkflowTemplateStepSchema.parse(req.body);
+	const result = await service.updateWorkflowTemplateStep(
+		res.locals.template,
+		res.locals.templateStep,
+		body,
+	);
+	return ok(res, result);
+};
+
+export const deleteWorkflowTemplateStep: ScopedApiRequestHandler<
+	WorkflowTemplateStepScope,
+	true
+> = async (_req, res) => {
+	await service.deleteWorkflowTemplateStep(res.locals.template, res.locals.templateStep);
+	return ok(res, true);
+};

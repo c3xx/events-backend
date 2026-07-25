@@ -151,3 +151,87 @@ export const findById = dbAction(async (templateId: number, stepId: number) => {
 		},
 	});
 });
+
+export const update = dbAction(async (stepId: number, data: { name: string }) => {
+	const [updated] = await db
+		.update(schema.workflowTemplateStep)
+		.set({ name: data.name })
+		.where(
+			and(
+				eq(schema.workflowTemplateStep.id, stepId),
+				isNull(schema.workflowTemplateStep.deletedAt),
+			),
+		)
+		.returning({ id: schema.workflowTemplateStep.id });
+	return updated;
+});
+
+export const softDelete = dbAction(async (templateId: number, stepId: number) => {
+	return await db.transaction(async (tx) => {
+		const [targetStep] = await tx
+			.select({
+				id: schema.workflowTemplateStep.id,
+				nextStepId: schema.workflowTemplateStep.nextStepId,
+			})
+			.from(schema.workflowTemplateStep)
+			.where(
+				and(
+					eq(schema.workflowTemplateStep.id, stepId),
+					eq(schema.workflowTemplateStep.templateId, templateId),
+					isNull(schema.workflowTemplateStep.deletedAt),
+				),
+			);
+
+		if (targetStep == null) return null;
+
+		const [template] = await tx
+			.select({ initialStepId: schema.workflowTemplate.initialStepId })
+			.from(schema.workflowTemplate)
+			.where(
+				and(eq(schema.workflowTemplate.id, templateId), isNull(schema.workflowTemplate.deletedAt)),
+			);
+
+		if (template?.initialStepId === stepId) {
+			await tx
+				.update(schema.workflowTemplate)
+				.set({ initialStepId: targetStep.nextStepId })
+				.where(eq(schema.workflowTemplate.id, templateId));
+		} else {
+			const [prevStep] = await tx
+				.select({ id: schema.workflowTemplateStep.id })
+				.from(schema.workflowTemplateStep)
+				.where(
+					and(
+						eq(schema.workflowTemplateStep.templateId, templateId),
+						eq(schema.workflowTemplateStep.nextStepId, stepId),
+						isNull(schema.workflowTemplateStep.deletedAt),
+					),
+				);
+
+			if (prevStep != null) {
+				await tx
+					.update(schema.workflowTemplateStep)
+					.set({ nextStepId: targetStep.nextStepId })
+					.where(eq(schema.workflowTemplateStep.id, prevStep.id));
+			}
+		}
+
+		const [deleted] = await tx
+			.update(schema.workflowTemplateStep)
+			.set({ deletedAt: sql`NOW()` })
+			.where(eq(schema.workflowTemplateStep.id, stepId))
+			.returning({ id: schema.workflowTemplateStep.id });
+
+		await tx
+			.update(schema.workflowTemplateStepRole)
+			.set({ deletedAt: sql`NOW()` })
+			.where(
+				and(
+					eq(schema.workflowTemplateStepRole.stepId, stepId),
+					isNull(schema.workflowTemplateStepRole.deletedAt),
+				),
+			);
+
+		return deleted;
+	});
+});
