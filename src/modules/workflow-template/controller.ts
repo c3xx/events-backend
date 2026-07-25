@@ -35,3 +35,20 @@ export const createWorkflowTemplate: ApiRequestHandler<{
 	const result = await service.createWorkflowTemplate(body);
 	return ok(res, result);
 };
+
+export const updateWorkflowTemplate: ScopedApiRequestHandler<
+	WorkflowTemplateScope,
+	{ id: number }
+> = async (req, res) => {
+	const body = schemas.updateWorkflowTemplateSchema.parse(req.body);
+	const result = await service.updateWorkflowTemplate(res.locals.template, body);
+	return ok(res, result);
+};
+
+export const deleteWorkflowTemplate: ScopedApiRequestHandler<WorkflowTemplateScope, true> = async (
+	_req,
+	res,
+) => {
+	await service.deleteWorkflowTemplate(res.locals.template);
+	return ok(res, true);
+};
