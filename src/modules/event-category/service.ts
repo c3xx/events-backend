@@ -19,5 +19,4 @@ export async function updateEventCategory(id: number, input: schemas.UpdateEvent
 export async function deleteEventCategory(id: number) {
 	const result = await repository.deleteEventCategory(id);
 	if ((result.rowCount ?? 0) === 0) throw new NotFoundError("Event category not found");
-	return result;
 }

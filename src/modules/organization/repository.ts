@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
@@ -67,6 +67,18 @@ export const findOrganizationManagedEntity = dbAction(async (organizationId: num
 	return relatedManagedEntity;
 });
 
+export const findChildOrganizations = dbAction(async (organizationId: number) => {
+	return await db
+		.select({ id: schema.organization.id })
+		.from(schema.organization)
+		.where(
+			and(
+				eq(schema.organization.parentOrganizationId, organizationId),
+				isNull(schema.organization.deletedAt),
+			),
+		);
+});
+
 export const updateOrganization = dbAction(
 	async (id: number, data: { name?: string | undefined; isActive?: boolean | undefined }) => {
 		const [updated] = await db
@@ -79,9 +91,86 @@ export const updateOrganization = dbAction(
 );
 
 export const softDeleteOrganization = dbAction(async (id: number) => {
-	const result = await db
-		.update(schema.organization)
-		.set({ deletedAt: sql`NOW()` })
-		.where(and(eq(schema.organization.id, id), isNull(schema.organization.deletedAt)));
-	return result;
+	return await db.transaction(async (tx) => {
+		const [result] = await tx
+			.update(schema.organization)
+			.set({ deletedAt: sql`NOW()` })
+			.where(and(eq(schema.organization.id, id), isNull(schema.organization.deletedAt)))
+			.returning({ id: schema.organization.id });
+
+		if (result == null) return null;
+
+		const [managedEntity] = await tx
+			.select({ id: schema.managedEntity.id })
+			.from(schema.managedEntity)
+			.where(
+				and(
+					eq(schema.managedEntity.managedEntityType, "organization"),
+					eq(schema.managedEntity.refId, id),
+					isNull(schema.managedEntity.deletedAt),
+				),
+			);
+
+		if (managedEntity != null) {
+			await tx
+				.update(schema.managedEntity)
+				.set({ deletedAt: sql`NOW()` })
+				.where(eq(schema.managedEntity.id, managedEntity.id));
+
+			await tx
+				.update(schema.userRole)
+				.set({ deletedAt: sql`NOW()` })
+				.where(
+					and(
+						eq(schema.userRole.managedEntityId, managedEntity.id),
+						isNull(schema.userRole.deletedAt),
+					),
+				);
+		}
+
+		await tx
+			.update(schema.eventOrganizerInvitation)
+			.set({
+				status: "revoked",
+				closedAt: sql`NOW()`,
+				deletedAt: sql`NOW()`,
+			})
+			.where(
+				and(
+					or(
+						eq(schema.eventOrganizerInvitation.senderOrganizationId, id),
+						eq(schema.eventOrganizerInvitation.recipientOrganizationId, id),
+					),
+					eq(schema.eventOrganizerInvitation.status, "pending"),
+					isNull(schema.eventOrganizerInvitation.deletedAt),
+				),
+			);
+
+		const hostEvents = await tx
+			.select({ eventId: schema.eventOrganizer.eventId })
+			.from(schema.eventOrganizer)
+			.where(
+				and(
+					eq(schema.eventOrganizer.organizationId, id),
+					eq(schema.eventOrganizer.role, "host"),
+					isNull(schema.eventOrganizer.deletedAt),
+				),
+			);
+
+		const hostEventIds = hostEvents.map((e) => e.eventId);
+		if (hostEventIds.length > 0) {
+			await tx
+				.update(schema.event)
+				.set({ deletedAt: sql`NOW()` })
+				.where(
+					and(
+						inArray(schema.event.id, hostEventIds),
+						inArray(schema.event.status, ["draft", "pending"]),
+						isNull(schema.event.deletedAt),
+					),
+				);
+		}
+
+		return result;
+	});
 });
