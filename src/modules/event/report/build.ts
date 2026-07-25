@@ -18,11 +18,13 @@ export type EventReportData = {
 	organizers?: {
 		role: string;
 		organization: {
+			id: number;
 			name: string;
 		};
 	}[];
 	invitations?: {
 		recipientOrganization: {
+			id: number;
 			name: string;
 		};
 		respondedByUser?: {
@@ -99,7 +101,7 @@ export function buildApprovalReport(event: EventReportData): ApprovalReport {
 	];
 
 	const invitationsByOrg = new Map(
-		(event.invitations ?? []).map((inv) => [inv.recipientOrganization.name, inv]),
+		(event.invitations ?? []).map((inv) => [inv.recipientOrganization.id, inv]),
 	);
 
 	const organizersList = (event.organizers || []).map((o) => {
@@ -110,7 +112,7 @@ export function buildApprovalReport(event: EventReportData): ApprovalReport {
 				email: event.creator.email,
 			};
 		} else if (o.role === "co_host") {
-			const invitation = invitationsByOrg.get(o.organization.name);
+			const invitation = invitationsByOrg.get(o.organization.id);
 			if (invitation?.respondedByUser?.user) {
 				coord = {
 					name: invitation.respondedByUser.user.fullName,

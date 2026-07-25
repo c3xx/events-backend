@@ -22,8 +22,6 @@ export type ApprovalReport = {
 
 	// Formal letter metadata matching TKMCE SPOC PDF
 	referenceNumber?: string;
-	signerName?: string;
-	signerTitle?: string;
 	approvalHistory?: ApprovalEntry[];
 
 	// Parallel layout fields

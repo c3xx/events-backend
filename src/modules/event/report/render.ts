@@ -300,9 +300,7 @@ function renderSignaturesAndStamp(doc: PDFKit.PDFDocument, report: ApprovalRepor
 	const signatories: Signatory[] =
 		report.approvalHistory && report.approvalHistory.length > 0
 			? dedupeApprovers(report.approvalHistory)
-			: report.signerName && report.signerTitle
-				? [{ name: report.signerName, role: report.signerTitle }]
-				: [];
+			: [];
 
 	let cursorY = doc.y + LAYOUT.afterFirstSignatory;
 	signatories.forEach((sig, i) => {

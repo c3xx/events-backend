@@ -251,7 +251,7 @@ export async function getParentableEvents(
 	user: AuthenticatedUser,
 	parentableFor: schemas.GetParentableEventsSchema,
 ) {
-	const hasPermission = permissionRepository.hasPermissionInManagedEntity(
+	const hasPermission = await permissionRepository.hasPermissionInManagedEntity(
 		user,
 		"organization",
 		[parentableFor.organizationId],

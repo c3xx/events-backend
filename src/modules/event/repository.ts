@@ -4,86 +4,87 @@ import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
 export const findEventReportData = dbAction(async (eventId: number) => {
-	const event = await db.query.event.findFirst({
-		where: and(eq(schema.event.id, eventId), isNull(schema.event.deletedAt)),
-		columns: {
-			id: true,
-			title: true,
-			requestDetails: true,
-			status: true,
-			startsAt: true,
-			endsAt: true,
-		},
-		with: {
-			category: {
-				columns: { name: true },
+	const [event, latestInstance] = await Promise.all([
+		db.query.event.findFirst({
+			where: and(eq(schema.event.id, eventId), isNull(schema.event.deletedAt)),
+			columns: {
+				id: true,
+				title: true,
+				requestDetails: true,
+				status: true,
+				startsAt: true,
+				endsAt: true,
 			},
-			creator: {
-				columns: { fullName: true, email: true },
-			},
-			organizers: {
-				where: isNull(schema.eventOrganizer.deletedAt),
-				columns: { role: true },
-				with: {
-					organization: {
-						columns: { name: true },
+			with: {
+				category: {
+					columns: { name: true },
+				},
+				creator: {
+					columns: { fullName: true, email: true },
+				},
+				organizers: {
+					where: isNull(schema.eventOrganizer.deletedAt),
+					columns: { role: true },
+					with: {
+						organization: {
+							columns: { id: true, name: true },
+						},
 					},
 				},
-			},
-			invitations: {
-				where: and(
-					eq(schema.eventOrganizerInvitation.status, "accepted"),
-					isNull(schema.eventOrganizerInvitation.deletedAt),
-				),
-				with: {
-					recipientOrganization: {
-						columns: { id: true, name: true },
-					},
-					respondedByUser: {
-						with: {
-							user: {
-								columns: { fullName: true, email: true },
+				invitations: {
+					where: and(
+						eq(schema.eventOrganizerInvitation.status, "accepted"),
+						isNull(schema.eventOrganizerInvitation.deletedAt),
+					),
+					with: {
+						recipientOrganization: {
+							columns: { id: true, name: true },
+						},
+						respondedByUser: {
+							with: {
+								user: {
+									columns: { fullName: true, email: true },
+								},
 							},
 						},
 					},
 				},
-			},
-			venueAllotments: {
-				where: isNull(schema.venueAllotment.deletedAt),
-				columns: { startsAt: true, endsAt: true },
-				with: {
-					venue: {
-						columns: { id: true, name: true },
-						with: {
-							facilities: {
-								where: eq(schema.venueFacility.isActive, true),
-								columns: {},
-								with: {
-									facility: { columns: { id: true, name: true } },
+				venueAllotments: {
+					where: isNull(schema.venueAllotment.deletedAt),
+					columns: { startsAt: true, endsAt: true },
+					with: {
+						venue: {
+							columns: { id: true, name: true },
+							with: {
+								facilities: {
+									where: eq(schema.venueFacility.isActive, true),
+									columns: {},
+									with: {
+										facility: { columns: { id: true, name: true } },
+									},
 								},
 							},
 						},
 					},
 				},
 			},
-		},
-	});
+		}),
+		db
+			.select({ id: schema.workflowInstance.id })
+			.from(schema.workflowInstance)
+			.where(
+				and(
+					eq(schema.workflowInstance.eventId, eventId),
+					eq(schema.workflowInstance.status, "completed"),
+					isNull(schema.workflowInstance.deletedAt),
+				),
+			)
+			.orderBy(sql`${schema.workflowInstance.completedAt} DESC`)
+			.limit(1)
+			.then((rows) => rows[0]),
+	]);
 
 	if (!event) return null;
-
-	const latestInstance = await db
-		.select({ id: schema.workflowInstance.id })
-		.from(schema.workflowInstance)
-		.where(
-			and(
-				eq(schema.workflowInstance.eventId, eventId),
-				eq(schema.workflowInstance.status, "completed"),
-				isNull(schema.workflowInstance.deletedAt),
-			),
-		)
-		.orderBy(sql`${schema.workflowInstance.completedAt} DESC`)
-		.limit(1)
-		.then((rows) => rows[0]);
 
 	const approvedSteps = latestInstance
 		? await db
