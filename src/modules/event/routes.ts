@@ -16,6 +16,7 @@ router.post("/", controller.createEvent);
 router.param("eventId", eventIdParamHandler);
 
 router.get("/:eventId", controller.getEvent);
+router.get("/:eventId/report", controller.getApprovalReport);
 router.patch("/:eventId", controller.updateEvent);
 router.post("/:eventId/submit", controller.submitEvent);
 

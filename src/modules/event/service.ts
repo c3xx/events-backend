@@ -6,6 +6,7 @@ import * as permissionRepository from "@/modules/permission/repository.js";
 import * as roleRepository from "@/modules/role/repository.js";
 import * as userRepository from "@/modules/user/repository.js";
 import * as workflowTemplateRepository from "@/modules/workflow-template/repository.js";
+import { generateApprovalReportPdf } from "./report/index.js";
 import * as repository from "./repository.js";
 import type * as schemas from "./schema.js";
 import type { EventScope } from "./scopes.js";
@@ -316,4 +317,17 @@ export async function cancelApprovedEvent(user: AuthenticatedUser, event: EventS
 	if (result == null) {
 		throw new NotFoundError("Event not found");
 	}
+}
+
+export async function getApprovalReportPdf(event: EventScope["event"]) {
+	if (event.status !== "approved") {
+		throw new ConflictError("Approval report is only available for approved events");
+	}
+
+	const reportData = await repository.findEventReportData(event.id);
+	if (reportData == null) {
+		throw new NotFoundError("Event not found");
+	}
+
+	return await generateApprovalReportPdf(reportData);
 }

@@ -121,3 +121,15 @@ export const cancelEvent: ScopedApiRequestHandler<EventScope, true> = async (req
 	await service.cancelApprovedEvent(user, res.locals.event);
 	return ok(res, true);
 };
+
+export const getApprovalReport: ScopedBinaryRequestHandler<EventScope> = async (_req, res) => {
+	const event = res.locals.event;
+	const pdf = await service.getApprovalReportPdf(event);
+
+	res.setHeader("Content-Type", "application/pdf");
+	res.setHeader(
+		"Content-Disposition",
+		`attachment; filename="event-${event.id}-approval-report.pdf"`,
+	);
+	res.send(pdf);
+};
