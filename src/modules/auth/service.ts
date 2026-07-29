@@ -15,6 +15,7 @@ import {
 	generateRefreshToken,
 	JWT_REFRESH_SECRET_SIGN_KEY,
 } from "@/lib/jwt.js";
+import { clearLoginAttempts, recordFailedLoginAttempt } from "@/lib/login-lockout.js";
 import * as userRepository from "@/modules/user/repository.js";
 import * as repository from "./repository.js";
 import type * as schemas from "./schema.js";
@@ -39,8 +40,10 @@ export async function login(
 
 	const isValid = await verifyPassword(user.passwordHash, password);
 	if (!isValid) {
+		await recordFailedLoginAttempt(email, user.email);
 		throw new BadRequestError("Invalid credentials");
 	}
+	await clearLoginAttempts(email);
 
 	const payload: IJWTPayload = {
 		id: user.id,

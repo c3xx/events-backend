@@ -1,18 +1,11 @@
 import { Router } from "express";
-import { rateLimiter } from "@/middlewares/index.js";
+import { loginLockout, rateLimiter } from "@/middlewares/index.js";
 import * as controller from "./controller.js";
 
 const router: Router = Router();
 
-router.post(
-	"/login",
-	rateLimiter({
-		maxRequests: 20,
-		windowMs: 15 * 60 * 1000,
-		prefix: "auth:login",
-	}),
-	controller.login,
-);
+router.post("/login", loginLockout, controller.login);
+
 router.post(
 	"/refresh",
 	rateLimiter({

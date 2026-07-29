@@ -15,3 +15,11 @@ export function resolveKey(req: Parameters<RequestHandler>[0], prefix: string): 
 	}
 	return `${prefix}:ip:${getClientIp(req)}`;
 }
+
+export function attemptsKey(email: string) {
+	return `login:attempts:${email.toLowerCase().trim()}`;
+}
+
+export function lockoutKey(email: string) {
+	return `login:lockout:${email.toLowerCase().trim()}`;
+}
