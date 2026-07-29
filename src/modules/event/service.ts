@@ -136,7 +136,7 @@ export async function submitEvent(user: AuthenticatedUser, event: EventScope["ev
 
 	if (inactiveOrganizerOrganizations.length > 0) {
 		throw new ConflictError(
-			`Inactive organizations: ${inactiveOrganizerOrganizations.map((org) => org.name).join(", ")}`,
+			`Cannot submit an event with inactive organizer organizations. Remove them and re-submit.`,
 		);
 	}
 
@@ -162,7 +162,7 @@ export async function submitEvent(user: AuthenticatedUser, event: EventScope["ev
 	}
 
 	if (!eventType.isActive) {
-		throw new ForbiddenError("Event type is not active");
+		throw new ForbiddenError("Event cannot be submitted as the event type is inactive.");
 	}
 
 	const template = await workflowTemplateRepository.findByIdWithRoles(
