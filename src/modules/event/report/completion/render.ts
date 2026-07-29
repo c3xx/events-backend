@@ -119,15 +119,12 @@ export function renderCompletionReportPdf(report: CompletionReport): Promise<Buf
 				const urls = report.imageUrls || [];
 				for (const imgUrl of urls) {
 					try {
-						let inputBuffer: Buffer;
 						// Treat as local file path, remove leading slash if any
 						const safePath = imgUrl.startsWith("/") ? imgUrl.substring(1) : imgUrl;
 						const finalPath = safePath.startsWith(".temp/data/images")
-								? safePath
-								: path.join("src/assets", safePath);
-						inputBuffer = fs.readFileSync(path.resolve(process.cwd(), finalPath));
-						
-
+							? safePath
+							: path.join("src/assets", safePath);
+						const inputBuffer = fs.readFileSync(path.resolve(process.cwd(), finalPath));
 						// Compress the image and auto-orient based on EXIF
 						const compressedBuffer = await sharp(inputBuffer)
 							.rotate() // Auto-orient based on EXIF data
