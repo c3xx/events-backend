@@ -6,11 +6,15 @@ export type FacilityScope = {
 	facility: {
 		id: number;
 		name: string;
+		type: {
+			id: number;
+			name: string;
+		};
 		isAvailable: boolean;
 		providers: {
 			id: number;
 			scope: {
-				type: "organization" | "venue";
+				type: FacilityScope;
 				id: number;
 				name: string;
 				kind: {

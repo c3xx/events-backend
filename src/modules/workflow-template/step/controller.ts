@@ -10,12 +10,12 @@ export const getWorkflowTemplateStep: ScopedApiRequestHandler<
 		name: string;
 		nextStepId: number | null;
 		stepRoles: {
-			targetGroupApprovalCriteria: "all" | "any";
+			targetGroupApprovalCriteria: WorkflowTargetGroupApprovalCriteria;
 			role: {
 				id: number;
 				name: string;
 				scope: {
-					type: "organization" | "venue";
+					type: ManagedEntityType;
 					kindId: number;
 					kindName: string;
 				};
@@ -34,12 +34,12 @@ export const getAllWorkflowTemplateSteps: ScopedApiRequestHandler<
 		name: string;
 		nextStepId: number | null;
 		stepRoles: {
-			targetGroupApprovalCriteria: "all" | "any";
+			targetGroupApprovalCriteria: WorkflowTargetGroupApprovalCriteria;
 			role: {
 				id: number;
 				name: string;
 				scope: {
-					type: "organization" | "venue";
+					type: ManagedEntityType;
 					kindId: number;
 					kindName: string;
 				};

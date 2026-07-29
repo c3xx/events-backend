@@ -17,7 +17,7 @@ export const findFacilities = dbAction(async () => {
 				jsonBuildObject({
 					id: schema.facilityProvider.id,
 					scope: sql<{
-						type: "organization" | "venue"; // todo: search for this and add "facility" where matterss
+						type: FacilityProviderEntityType; // todo: search for this and add "facility" where matterss
 						id: number;
 						name: string;
 						kind: {

@@ -298,7 +298,7 @@ const workflowInstanceWith = {
 						},
 						extras: {
 							scope: sql<{
-								type: "organization" | "venue";
+								type: ManagedEntityType;
 								kindId: number;
 								kindName: string;
 							}>`case
@@ -312,6 +312,11 @@ const workflowInstanceWith = {
 									select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', vt.id, 'kindName', vt.name)
 									from venue_type vt where vt.id = ${schema.role.typeRefId} limit 1
 								)
+								when ${schema.role.managedEntityType} = 'venue'
+								then (
+									select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', ft.id, 'kindName', ft.name)
+									from facility_type ft where ft.id = ${schema.role.typeRefId} limit 1
+								)
 								else null
 							end`.as("scope"),
 						},
@@ -322,17 +327,19 @@ const workflowInstanceWith = {
 						},
 						extras: {
 							scope: sql<{
-								type: "organization" | "venue";
+								type: ManagedEntityType;
 								id: number;
 								name: string;
 							}>`(SELECT CASE
 								WHEN me.managed_entity_type = 'organization' THEN json_build_object('type', me.managed_entity_type, 'id', o.id, 'name', o.name)
 								WHEN me.managed_entity_type = 'venue' THEN json_build_object('type', me.managed_entity_type, 'id', v.id, 'name', v.name)
+								WHEN me.managed_entity_type = 'facility' THEN json_build_object('type', me.managed_entity_type, 'id', f.id, 'name', f.name)
 								ELSE null
 							END
 							FROM managed_entity me
 							LEFT JOIN organization o ON me.managed_entity_type = 'organization' AND o.id = me.ref_id
 							LEFT JOIN venue v ON me.managed_entity_type = 'venue' AND v.id = me.ref_id
+							LEFT JOIN facility f ON me.managed_entity_type = 'facility' AND f.id = me.ref_id
 							WHERE me.id = ${schema.workflowInstanceStepTargetGroup.managedEntityId}
 							LIMIT 1)`.as("scope"),
 						},

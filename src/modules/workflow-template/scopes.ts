@@ -13,12 +13,12 @@ export type WorkflowTemplateScope = {
 			name: string;
 			nextStepId: number | null;
 			stepRoles: {
-				targetGroupApprovalCriteria: "any" | "all";
+				targetGroupApprovalCriteria: WorkflowTargetGroupApprovalCriteria;
 				role: {
 					id: number;
 					name: string;
 					scope: {
-						type: "organization" | "venue";
+						type: ManagedEntityType;
 						kindId: number;
 						kindName: string;
 					};
@@ -53,7 +53,7 @@ export type WorkflowTemplateStepScope = WorkflowTemplateScope & {
 				id: number;
 				name: string;
 				scope: {
-					type: "organization" | "venue";
+					type: ManagedEntityType;
 					kindId: number;
 					kindName: string;
 				};
