@@ -1,8 +1,8 @@
 import { sendEmail } from "@/lib/email.js";
 import { getAccountLockedContent } from "@/lib/email-templates.js";
 import { env } from "@/lib/env.js";
+import { attemptsKey, lockoutKey } from "@/redis/helper.js";
 import { redis } from "@/redis/index.js";
-import { attemptsKey, lockoutKey } from "../redis/helper.js";
 
 export const LOGIN_MAX_ATTEMPTS = 3;
 
