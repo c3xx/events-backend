@@ -26,8 +26,10 @@ export function jsonBuildObject<T extends SelectedFields<any, any>>(shape: T) {
 	return sql<SelectResultFields<T>>`json_build_object(${sql.join(chunks)})`;
 }
 
-export function jsonAgg<T>(shape: SQL<T>) {
-	return sql<T[]>`coalesce(json_agg(${shape}), '[]')`;
+export function jsonAgg<T>(shape: SQL<T>, filterOn?: SQL | PgColumn) {
+	return filterOn
+		? sql<T[]>`coalesce(json_agg(${shape}) filter (where ${filterOn} is not null),'[]'::json)`
+		: sql<T[]>`coalesce(json_agg(${shape}), '[]'::json)`;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: I dont know how & I dont have time

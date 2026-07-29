@@ -1,5 +1,6 @@
 import { ok } from "@/lib/helpers.js";
 import * as schemas from "./schema.js";
+import type { FacilityScope } from "./scopes.js";
 import * as service from "./service.js";
 
 export const getFacilities: ApiRequestHandler<
@@ -16,10 +17,39 @@ export const createFacility: ApiRequestHandler<{
 	id: number;
 }> = async (req, res) => {
 	const body = schemas.createFacilitySchema.parse(req.body);
-
-	const result = await service.createFacility({
-		name: body.name,
-	});
-
+	const result = await service.createFacility(body);
 	return ok(res, result);
+};
+
+export const getFacility: ScopedApiRequestHandler<
+	FacilityScope,
+	{
+		id: number;
+		name: string;
+		isAvailable: boolean;
+		providers: {
+			id: number;
+			scope: {
+				type: FacilityProviderEntityType;
+				id: number;
+				name: string;
+				kind: {
+					id: number;
+					name: string;
+				};
+			};
+		}[];
+	}
+> = async (_req, res) => {
+	const result = await service.getFacility(res.locals.facility);
+	return ok(res, result);
+};
+
+export const changeAvailability: ScopedApiRequestHandler<FacilityScope, true> = async (
+	req,
+	res,
+) => {
+	const body = schemas.changeAvailabilitySchema.parse(req.body);
+	await service.changeAvailability(res.locals.facility, body);
+	return ok(res, true);
 };
