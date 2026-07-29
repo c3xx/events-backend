@@ -379,12 +379,31 @@ export const venueRelations = relations(venue, (r) => ({
 	// soft-fk(managed_entity)
 }));
 
+export const facilityType = pgTable(
+	"facility_type",
+	{
+		id: smallint().primaryKey().generatedAlwaysAsIdentity(),
+		name: text().notNull(), // permissioned, unpermissioned
+		...fields("common", "soft-delete"),
+	},
+	(t) => [uniqueIndex().on(t.name).where(isNull(t.deletedAt))],
+);
+
+export const facilityTypeRelations = relations(facilityType, (r) => ({
+	facilities: r.many(facility),
+	// soft-fk(roles), roles that comes under this type of facility
+}));
+
 export const facility = pgTable(
 	"facility",
 	{
 		id: smallint().primaryKey().generatedAlwaysAsIdentity(),
 		name: text().notNull(),
+		typeId: smallint()
+			.references(() => facilityType.id)
+			.notNull(),
 		isAvailable: boolean().notNull(),
+		// unavailabilityReason: text(), // todo
 		...fields("common", "soft-delete"),
 	},
 	(t) => [uniqueIndex().on(t.name).where(sql`${t.deletedAt} IS NULL`)],
@@ -392,6 +411,7 @@ export const facility = pgTable(
 
 export const facilityRelations = relations(facility, (r) => ({
 	providers: r.many(facilityProvider),
+	// soft-fk(managed_entity)
 }));
 
 export const facilityProvider = pgTable(
