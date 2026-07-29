@@ -75,11 +75,7 @@ export const getOrganizationsByIds = dbAction(async (organizationIds: number[]) 
 		),
 		columns: {
 			id: true,
-			name: true,
-			organizationTypeId: true,
-			parentOrganizationId: true,
 			isActive: true,
-			createdAt: true,
 		},
 	});
 });
