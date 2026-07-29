@@ -8,6 +8,10 @@ DECLARE
     v_current_id INTEGER := NEW.parent_organization_id;
 BEGIN
 
+    IF NEW.parent_organization_id IS NULL OR NEW.parent_organization_id = NEW.id THEN
+        RETURN NEW;
+    END IF;
+
     WHILE v_current_id IS NOT NULL LOOP
         IF v_current_id = NEW.id THEN
             RAISE EXCEPTION

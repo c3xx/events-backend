@@ -8,6 +8,10 @@ DECLARE
     v_current_id BIGINT := NEW.parent_event_id;
 BEGIN
 
+    IF NEW.parent_event_id IS NULL OR NEW.parent_event_id = NEW.id THEN
+        RETURN NEW;
+    END IF;
+
     WHILE v_current_id IS NOT NULL LOOP
         IF v_current_id = NEW.id THEN
             RAISE EXCEPTION
