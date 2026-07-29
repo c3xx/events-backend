@@ -1,11 +1,17 @@
-import type { EventReportData } from "./build.js";
-import { buildApprovalReport } from "./build.js";
-import { renderReportPdf } from "./render.js";
+import { buildApprovalReport } from "./approval/build.js";
+import { renderApprovalReportPdf } from "./approval/render.js";
+import { buildCompletionReport } from "./completion/build.js";
+import { renderCompletionReportPdf } from "./completion/render.js";
+import type { EventReportData } from "./shared/build.js";
 
-export type { EventReportData } from "./build.js";
-export type { ApprovalReport } from "./types.js";
+export type { EventReportData } from "./shared/build.js";
 
 export async function generateApprovalReportPdf(event: EventReportData): Promise<Buffer> {
 	const report = buildApprovalReport(event);
-	return await renderReportPdf(report);
+	return await renderApprovalReportPdf(report);
+}
+
+export async function generateCompletionReportPdf(event: EventReportData): Promise<Buffer> {
+	const report = buildCompletionReport(event);
+	return await renderCompletionReportPdf(report);
 }

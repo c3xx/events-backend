@@ -680,6 +680,7 @@ export const eventReport = pgTable(
 			.references(() => event.id)
 			.notNull(),
 		details: text().notNull(),
+		participantsCount: integer().notNull().default(0),
 		submittedAt: timestamp({ mode: "string", withTimezone: true }).defaultNow().notNull(),
 		...fields("common", "soft-delete"),
 	},
@@ -690,6 +691,23 @@ export const eventReportRelations = relations(eventReport, (r) => ({
 	event: r.one(event, {
 		fields: [eventReport.eventId],
 		references: [event.id],
+	}),
+	images: r.many(eventReportImage),
+}));
+
+export const eventReportImage = pgTable("event_report_image", {
+	id: integer().primaryKey().generatedAlwaysAsIdentity(),
+	eventReportId: bigint({ mode: "number" })
+		.references(() => eventReport.id, { onDelete: "cascade" })
+		.notNull(),
+	imageUrl: text("image_url").notNull(),
+	...fields("common"),
+});
+
+export const eventReportImageRelations = relations(eventReportImage, (r) => ({
+	report: r.one(eventReport, {
+		fields: [eventReportImage.eventReportId],
+		references: [eventReport.id],
 	}),
 }));
 

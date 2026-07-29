@@ -67,6 +67,14 @@ export const findEventReportData = dbAction(async (eventId: number) => {
 						},
 					},
 				},
+				report: {
+					columns: { details: true, participantsCount: true },
+					with: {
+						images: {
+							columns: { imageUrl: true },
+						},
+					},
+				},
 			},
 		}),
 		db

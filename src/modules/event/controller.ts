@@ -133,3 +133,15 @@ export const getApprovalReport: ScopedBinaryRequestHandler<EventScope> = async (
 	);
 	res.send(pdf);
 };
+
+export const getCompletionReport: ScopedBinaryRequestHandler<EventScope> = async (_req, res) => {
+	const event = res.locals.event;
+	const pdf = await service.getCompletionReportPdf(event);
+
+	res.setHeader("Content-Type", "application/pdf");
+	res.setHeader(
+		"Content-Disposition",
+		`attachment; filename="event-${event.id}-completion-report.pdf"`,
+	);
+	res.send(pdf);
+};

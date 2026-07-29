@@ -39,3 +39,26 @@ export type ApprovalReport = {
 	}[];
 	eventCategory?: string;
 };
+
+export type CompletionReport = {
+	title: string;
+	generatedAt: string;
+	institution?: ReportInstitution;
+
+	referenceNumber?: string;
+
+	eventName: string;
+	dateTimeRange: string;
+	organizers: {
+		name: string;
+		coordinator?: {
+			name: string;
+			email: string;
+		};
+	}[];
+	venues: { name: string; timeRange: string }[];
+
+	participantsCount: number;
+	description: string;
+	imageUrls: string[];
+};
