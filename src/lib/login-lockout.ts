@@ -4,9 +4,9 @@ import { env } from "@/lib/env.js";
 import { attemptsKey, lockoutKey } from "@/redis/helper.js";
 import { redis } from "@/redis/index.js";
 
-export const LOGIN_MAX_ATTEMPTS = 3;
+export const LOGIN_MAX_ATTEMPTS = 5;
 
-export const LOGIN_LOCKOUT_DURATION_MS = 3 * 60 * 60 * 1000;
+export const LOGIN_LOCKOUT_DURATION_MS = 30 * 60 * 1000;
 
 export async function isAccountLocked(
 	email: string,
