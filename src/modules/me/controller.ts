@@ -1,4 +1,5 @@
 import { getAuthenticatedUser, ok } from "@/lib/helpers.js";
+import * as schemas from "./schema.js";
 import * as service from "./service.js";
 
 export const userDetails: ApiRequestHandler<Frontend.AuthenticatedUser> = async (req, res) => {
@@ -15,5 +16,23 @@ export const getEventCreatableOrganizations: ApiRequestHandler<
 > = async (req, res) => {
 	const user = getAuthenticatedUser(req);
 	const result = await service.getEventCreatableOrganizations(user);
+	return ok(res, result);
+};
+
+export const updateProfile: ApiRequestHandler<true> = async (req, res) => {
+	const user = getAuthenticatedUser(req);
+	const body = schemas.updateProfileSchema.parse(req.body);
+	await service.updateProfile(user.id, body);
+	return ok(res, true);
+};
+
+export const getCalendar: ApiRequestHandler<
+	{
+		utcDate: string;
+		events: CalculatedCalendarDayEvent[];
+	}[]
+> = async (req, res) => {
+	const params = schemas.getCalendarParamsSchema.parse(req.query);
+	const result = await service.getCalendar(params);
 	return ok(res, result);
 };

@@ -6,8 +6,11 @@ import invitationRouter from "./invitation/routes.js";
 const router: Router = Router();
 
 router.get("/", controller.userDetails);
+router.patch("/", controller.updateProfile);
 
 router.get("/organizations/event-creatable", controller.getEventCreatableOrganizations);
+
+router.get("/calendar", controller.getCalendar);
 
 router.use("/approval-assignments", approvalAssignmentsRouter);
 

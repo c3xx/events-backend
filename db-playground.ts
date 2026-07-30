@@ -1,7 +1,10 @@
+import { getCalendarEvents } from "./src/modules/me/repository"
 
-import { getPendingInvitations, getPendingInvitation } from "./src/modules/me/invitation/service.js";
+const result = await getCalendarEvents({ status: ["approved", "pending"] })
 
-const result = await getPendingInvitation({id: 13, type: "end_user"},20)
+// import { getPendingInvitations, getPendingInvitation } from "./src/modules/me/invitation/service.js";
+
+// const result = await getPendingInvitation({id: 13, type: "end_user"},20)
 
 // const result = await db.query.workflowInstance.findFirst({
 // where: and(

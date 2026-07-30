@@ -129,6 +129,21 @@ export async function submitEvent(user: AuthenticatedUser, event: EventScope["ev
 	if (!host) {
 		throw new NotFoundError("Host organizer not found");
 	}
+
+	const organizerOrganizationIds = event.organizers.map((organizer) => organizer.organization.id);
+
+	const organizerOrganization =
+		await organizationRepository.getOrganizationsByIds(organizerOrganizationIds);
+
+	const inactiveOrganizerOrganizations = organizerOrganization.filter((org) => !org.isActive);
+
+	if (inactiveOrganizerOrganizations.length > 0) {
+		throw new ConflictError(
+			`Cannot submit an event with inactive organizer organizations. Remove them and re-submit.`,
+			inactiveOrganizerOrganizations,
+		);
+	}
+
 	// Only host organization can submit event
 	const hasPermission = await permissionRepository.hasPermissionInManagedEntity(
 		user,
@@ -148,6 +163,10 @@ export async function submitEvent(user: AuthenticatedUser, event: EventScope["ev
 	const eventType = await eventTypeRepository.getEventType(event.type.id);
 	if (!eventType) {
 		throw new NotFoundError("Event type not found");
+	}
+
+	if (!eventType.isActive) {
+		throw new ForbiddenError("Event cannot be submitted as the event type is inactive.");
 	}
 
 	const template = await workflowTemplateRepository.findByIdWithRoles(
@@ -264,4 +283,59 @@ export async function getParentableEvents(
 	}
 
 	return repository.findParentableEvents(parentableFor);
+}
+
+export async function discardDraftEvent(user: AuthenticatedUser, event: EventScope["event"]) {
+	const host = event.organizers.find((o) => o.role === "host");
+	if (!host) {
+		throw new NotFoundError("Host organizer not found");
+	}
+
+	const hasPermission = await permissionRepository.hasPermissionInManagedEntity(
+		user,
+		"organization",
+		[host.organization.id],
+		"event:manage",
+	);
+	if (!hasPermission) {
+		throw new ForbiddenError("You do not have any required permission for this");
+	}
+
+	if (event.status !== "draft") {
+		throw new ConflictError("Only draft events can be discarded");
+	}
+
+	await repository.discardDraftEvent(event.id);
+}
+
+export async function cancelApprovedEvent(user: AuthenticatedUser, event: EventScope["event"]) {
+	const host = event.organizers.find((o) => o.role === "host");
+	if (!host) {
+		throw new NotFoundError("Host organizer not found");
+	}
+
+	const hasPermission = await permissionRepository.hasPermissionInManagedEntity(
+		user,
+		"organization",
+		[host.organization.id],
+		"event:manage",
+	);
+	if (!hasPermission) {
+		throw new ForbiddenError("You do not have any required permission for this");
+	}
+
+	if (event.status !== "approved") {
+		throw new ConflictError("Only approved events can be cancelled");
+	}
+
+	const now = new Date();
+	const endsAt = new Date(event.endsAt);
+	if (endsAt <= now) {
+		throw new ConflictError("Cannot cancel an event that has already ended");
+	}
+
+	const result = await repository.cancelApprovedEvent(event.id);
+	if (result == null) {
+		throw new NotFoundError("Event not found");
+	}
 }

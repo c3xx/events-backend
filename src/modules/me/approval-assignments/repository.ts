@@ -12,6 +12,7 @@ export const findPendingEventsForUser = dbAction(async (userId: number) => {
 		.select({
 			id: schema.event.id,
 			title: schema.event.title,
+			createdAt: schema.event.createdAt,
 			startsAt: schema.event.startsAt,
 			endsAt: schema.event.endsAt,
 			type: {
@@ -110,6 +111,7 @@ export const findAssignmentsForUserInEvent = dbAction(async (userId: number, eve
 			id: schema.workflowInstanceStepAssignment.id,
 			status: schema.workflowInstanceStepAssignment.status,
 			remarks: schema.workflowInstanceStepAssignment.remarks,
+			createdAt: schema.workflowInstanceStepAssignment.createdAt,
 			completedAt: schema.workflowInstanceStepAssignment.completedAt,
 
 			step: {

@@ -11,11 +11,14 @@ export type EventScope = {
 		requestDetails: string;
 		status: EventStatus;
 		parentEventId: number | null;
+		createdAt: string;
 		startsAt: string;
 		endsAt: string;
 		type: {
 			id: number;
 			name: string;
+			collaborationPolicy: EventTypeCollaborationPolicy;
+			venuePolicy: EventTypeVenuePolicy;
 		};
 		category: {
 			id: number;

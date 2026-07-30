@@ -13,7 +13,16 @@ export const getLatestWorkflowInstance: ScopedApiRequestHandler<
 
 export const getAllWorkflowInstances: ScopedApiRequestHandler<
 	EventScope,
-	WorkflowInstances
+	{
+		id: number;
+		status: WorkflowInstanceStatus;
+		createdAt: string;
+		completedAt: string | null;
+		submitter: {
+			id: number;
+			fullName: string;
+		};
+	}[]
 > = async (_req, res) => {
 	const result = await service.getAllWorkflowInstances(res.locals.event);
 	return ok(res, result);

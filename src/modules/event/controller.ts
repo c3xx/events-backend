@@ -20,6 +20,7 @@ export const getEvents: ApiRequestHandler<
 		category: { id: number; name: string };
 		status: EventStatus;
 		parentEvent: { id: number; title: string } | null;
+		createdAt: string;
 		startsAt: string;
 		organizers: {
 			id: number;
@@ -46,9 +47,15 @@ export const getEvent: ScopedApiRequestHandler<
 		requestDetails: string;
 		status: EventStatus;
 		parentEventId: number | null;
+		createdAt: string;
 		startsAt: string;
 		endsAt: string;
-		type: { id: number; name: string };
+		type: {
+			id: number;
+			name: string;
+			collaborationPolicy: EventTypeCollaborationPolicy;
+			venuePolicy: EventTypeVenuePolicy;
+		};
 		category: { id: number; name: string };
 		parentEvent: { id: number; title: string } | null;
 		organizers: {
@@ -101,4 +108,16 @@ export const getParentableEvents: ApiRequestHandler<
 	const query = schemas.getParentableEventsSchema.parse(req.query);
 	const result = await service.getParentableEvents(user, query);
 	return ok(res, result);
+};
+
+export const discardEvent: ScopedApiRequestHandler<EventScope, true> = async (req, res) => {
+	const user = getAuthenticatedUser(req);
+	await service.discardDraftEvent(user, res.locals.event);
+	return ok(res, true);
+};
+
+export const cancelEvent: ScopedApiRequestHandler<EventScope, true> = async (req, res) => {
+	const user = getAuthenticatedUser(req);
+	await service.cancelApprovedEvent(user, res.locals.event);
+	return ok(res, true);
 };
