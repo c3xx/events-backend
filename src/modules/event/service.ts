@@ -137,7 +137,7 @@ export async function submitEvent(user: AuthenticatedUser, event: EventScope["ev
 	if (inactiveOrganizerOrganizations.length > 0) {
 		throw new ConflictError(
 			`Cannot submit an event with inactive organizer organizations. Remove them and re-submit.`,
-			inactiveOrganizerOrganizations
+			inactiveOrganizerOrganizations,
 		);
 	}
 
