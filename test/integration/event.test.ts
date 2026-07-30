@@ -359,7 +359,7 @@ describe("Event Integration Tests", () => {
 	});
 });
 describe("Workflow Instance Management", () => {
-	test.skip("Submitting event again that has existing workflow with active status is denied", async () => {
+	test("Submitting event again that has existing workflow with active status is denied", async () => {
 		const { admin, hostOrg, eventType, category, fullEvent } = await createAndSubmitBasicEvent();
 		const event2 = await createEvent(
 			{ id: admin.id, type: "admin" },
@@ -410,7 +410,7 @@ describe("Workflow Instance Management", () => {
 		).rejects.toThrow();
 	});
 
-	test.skip("Submit event with inactive event type should fail", async () => {
+	test("Submit event with inactive event type should fail", async () => {
 		const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
 		const [inactiveEventType] = await db
 			.insert(schema.eventType)
@@ -472,7 +472,7 @@ describe("Workflow Instance Management", () => {
 		assert(newWorkflowInstance != null);
 		expect(newWorkflowInstance.status).toBe("active");
 	});
-	test.skip("Submitting an event with an inactive host organizer should fail", async () => {
+	test("Submitting an event with an inactive host organizer should fail", async () => {
 		const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
 
 		const [inactiveOrganizer] = await db
@@ -634,7 +634,7 @@ describe("Workflow Instance Management", () => {
 		expect(result1.status).toBe("fulfilled");
 		expect(result2.status).toBe("fulfilled");
 	});
-	test.skip("Concurrent submission of the same event", async () => {
+	test("Concurrent submission of the same event", async () => {
 		const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
 		const event = await createEvent(
 			{ id: admin.id, type: "admin" },
@@ -701,7 +701,7 @@ describe("Workflow Instance Management", () => {
 				{ id: admin.id, type: "admin" },
 				fullEvent as unknown as Parameters<typeof submitEvent>[1],
 			),
-		).resolves.not.toThrow();
+		).rejects.toThrow();
 	});
 });
 describe("Workflow Approval Execution", () => {
