@@ -10,6 +10,8 @@ router.patch("/", controller.updateProfile);
 
 router.get("/organizations/event-creatable", controller.getEventCreatableOrganizations);
 
+router.get("/calendar", controller.getCalendar);
+
 router.use("/approval-assignments", approvalAssignmentsRouter);
 
 router.use("/invitations", invitationRouter);
