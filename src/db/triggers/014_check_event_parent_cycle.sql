@@ -7,9 +7,8 @@ RETURNS TRIGGER AS $$
 DECLARE
     v_current_id BIGINT := NEW.parent_event_id;
 BEGIN
-
     IF NEW.parent_event_id IS NULL OR NEW.parent_event_id = NEW.id THEN
-        RETURN NEW;
+        RETURN NEW; -- passed to check_event_parent_type, which will handle this.
     END IF;
 
     WHILE v_current_id IS NOT NULL LOOP

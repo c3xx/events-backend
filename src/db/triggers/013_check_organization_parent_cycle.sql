@@ -7,7 +7,6 @@ RETURNS TRIGGER AS $$
 DECLARE
     v_current_id INTEGER := NEW.parent_organization_id;
 BEGIN
-
     IF NEW.parent_organization_id IS NULL OR NEW.parent_organization_id = NEW.id THEN
         RETURN NEW; -- passed to check_organization_parent_type which will handle this.
     END IF;
