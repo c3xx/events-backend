@@ -9,7 +9,7 @@ DECLARE
 BEGIN
 
     IF NEW.parent_organization_id IS NULL OR NEW.parent_organization_id = NEW.id THEN
-        RETURN NEW;
+        RETURN NEW; -- passed to check_organization_parent_type which will handle this.
     END IF;
 
     WHILE v_current_id IS NOT NULL LOOP
