@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -7,7 +8,7 @@ export default defineConfig({
 		testTimeout: 60 * 1000, // 30s to get the container start (hopefully)
 		hookTimeout: 60 * 1000,
 		alias: {
-			"@/": new URL("./src/", import.meta.url).pathname,
+			"@/": fileURLToPath(new URL("./src/", import.meta.url)),
 		},
 		fileParallelism: false,
 		env: {
