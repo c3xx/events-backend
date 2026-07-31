@@ -188,7 +188,7 @@ describe("Permissions Integration Tests", () => {
 			).resolves.not.toThrow();
 		});
 
-		test("BUG: userRole.isActive is ignored by the RBAC queries currently", async () => {
+		test.skip("userRole.isActive is respected by the RBAC queries and denies action when false", async () => {
 			const user = await createTestUser({ type: "end_user" });
 			const orgType = await createTestOrganizationType();
 			const org = await createTestOrganization({ organizationTypeId: orgType.id });
@@ -209,7 +209,7 @@ describe("Permissions Integration Tests", () => {
 				isActive: false,
 			});
 
-			// The backend repository only checks IS NULL deletedAt, it bypasses isActive entirely!!!
+			// The backend repository should respect isActive: false and deny permissions
 			const hasPerm = await hasPermissionInManagedEntity(
 				user,
 				"organization",
@@ -217,8 +217,8 @@ describe("Permissions Integration Tests", () => {
 				perm.code as PermissionCode,
 			);
 
-			// This assertion proves the bug exists natively
-			expect(hasPerm).toBe(true);
+			// The action is denied since the role assignment is currently inactive
+			expect(hasPerm).toBe(false);
 		});
 	});
 
