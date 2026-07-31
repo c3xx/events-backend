@@ -12,6 +12,7 @@ export default defineConfig({
 		setupFiles: ["./test/setup-env.ts", "./test/setup.ts"],
 		testTimeout: 60 * 1000,
 		hookTimeout: 60 * 1000,
+
 		fileParallelism: false,
 		env: {
 			JWT_ACCESS_SECRET: "teststuff",

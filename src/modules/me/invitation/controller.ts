@@ -10,6 +10,9 @@ export const getPendingInvitations: ApiRequestHandler<
 		event: {
 			id: number;
 			title: string;
+			createdAt: string;
+			startsAt: string;
+			endsAt: string;
 			type: {
 				id: number;
 				name: string;
@@ -59,6 +62,7 @@ export const getPendingInvitation: ApiRequestHandler<{
 		title: string;
 		requestDetails: string;
 		expectedParticipants: number;
+		createdAt: string;
 		startsAt: string;
 		endsAt: string;
 		parentEvent: {
@@ -68,6 +72,8 @@ export const getPendingInvitation: ApiRequestHandler<{
 		type: {
 			id: number;
 			name: string;
+			venuePolicy: EventTypeVenuePolicy;
+			collaborationPolicy: EventTypeCollaborationPolicy;
 		};
 		category: {
 			id: number;

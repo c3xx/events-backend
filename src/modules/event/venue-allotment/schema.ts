@@ -1,4 +1,6 @@
 import z from "zod";
+import { idLike } from "@/lib/helpers.js";
+import { eventScopedSchema } from "@/modules/event/schema.js";
 
 export const createVenueAllotmentSchema = z
 	.object({
@@ -11,4 +13,11 @@ export const createVenueAllotmentSchema = z
 	})
 	.strict();
 
+export const allotmentScopedSchema = eventScopedSchema
+	.extend({
+		allotmentId: idLike("Invalid allotment ID"),
+	})
+	.strict();
+
 export type CreateVenueAllotmentSchema = z.output<typeof createVenueAllotmentSchema>;
+export type AllotmentScopedSchema = z.output<typeof allotmentScopedSchema>;

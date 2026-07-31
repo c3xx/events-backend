@@ -47,8 +47,10 @@ declare global {
 		initialStepId: number | null;
 		status: WorkflowInstanceStatus;
 		completedAt: string | null;
-		eventId: number;
-		submittedBy: number;
+		submitter: {
+			id: number;
+			fullName: string;
+		};
 		steps: {
 			id: number;
 			name: string;
@@ -91,16 +93,6 @@ declare global {
 			}[];
 		}[];
 	};
-
-	export type WorkflowInstances = {
-		id: number;
-		createdAt: string;
-		initialStepId: number | null;
-		status: WorkflowInstanceStatus;
-		completedAt: string | null;
-		eventId: number;
-		submittedBy: number;
-	}[];
 
 	type AuthenticatedUser = Pick<User, "id" | "type">;
 
@@ -187,4 +179,64 @@ declare global {
 		typeof schema,
 		ExtractTablesWithRelations<typeof schema>
 	>;
+
+	type ParsedDate = {
+		date: number;
+		month: number;
+		year: number;
+	};
+
+	type CalculatedCalendarDayEvent = {
+		id: number;
+		title: string;
+		status: "draft" | "pending" | "approved" | "cancelled" | "overridden";
+		startsAt: string;
+		endsAt: string;
+		parentEvent: {
+			id: number;
+			title: string;
+		} | null;
+		hostOrganization: {
+			id: number;
+			name: string;
+			type: {
+				id: number;
+				name: string;
+			};
+		};
+		category: {
+			id: number;
+			name: string;
+		};
+		timings: {
+			startsAt: string;
+			endsAt: string;
+		};
+		venueAllotments: {
+			id: number;
+			venue: {
+				id: number;
+				name: string;
+				type: {
+					id: number;
+					name: string;
+				};
+			};
+			startsAt: string;
+			endsAt: string;
+			timings: {
+				startsAt: string;
+				endsAt: string;
+			};
+		}[];
+		allVenueAllotments: {
+			id: number;
+			venue: {
+				id: number;
+				name: string;
+			};
+			startsAt: string;
+			endsAt: string;
+		}[];
+	};
 }

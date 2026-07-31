@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 import { resolveStep } from "./progression.js";
@@ -31,7 +31,7 @@ export const findAncestorOrganizationManagedEntities = dbAction(
 				INNER JOIN ancestors a ON o.id = a.parent_organization_id
 				WHERE o.deleted_at IS NULL
 			)
-			SELECT me.id AS managed_entity_id, anc.organization_type_id AS type_ref_id
+			SELECT DISTINCT me.id AS managed_entity_id, anc.organization_type_id AS type_ref_id
 			FROM ancestors anc
 			INNER JOIN managed_entity me
 			  ON me.ref_id = anc.id
@@ -226,30 +226,29 @@ export const getLatestWorkflowInstance = dbAction(async (eventId: number) => {
 			initialStepId: true,
 			status: true,
 			completedAt: true,
-			eventId: true,
-			submittedBy: true,
 		},
 		with: workflowInstanceWith,
 	});
 });
 
 export const getAllWorkflowInstances = dbAction(async (eventId: number) => {
-	return await db.query.workflowInstance.findMany({
-		where: and(
-			eq(schema.workflowInstance.eventId, eventId),
-			isNull(schema.workflowInstance.deletedAt),
-		),
-		orderBy: (t, { desc }) => [desc(t.createdAt)],
-		columns: {
-			id: true,
-			createdAt: true,
-			initialStepId: true,
-			status: true,
-			completedAt: true,
-			eventId: true,
-			submittedBy: true,
-		},
-	});
+	return await db
+		.select({
+			id: schema.workflowInstance.id,
+			status: schema.workflowInstance.status,
+			createdAt: schema.workflowInstance.createdAt,
+			completedAt: schema.workflowInstance.completedAt,
+			submitter: {
+				id: schema.user.id,
+				fullName: schema.user.fullName,
+			},
+		})
+		.from(schema.workflowInstance)
+		.innerJoin(schema.user, eq(schema.user.id, schema.workflowInstance.submittedBy))
+		.where(
+			and(eq(schema.workflowInstance.eventId, eventId), isNull(schema.workflowInstance.deletedAt)),
+		)
+		.orderBy(desc(schema.workflowInstance.createdAt));
 });
 
 export const getWorkflowInstance = dbAction(async (eventId: number, workflowInstanceId: number) => {
@@ -265,14 +264,18 @@ export const getWorkflowInstance = dbAction(async (eventId: number, workflowInst
 			initialStepId: true,
 			status: true,
 			completedAt: true,
-			eventId: true,
-			submittedBy: true,
 		},
 		with: workflowInstanceWith,
 	});
 });
 
 const workflowInstanceWith = {
+	submitter: {
+		columns: {
+			id: true,
+			fullName: true,
+		},
+	},
 	steps: {
 		columns: {
 			id: true,
