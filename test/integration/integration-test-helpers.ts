@@ -328,8 +328,8 @@ export async function createOrganizerTestSetup() {
 		typeRefId: setup.orgType.id,
 	});
 
-	await grantPermissionToRole(mockRole.id, "event_organizer_invitation:respond" as any);
-	await grantPermissionToRole(mockRole.id, "event:manage" as any);
+	await grantPermissionToRole(mockRole.id, "event_organizer_invitation:respond" as PermissionCode);
+	await grantPermissionToRole(mockRole.id, "event:manage" as PermissionCode);
 
 	const userRole = await createTestUserRole({
 		userId: setup.admin.id,
@@ -337,10 +337,9 @@ export async function createOrganizerTestSetup() {
 		managedEntityId: hostME.id,
 	});
 
-	const actor: any = {
+	const actor = {
 		id: setup.admin.id,
-		type: "admin" as any,
-		permissions: [],
+		type: "admin" as const,
 	};
 
 	const createdEvent = await createEvent(
