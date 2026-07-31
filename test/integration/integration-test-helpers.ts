@@ -484,3 +484,20 @@ export async function setupWorkflowTestEnvironment(options?: { noInitialStep?: b
 		faculty2,
 	};
 }
+
+export function createMockExpressContext(headers: Record<string, string> = {}) {
+	const req = {
+		headers,
+		user: undefined,
+		// biome-ignore lint/suspicious/noExplicitAny: Mocks
+	} as any;
+	const res = {
+		status: () => res,
+		json: () => res,
+		clearCookie: () => res,
+		cookie: () => res,
+		sendStatus: () => res,
+		// biome-ignore lint/suspicious/noExplicitAny: Mocks
+	} as any;
+	return { req, res };
+}
