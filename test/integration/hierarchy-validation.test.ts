@@ -197,13 +197,12 @@ describe("Type Hierarchy Validation", () => {
 				parentOrganizationId: orgA.id,
 			});
 
-			// BUG: Recursive graph cycles (A->B then B->A) are NOT blocked when types match perfectly! The trigger only checks types, not the full graph geometry.
 			await expect(
 				db
 					.update(schema.organization)
 					.set({ parentOrganizationId: orgB.id })
 					.where(eq(schema.organization.id, orgA.id)),
-			).resolves.not.toThrow();
+			).rejects.toThrow();
 		});
 	});
 
@@ -384,13 +383,12 @@ describe("Type Hierarchy Validation", () => {
 				parentEventId: eventA.id,
 			});
 
-			// BUG: Event recursive graph cycles (A->B then B->A) are NOT blocked when types match perfectly! The db trigger only checks single layer type compliance.
 			await expect(
 				db
 					.update(schema.event)
 					.set({ parentEventId: eventB.id })
 					.where(eq(schema.event.id, eventA.id)),
-			).resolves.not.toThrow();
+			).rejects.toThrow();
 		});
 	});
 
