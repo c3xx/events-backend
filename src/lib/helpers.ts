@@ -109,3 +109,7 @@ export const scopedParamHandler = <S extends Record<string, unknown>, T>(
 };
 
 export const idLike = (error: string) => z.coerce.number({ error }).int({ error });
+
+export function dateKey(date: Date): string {
+	return `${date.getUTCFullYear()}-${(date.getUTCMonth() + 1).toString().padStart(2, "0")}-${date.getUTCDate().toString().padStart(2, "0")}`;
+}
