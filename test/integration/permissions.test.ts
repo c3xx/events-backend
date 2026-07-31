@@ -188,7 +188,7 @@ describe("Permissions Integration Tests", () => {
 			).resolves.not.toThrow();
 		});
 
-		test.skip("userRole.isActive is respected by the RBAC queries and denies action when false", async () => {
+		test("userRole.isActive is respected by the RBAC queries and denies action when false", async () => {
 			const user = await createTestUser({ type: "end_user" });
 			const orgType = await createTestOrganizationType();
 			const org = await createTestOrganization({ organizationTypeId: orgType.id });
