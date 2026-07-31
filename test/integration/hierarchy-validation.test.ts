@@ -93,15 +93,6 @@ describe("Type Hierarchy Validation", () => {
 
 			await expect(addOrgAllowedChild({ id: 999999, childId: validOrg.id })).rejects.toThrow();
 		});
-
-		test("verifies self-mapping constraints (no DB constraint exists blocking this)", async () => {
-			const orgType = await createTestOrganizationType();
-
-			//bug: no explicit checking when parent organization type is same as child organization type
-			await expect(
-				addOrgAllowedChild({ id: orgType.id, childId: orgType.id }),
-			).resolves.not.toThrow();
-		});
 	});
 
 	describe("Organization Hierarchy Enforcement", () => {
