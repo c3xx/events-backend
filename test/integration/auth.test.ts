@@ -35,7 +35,6 @@ describe("Auth Integration Tests", () => {
 		});
 
 		test("rejects registration with email outside institution domain (DB layer DB trigger)", async () => {
-			// Bug note: createUser relies on Zod validation in controller, BUT the DB constraint should catch it here
 			await expect(
 				createUser({
 					email: "hacker@gmail.com",
@@ -203,7 +202,7 @@ describe("Auth Integration Tests", () => {
 			expect(newTokens.refreshToken).toBeDefined();
 		});
 
-		test("BUG: refresh allows inactive users to re-issue tokens", async () => {
+		test("refresh shouldn't allow inactive users to re-issue tokens", async () => {
 			const email = "refresh-inactive@tkmce.ac.in";
 			const passwordHash = await hashPassword("password123");
 			const user = await createTestUser({ email, passwordHash, type: "end_user", isActive: true });
@@ -212,7 +211,7 @@ describe("Auth Integration Tests", () => {
 
 			await db.update(schema.user).set({ isActive: false }).where(eq(schema.user.id, user.id));
 
-			await expect(createNewTokens(refreshToken)).resolves.not.toThrow();
+			await expect(createNewTokens(refreshToken)).rejects.toThrow();
 		});
 
 		test("refresh rejects if user is soft-deleted", async () => {
@@ -254,7 +253,7 @@ describe("Auth Integration Tests", () => {
 			expect(req.user.type).toBe("end_user");
 		});
 
-		test("BUG: stateless middleware blindly accepts tokens for soft-deleted users", async () => {
+		test("stateless middleware shouldn't accept tokens for soft-deleted users", async () => {
 			const user = await createTestUser({ type: "end_user" });
 			const accessToken = await generateAccessToken({ id: user.id, type: "end_user" });
 
@@ -267,7 +266,7 @@ describe("Auth Integration Tests", () => {
 				authorization: `Bearer ${accessToken}`,
 			});
 
-			await expect(authenticateToken(req, res, () => {})).resolves.not.toThrow();
+			await expect(authenticateToken(req, res, () => {})).rejects.toThrow();
 		});
 
 		test("rejects requests with missing or expired token", async () => {
