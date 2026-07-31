@@ -188,19 +188,21 @@ describe("Type Hierarchy Validation", () => {
 
 		test("Cycle Detection: rejects 2-level organization parent cycle (A->B then B->A)", async () => {
 			const rootType = await createTestOrganizationType();
-			const loopType = await createTestOrganizationType();
-			await addOrgAllowedChild({ id: rootType.id, childId: loopType.id });
-			await addOrgAllowedChild({ id: loopType.id, childId: loopType.id });
+			const typeA = await createTestOrganizationType();
+			const typeB = await createTestOrganizationType();
+			await addOrgAllowedChild({ id: rootType.id, childId: typeA.id });
+			await addOrgAllowedChild({ id: typeA.id, childId: typeB.id });
+			await addOrgAllowedChild({ id: typeB.id, childId: typeA.id });
 
 			const rootOrg = await createOrganization({ name: "Root", organizationTypeId: rootType.id });
 			const orgA = await createOrganization({
 				name: "A",
-				organizationTypeId: loopType.id,
+				organizationTypeId: typeA.id,
 				parentOrganizationId: rootOrg.id,
 			});
 			const orgB = await createOrganization({
 				name: "B",
-				organizationTypeId: loopType.id,
+				organizationTypeId: typeB.id,
 				parentOrganizationId: orgA.id,
 			});
 
@@ -360,9 +362,11 @@ describe("Type Hierarchy Validation", () => {
 			const template = await createTestWorkflowTemplate();
 			await createTestWorkflowStep({ templateId: template.id });
 			const rootType = await createTestEventType({ workflowTemplateId: template.id });
-			const loopType = await createTestEventType({ workflowTemplateId: template.id });
-			await addEventAllowedChild({ id: rootType.id, childId: loopType.id });
-			await addEventAllowedChild({ id: loopType.id, childId: loopType.id });
+			const typeA = await createTestEventType({ workflowTemplateId: template.id });
+			const typeB = await createTestEventType({ workflowTemplateId: template.id });
+			await addEventAllowedChild({ id: rootType.id, childId: typeA.id });
+			await addEventAllowedChild({ id: typeA.id, childId: typeB.id });
+			await addEventAllowedChild({ id: typeB.id, childId: typeA.id });
 
 			const rootEvent = await createEvent(
 				actor,
@@ -375,7 +379,7 @@ describe("Type Hierarchy Validation", () => {
 			const eventA = await createEvent(actor, {
 				...createTestEventBody({
 					organizationId: setup.hostOrg.id,
-					typeId: loopType.id,
+					typeId: typeA.id,
 					categoryId: setup.category.id,
 				}),
 				parentEventId: rootEvent.id,
@@ -383,7 +387,7 @@ describe("Type Hierarchy Validation", () => {
 			const eventB = await createEvent(actor, {
 				...createTestEventBody({
 					organizationId: setup.hostOrg.id,
-					typeId: loopType.id,
+					typeId: typeB.id,
 					categoryId: setup.category.id,
 				}),
 				parentEventId: eventA.id,
