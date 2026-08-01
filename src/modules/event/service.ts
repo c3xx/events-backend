@@ -12,7 +12,7 @@ import type { EventScope } from "./scopes.js";
 import * as workflowInstanceRepository from "./workflow-instance/repository.js";
 
 export async function createEvent(user: AuthenticatedUser, input: schemas.CreateEventSchema) {
-	if(new Date(input.startsAt)<new Date()){
+	if (new Date(input.startsAt) < new Date()) {
 		throw new ForbiddenError("Event cannot start in the past");
 	}
 
