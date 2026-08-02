@@ -616,7 +616,7 @@ describe("Workflow Instance Management", () => {
 		expect(result1.status).toBe("fulfilled");
 		expect(result2.status).toBe("fulfilled");
 	});
-	test.skip("Concurrent submission of the same event", async () => {
+	test("Concurrent submission of the same event", async () => {
 		const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
 		const event = await createEvent(
 			{ id: admin.id, type: "admin" },
