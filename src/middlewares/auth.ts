@@ -1,7 +1,8 @@
 import { jwtVerify } from "jose";
 import { env } from "@/lib/env.js";
-import { UnauthorizedError } from "@/lib/errors.js";
+import { BadRequestError, UnauthorizedError } from "@/lib/errors.js";
 import { JWS_ALG_HEADER_PARAMETER, JWT_ACCESS_SECRET_SIGN_KEY } from "@/lib/jwt.js";
+import { findUserById } from "@/modules/user/repository.js";
 
 const BEARER_PREFIX = "Bearer ";
 
@@ -32,6 +33,11 @@ export const authenticateToken: ApiRequestHandler = async (req, _res, next) => {
 
 		// todo: always fetch permissions, or embed inside *very* short-lived access tokens?
 		// going with always fetch for now, for testing purposes. this is heavy though.
+
+		const user = await findUserById(payload.id);
+		if (user == null) {
+			throw new BadRequestError("User not found");
+		}
 
 		req.user = {
 			id: payload.id,

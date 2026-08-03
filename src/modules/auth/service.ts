@@ -69,6 +69,8 @@ export async function createNewTokens(refreshToken: string) {
 	const user = await userRepository.findUserById(jwtPayload.id);
 	if (user == null) {
 		throw new UnauthorizedError("Could not find the authenticated user");
+	} else if (!user.isActive) {
+		throw new ForbiddenError("User is inactive");
 	}
 
 	const newPayload = {
