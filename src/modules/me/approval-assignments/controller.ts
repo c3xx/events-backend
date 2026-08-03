@@ -23,7 +23,7 @@ export const getPendingApprovalEvents: ApiRequestHandler<
 		} | null;
 		organizers: {
 			id: number;
-			role: "host" | "co_host" | "resource_provider";
+			role: EventOrganizerRole;
 			organization: {
 				id: number;
 				name: string;
@@ -44,7 +44,6 @@ export const getEventAssignments: ApiRequestHandler<
 		expectedParticipants: number;
 		requestDetails: string;
 		status: EventStatus;
-		parentEventId: number | null;
 		startsAt: string;
 		endsAt: string;
 		type: {
@@ -68,6 +67,32 @@ export const getEventAssignments: ApiRequestHandler<
 			venue: {
 				id: number;
 				name: string;
+			};
+			facilities: {
+				id: number;
+				venueAllotmentId: number | null;
+				facility: {
+					id: number;
+					name: string;
+					type: {
+						id: number;
+						name: string;
+					};
+					isAvailable: boolean;
+				};
+			}[];
+		}[];
+		facilities: {
+			id: number;
+			venueAllotmentId: number | null;
+			facility: {
+				id: number;
+				name: string;
+				type: {
+					id: number;
+					name: string;
+				};
+				isAvailable: boolean;
 			};
 		}[];
 		organizers: {

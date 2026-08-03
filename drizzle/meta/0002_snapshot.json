@@ -1,5 +1,5 @@
 {
-	"id": "54ce0b8d-9f97-4381-a885-2f629dd4ed4f",
+	"id": "c75e83b2-f365-4e57-97d3-c1d02eba6325",
 	"prevId": "e297106d-7a31-49f9-9a24-9c0516c2e6b8",
 	"version": "7",
 	"dialect": "postgresql",
@@ -239,6 +239,102 @@
 				}
 			},
 			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.event_facility": {
+			"name": "event_facility",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "bigint",
+					"primaryKey": true,
+					"notNull": true,
+					"identity": {
+						"type": "always",
+						"name": "event_facility_id_seq",
+						"schema": "public",
+						"increment": "1",
+						"startWith": "1",
+						"minValue": "1",
+						"maxValue": "9223372036854775807",
+						"cache": "1",
+						"cycle": false
+					}
+				},
+				"event_id": {
+					"name": "event_id",
+					"type": "bigint",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"facility_id": {
+					"name": "facility_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"venue_allotment_id": {
+					"name": "venue_allotment_id",
+					"type": "bigint",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"event_facility_event_id_event_id_fk": {
+					"name": "event_facility_event_id_event_id_fk",
+					"tableFrom": "event_facility",
+					"tableTo": "event",
+					"columnsFrom": ["event_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				},
+				"event_facility_facility_id_facility_id_fk": {
+					"name": "event_facility_facility_id_facility_id_fk",
+					"tableFrom": "event_facility",
+					"tableTo": "facility",
+					"columnsFrom": ["facility_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				},
+				"event_facility_venue_allotment_id_venue_allotment_id_fk": {
+					"name": "event_facility_venue_allotment_id_venue_allotment_id_fk",
+					"tableFrom": "event_facility",
+					"tableTo": "venue_allotment",
+					"columnsFrom": ["venue_allotment_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
 			"compositePrimaryKeys": {},
 			"uniqueConstraints": {},
 			"policies": {},
@@ -842,6 +938,39 @@
 					"primaryKey": false,
 					"notNull": true
 				},
+				"type_id": {
+					"name": "type_id",
+					"type": "smallint",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"is_available": {
+					"name": "is_available",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"association": {
+					"name": "association",
+					"type": "facility_association_method",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"workflow_participation_policy": {
+					"name": "workflow_participation_policy",
+					"type": "facility_workflow_participation_policy",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"overlap_policy": {
+					"name": "overlap_policy",
+					"type": "facility_overlap_policy",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true
+				},
 				"created_at": {
 					"name": "created_at",
 					"type": "timestamp with time zone",
@@ -875,7 +1004,198 @@
 						}
 					],
 					"isUnique": true,
-					"where": "\"facility\".\"deleted_at\" is null",
+					"where": "\"facility\".\"deleted_at\" IS NULL",
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"facility_type_id_facility_type_id_fk": {
+					"name": "facility_type_id_facility_type_id_fk",
+					"tableFrom": "facility",
+					"tableTo": "facility_type",
+					"columnsFrom": ["type_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.facility_provider": {
+			"name": "facility_provider",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"identity": {
+						"type": "always",
+						"name": "facility_provider_id_seq",
+						"schema": "public",
+						"increment": "1",
+						"startWith": "1",
+						"minValue": "1",
+						"maxValue": "2147483647",
+						"cache": "1",
+						"cycle": false
+					}
+				},
+				"facility_id": {
+					"name": "facility_id",
+					"type": "smallint",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"provider_entity_type": {
+					"name": "provider_entity_type",
+					"type": "facility_provider_entity_type",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"provider_entity_ref_id": {
+					"name": "provider_entity_ref_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				}
+			},
+			"indexes": {
+				"facility_provider_facility_id_provider_entity_type_provider_entity_ref_id_index": {
+					"name": "facility_provider_facility_id_provider_entity_type_provider_entity_ref_id_index",
+					"columns": [
+						{
+							"expression": "facility_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "provider_entity_type",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "provider_entity_ref_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": true,
+					"where": "\"facility_provider\".\"deleted_at\" IS NULL",
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"facility_provider_facility_id_facility_id_fk": {
+					"name": "facility_provider_facility_id_facility_id_fk",
+					"tableFrom": "facility_provider",
+					"tableTo": "facility",
+					"columnsFrom": ["facility_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.facility_type": {
+			"name": "facility_type",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "smallint",
+					"primaryKey": true,
+					"notNull": true,
+					"identity": {
+						"type": "always",
+						"name": "facility_type_id_seq",
+						"schema": "public",
+						"increment": "1",
+						"startWith": "1",
+						"minValue": "1",
+						"maxValue": "32767",
+						"cache": "1",
+						"cycle": false
+					}
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				}
+			},
+			"indexes": {
+				"facility_type_name_index": {
+					"name": "facility_type_name_index",
+					"columns": [
+						{
+							"expression": "name",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": true,
+					"where": "\"facility_type\".\"deleted_at\" is null",
 					"concurrently": false,
 					"method": "btree",
 					"with": {}
@@ -2048,94 +2368,6 @@
 			},
 			"isRLSEnabled": false
 		},
-		"public.venue_facility": {
-			"name": "venue_facility",
-			"schema": "",
-			"columns": {
-				"id": {
-					"name": "id",
-					"type": "integer",
-					"primaryKey": true,
-					"notNull": true,
-					"identity": {
-						"type": "always",
-						"name": "venue_facility_id_seq",
-						"schema": "public",
-						"increment": "1",
-						"startWith": "1",
-						"minValue": "1",
-						"maxValue": "2147483647",
-						"cache": "1",
-						"cycle": false
-					}
-				},
-				"venue_id": {
-					"name": "venue_id",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true
-				},
-				"facility_id": {
-					"name": "facility_id",
-					"type": "smallint",
-					"primaryKey": false,
-					"notNull": true
-				},
-				"is_active": {
-					"name": "is_active",
-					"type": "boolean",
-					"primaryKey": false,
-					"notNull": true,
-					"default": true
-				},
-				"created_at": {
-					"name": "created_at",
-					"type": "timestamp with time zone",
-					"primaryKey": false,
-					"notNull": true,
-					"default": "now()"
-				},
-				"updated_at": {
-					"name": "updated_at",
-					"type": "timestamp with time zone",
-					"primaryKey": false,
-					"notNull": true,
-					"default": "now()"
-				}
-			},
-			"indexes": {},
-			"foreignKeys": {
-				"venue_facility_venue_id_venue_id_fk": {
-					"name": "venue_facility_venue_id_venue_id_fk",
-					"tableFrom": "venue_facility",
-					"tableTo": "venue",
-					"columnsFrom": ["venue_id"],
-					"columnsTo": ["id"],
-					"onDelete": "no action",
-					"onUpdate": "no action"
-				},
-				"venue_facility_facility_id_facility_id_fk": {
-					"name": "venue_facility_facility_id_facility_id_fk",
-					"tableFrom": "venue_facility",
-					"tableTo": "facility",
-					"columnsFrom": ["facility_id"],
-					"columnsTo": ["id"],
-					"onDelete": "no action",
-					"onUpdate": "no action"
-				}
-			},
-			"compositePrimaryKeys": {},
-			"uniqueConstraints": {
-				"venue_facility_venueId_facilityId_unique": {
-					"name": "venue_facility_venueId_facilityId_unique",
-					"nullsNotDistinct": false,
-					"columns": ["venue_id", "facility_id"]
-				}
-			},
-			"policies": {},
-			"checkConstraints": {},
-			"isRLSEnabled": false
-		},
 		"public.venue_type": {
 			"name": "venue_type",
 			"schema": "",
@@ -2283,6 +2515,28 @@
 				}
 			},
 			"indexes": {
+				"workflow_instance_event_id_initial_step_id_index": {
+					"name": "workflow_instance_event_id_initial_step_id_index",
+					"columns": [
+						{
+							"expression": "event_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "initial_step_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": true,
+					"where": "\"workflow_instance\".\"deleted_at\" IS NULL AND \"workflow_instance\".\"status\" = 'active'",
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				},
 				"workflow_instance_event_id_index": {
 					"name": "workflow_instance_event_id_index",
 					"columns": [
@@ -2294,7 +2548,7 @@
 						}
 					],
 					"isUnique": true,
-					"where": "\"workflow_instance\".\"deleted_at\" IS NULL AND \"workflow_instance\".\"status\" = 'active'",
+					"where": "\"workflow_instance\".\"deleted_at\" IS NULL AND \"workflow_instance\".\"status\" = 'active' AND \"workflow_instance\".\"initial_step_id\" IS NULL",
 					"concurrently": false,
 					"method": "btree",
 					"with": {}
@@ -3198,10 +3452,30 @@
 			"schema": "public",
 			"values": ["required", "optional", "forbidden"]
 		},
+		"public.facility_association_method": {
+			"name": "facility_association_method",
+			"schema": "public",
+			"values": ["event", "venue_allotment"]
+		},
+		"public.facility_overlap_policy": {
+			"name": "facility_overlap_policy",
+			"schema": "public",
+			"values": ["shared", "exclusive"]
+		},
+		"public.facility_provider_entity_type": {
+			"name": "facility_provider_entity_type",
+			"schema": "public",
+			"values": ["organization", "venue"]
+		},
+		"public.facility_workflow_participation_policy": {
+			"name": "facility_workflow_participation_policy",
+			"schema": "public",
+			"values": ["include", "exclude"]
+		},
 		"public.managed_entity_type": {
 			"name": "managed_entity_type",
 			"schema": "public",
-			"values": ["organization", "venue"]
+			"values": ["organization", "venue", "facility"]
 		},
 		"public.password_token_type": {
 			"name": "password_token_type",

@@ -15,6 +15,13 @@ declare global {
 	export type Role = typeof schema.role.$inferSelect;
 	export type Permission = typeof schema.permission.$inferSelect;
 	export type VenueAccessLevel = (typeof schema.venueAccessLevelEnum.enumValues)[number];
+	export type FacilityProviderEntityType =
+		(typeof schema.facilityProviderEntityTypeEnum.enumValues)[number];
+	export type FacilityAssociationMethod =
+		(typeof schema.facilityAssociationMethodEnum.enumValues)[number];
+	export type FacilityOverlapPolicy = (typeof schema.facilityOverlapPolicyEnum.enumValues)[number];
+	export type FacilityWorkflowParticipationPolicy =
+		(typeof schema.facilityWorkflowParticipationPolicyEnum.enumValues)[number];
 	export type PasswordTokenType = (typeof schema.passwordTokenTypeEnum.enumValues)[number];
 
 	// -- events

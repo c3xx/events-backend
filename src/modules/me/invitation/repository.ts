@@ -39,7 +39,7 @@ export const findPendingInvitationsForUser = dbAction(
 						id: schema.role.id,
 						name: schema.role.name,
 						// scope: sql<{
-						// 	type: "organization" | "venue";
+						// 	type: ManagedEntityType;
 						// 	kindId: number;
 						// 	kindName: string;
 						// }>`case
@@ -52,6 +52,11 @@ export const findPendingInvitationsForUser = dbAction(
 						// 	then (
 						// 		select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', vt.id, 'kindName', vt.name)
 						// 		from venue_type vt where vt.id = ${schema.role.typeRefId} limit 1
+						// 	)
+						//  when ${schema.role.managedEntityType} = 'facility'
+						// 	then (
+						// 		select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', ft.id, 'kindName', ft.name)
+						// 		from facility_type ft where ft.id = ${schema.role.typeRefId} limit 1
 						// 	)
 						// 	else null
 						// end`,

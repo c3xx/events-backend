@@ -1,7 +1,10 @@
 import { and, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { jsonAggDistinct, jsonBuildObject, jsonBuildObjectNullable } from "@/db/helpers.js";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
+
+const EVENT_ASSOCIATED_FACILITIES_KEY = Symbol("event associated facilities");
 
 export const createEvent = dbAction(
 	async (data: {
@@ -141,56 +144,178 @@ export const findEvents = dbAction(
 );
 
 export const findEventById = dbAction(async (eventId: number) => {
-	const event = await db.query.event.findFirst({
-		where: and(eq(schema.event.id, eventId), isNull(schema.event.deletedAt)),
-		columns: {
-			id: true,
-			title: true,
-			expectedParticipants: true,
-			requestDetails: true,
-			status: true,
-			parentEventId: true,
-			createdAt: true,
-			startsAt: true,
-			endsAt: true,
-		},
-		with: {
-			type: {
-				columns: {
-					id: true,
-					name: true,
-					collaborationPolicy: true,
-					venuePolicy: true,
-				},
-			},
-			category: {
-				columns: { id: true, name: true },
-			},
-			parentEvent: {
-				columns: { id: true, title: true },
-			},
-			organizers: {
-				where: isNull(schema.eventOrganizer.deletedAt),
-				columns: { id: true, role: true },
-				with: {
-					organization: {
-						columns: { id: true, name: true },
-					},
-				},
-			},
-			venueAllotments: {
-				where: isNull(schema.venueAllotment.deletedAt),
-				columns: { id: true, startsAt: true, endsAt: true },
-				with: {
-					venue: {
-						columns: { id: true, name: true },
-					},
-				},
-			},
-		},
-	});
+	const parentEvent = alias(schema.event, "parent_event");
 
-	return event;
+	const [eventDetails] = await db
+		.select({
+			id: schema.event.id,
+			title: schema.event.title,
+			expectedParticipants: schema.event.expectedParticipants,
+			requestDetails: schema.event.requestDetails,
+			status: schema.event.status,
+			createdAt: schema.event.createdAt,
+			startsAt: schema.event.startsAt,
+			endsAt: schema.event.endsAt,
+
+			type: jsonBuildObject({
+				id: schema.eventType.id,
+				name: schema.eventType.name,
+				collaborationPolicy: schema.eventType.collaborationPolicy,
+				venuePolicy: schema.eventType.venuePolicy,
+			}),
+			category: jsonBuildObject({
+				id: schema.eventCategory.id,
+				name: schema.eventCategory.name,
+			}),
+			parentEvent: jsonBuildObjectNullable(
+				{
+					id: parentEvent.id,
+					title: parentEvent.title,
+				},
+				parentEvent.id,
+			),
+			organizers: jsonAggDistinct(
+				jsonBuildObject({
+					id: schema.eventOrganizer.id,
+					role: schema.eventOrganizer.role,
+					organization: jsonBuildObject({
+						id: schema.organization.id,
+						name: schema.organization.name,
+					}),
+				}),
+			),
+			venueAllotments: jsonAggDistinct(
+				jsonBuildObject({
+					id: schema.venueAllotment.id,
+					startsAt: schema.venueAllotment.startsAt,
+					endsAt: schema.venueAllotment.endsAt,
+					venue: jsonBuildObject({
+						id: schema.venue.id,
+						name: schema.venue.name,
+					}),
+				}),
+				schema.venueAllotment.id,
+			),
+			facilityAssignments: jsonAggDistinct(
+				jsonBuildObject({
+					id: schema.eventFacility.id,
+					venueAllotmentId: schema.eventFacility.venueAllotmentId,
+					facility: jsonBuildObject({
+						id: schema.facility.id,
+						name: schema.facility.name,
+						type: jsonBuildObject({
+							id: schema.facilityType.id,
+							name: schema.facilityType.name,
+						}),
+						isAvailable: schema.facility.isAvailable,
+					}),
+				}),
+				schema.eventFacility.id,
+			),
+		})
+		.from(schema.event)
+		.innerJoin(
+			schema.eventType,
+			and(eq(schema.event.typeId, schema.eventType.id), isNull(schema.eventType.deletedAt)),
+		)
+		.innerJoin(
+			schema.eventCategory,
+			and(
+				eq(schema.event.categoryId, schema.eventCategory.id),
+				isNull(schema.eventCategory.deletedAt),
+			),
+		)
+		.leftJoin(
+			parentEvent,
+			and(eq(schema.event.parentEventId, parentEvent.id), isNull(parentEvent.deletedAt)),
+		)
+		.innerJoin(
+			schema.eventOrganizer,
+			and(
+				eq(schema.event.id, schema.eventOrganizer.eventId),
+				isNull(schema.eventOrganizer.deletedAt),
+			),
+		)
+		.innerJoin(
+			schema.organization,
+			and(
+				eq(schema.eventOrganizer.organizationId, schema.organization.id),
+				isNull(schema.organization.deletedAt),
+			),
+		)
+		.leftJoin(
+			schema.venueAllotment,
+			and(
+				eq(schema.venueAllotment.eventId, schema.event.id),
+				isNull(schema.venueAllotment.deletedAt),
+			),
+		)
+		.leftJoin(
+			schema.venue,
+			and(eq(schema.venueAllotment.venueId, schema.venue.id), isNull(schema.venue.deletedAt)),
+		)
+		.leftJoin(
+			schema.eventFacility,
+			and(
+				eq(schema.eventFacility.eventId, schema.event.id),
+				isNull(schema.eventFacility.deletedAt),
+			),
+		)
+		.leftJoin(
+			schema.facility,
+			and(
+				eq(schema.facility.id, schema.eventFacility.facilityId),
+				isNull(schema.facility.deletedAt),
+			),
+		)
+		.leftJoin(
+			schema.facilityType,
+			and(
+				eq(schema.facilityType.id, schema.facility.typeId),
+				isNull(schema.facilityType.deletedAt),
+			),
+		)
+		.where(and(eq(schema.event.id, eventId), isNull(schema.event.deletedAt)))
+		.limit(1)
+		.groupBy(schema.event.id, schema.eventType.id, schema.eventCategory.id, parentEvent.id);
+
+	if (eventDetails == null) return eventDetails;
+
+	const { facilityAssignments, ...event } = eventDetails;
+
+	const grouped = facilityAssignments.reduce(
+		(grouped, facilityAssignment) => {
+			const key = facilityAssignment.venueAllotmentId ?? EVENT_ASSOCIATED_FACILITIES_KEY;
+			grouped[key] ??= [];
+			grouped[key].push(facilityAssignment);
+			return grouped;
+		},
+		{} as Record<
+			number | symbol,
+			{
+				id: number;
+				venueAllotmentId: number | null;
+				facility: {
+					id: number;
+					name: string;
+					type: {
+						id: number;
+						name: string;
+					};
+					isAvailable: boolean;
+				};
+			}[]
+		>,
+	);
+
+	return {
+		...event,
+		venueAllotments: eventDetails.venueAllotments.map((venueAllotment) => ({
+			...venueAllotment,
+			facilities: grouped[venueAllotment.id] ?? [],
+		})),
+		facilities: grouped[EVENT_ASSOCIATED_FACILITIES_KEY] ?? [],
+	};
 });
 
 export const findEventOrganizerOrgIds = dbAction(async (eventId: number) => {

@@ -20,6 +20,10 @@ import {
 	EVENT_STATUS,
 	EVENT_TYPE_COLLABORATION_POLICY,
 	EVENT_TYPE_VENUE_POLICY,
+	FACILITY_ASSOCIATION_METHODS,
+	FACILITY_OVERLAP_POLICIES,
+	FACILITY_PROVIDER_ENTITY_TYPES,
+	FACILITY_WORKFLOW_PARTICIPATION_POLICIES,
 	INSTITUTION_DOMAIN,
 	MANAGED_ENTITY_TYPES,
 	PASSWORD_TOKEN_TYPES,
@@ -39,6 +43,22 @@ export const userTypeEnum = pgEnum("user_type", USER_TYPES);
 export const managedEntityTypeEnum = pgEnum("managed_entity_type", MANAGED_ENTITY_TYPES);
 export const passwordTokenTypeEnum = pgEnum("password_token_type", PASSWORD_TOKEN_TYPES);
 export const venueAccessLevelEnum = pgEnum("venue_access_level", VENUE_ACCESS_LEVELS);
+export const facilityProviderEntityTypeEnum = pgEnum(
+	"facility_provider_entity_type",
+	FACILITY_PROVIDER_ENTITY_TYPES,
+);
+export const facilityOverlapPolicyEnum = pgEnum(
+	"facility_overlap_policy",
+	FACILITY_OVERLAP_POLICIES,
+);
+export const facilityAssociationMethodEnum = pgEnum(
+	"facility_association_method",
+	FACILITY_ASSOCIATION_METHODS,
+);
+export const facilityWorkflowParticipationPolicyEnum = pgEnum(
+	"facility_workflow_participation_policy",
+	FACILITY_WORKFLOW_PARTICIPATION_POLICIES,
+);
 export const eventTypeVenuePolicyEnum = pgEnum("event_type_venue_policy", EVENT_TYPE_VENUE_POLICY);
 export const eventTypeCollaborationPolicyEnum = pgEnum(
 	"event_type_collaboration_policy",
@@ -371,8 +391,23 @@ export const venueRelations = relations(venue, (r) => ({
 		fields: [venue.organizationId],
 		references: [organization.id],
 	}),
-	facilities: r.many(venueFacility),
 	// soft-fk(managed_entity)
+}));
+
+export const facilityType = pgTable(
+	"facility_type",
+	{
+		id: smallint().primaryKey().generatedAlwaysAsIdentity(),
+		name: text().notNull(),
+
+		...fields("common", "soft-delete"),
+	},
+	(t) => [uniqueIndex().on(t.name).where(isNull(t.deletedAt))],
+);
+
+export const facilityTypeRelations = relations(facilityType, (r) => ({
+	facilities: r.many(facility),
+	// soft-fk(roles), roles that comes under this type of facility
 }));
 
 export const facility = pgTable(
@@ -380,41 +415,78 @@ export const facility = pgTable(
 	{
 		id: smallint().primaryKey().generatedAlwaysAsIdentity(),
 		name: text().notNull(),
+		typeId: smallint()
+			.references(() => facilityType.id)
+			.notNull(),
+		isAvailable: boolean().notNull(),
+		// unavailabilityReason: text(), // todo
+
+		association: facilityAssociationMethodEnum().notNull(),
+		workflowParticipationPolicy: facilityWorkflowParticipationPolicyEnum().notNull(),
+		overlapPolicy: facilityOverlapPolicyEnum().notNull(),
+
 		...fields("common", "soft-delete"),
 	},
-	(t) => [uniqueIndex().on(t.name).where(isNull(t.deletedAt))],
+	(t) => [uniqueIndex().on(t.name).where(sql`${t.deletedAt} IS NULL`)],
 );
 
 export const facilityRelations = relations(facility, (r) => ({
-	venues: r.many(venueFacility),
+	providers: r.many(facilityProvider),
+	// soft-fk(managed_entity)
 }));
 
-export const venueFacility = pgTable(
-	"venue_facility",
+export const facilityProvider = pgTable(
+	"facility_provider",
 	{
 		id: integer().primaryKey().generatedAlwaysAsIdentity(),
-		venueId: integer()
-			.references(() => venue.id)
-			.notNull(),
 		facilityId: smallint()
 			.references(() => facility.id)
 			.notNull(),
-		isActive: boolean().notNull().default(true),
-		...fields("common"), // todo: soft-delete or no?
+		providerEntityType: facilityProviderEntityTypeEnum().notNull(),
+		providerEntityRefId: integer().notNull(),
+		...fields("common", "soft-delete"),
 	},
-	(t) => [unique().on(t.venueId, t.facilityId)],
+	(t) => [
+		uniqueIndex()
+			.on(t.facilityId, t.providerEntityType, t.providerEntityRefId)
+			.where(sql`${t.deletedAt} IS NULL`),
+	],
 );
 
-export const venueFacilityRelations = relations(venueFacility, (r) => ({
-	venue: r.one(venue, {
-		fields: [venueFacility.venueId],
-		references: [venue.id],
-	}),
+export const facilityProviderRelations = relations(facilityProvider, (r) => ({
 	facility: r.one(facility, {
-		fields: [venueFacility.facilityId],
+		fields: [facilityProvider.facilityId],
 		references: [facility.id],
 	}),
+	// soft-fk(provider-entity-ref-id) -> organization, venue
 }));
+
+export const eventFacility = pgTable(
+	"event_facility",
+	{
+		id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+		eventId: bigint({ mode: "number" })
+			.references(() => event.id)
+			.notNull(),
+		facilityId: integer()
+			.references(() => facility.id)
+			.notNull(),
+		venueAllotmentId: bigint({ mode: "number" }).references(() => venueAllotment.id),
+
+		...fields("common", "soft-delete"),
+	},
+	// (t) => [
+	// todo: write trigger to check the uniqueness based on the facility->facility_type(overlap_policy)
+	// todo: write trigger to check whether the venue_allotment_id is related with event_id (of the same event)
+	//
+	// uniqueIndex()
+	// 	.on(t.eventId, t.facilityId)
+	// 	.where(sql`${t.deletedAt} IS NULL AND ${t.venueAllotmentId} IS NULL`),
+	// uniqueIndex()
+	// 	.on(t.eventId, t.facilityId, t.venueAllotmentId)
+	// 	.where(sql`${t.deletedAt} IS NULL AND ${t.venueAllotmentId} IS NOT NULL`),
+	// ],
+);
 
 export const eventType = pgTable(
 	"event_type",

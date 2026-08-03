@@ -124,7 +124,7 @@ export const findAssignmentsForUserInEvent = dbAction(async (userId: number, eve
 				id: schema.role.id,
 				name: schema.role.name,
 				scope: sql<{
-					type: "organization" | "venue";
+					type: ManagedEntityType;
 					kindId: number;
 					kindName: string;
 				}>`case
@@ -138,11 +138,16 @@ export const findAssignmentsForUserInEvent = dbAction(async (userId: number, eve
 						select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', vt.id, 'kindName', vt.name)
 						from venue_type vt where vt.id = ${schema.role.typeRefId} limit 1
 					)
+					when ${schema.role.managedEntityType} = 'facility'
+					then (
+						select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', ft.id, 'kindName', ft.name)
+						from facility_type ft where ft.id = ${schema.role.typeRefId} limit 1
+					)
 					else null
 				end`.as("scope"),
 			},
 			scope: sql<{
-				type: "organization" | "venue";
+				type: ManagedEntityType;
 				id: number;
 				name: string;
 			}>`case
@@ -155,6 +160,11 @@ export const findAssignmentsForUserInEvent = dbAction(async (userId: number, eve
 					then (
 						select json_build_object('type', ${schema.managedEntity.managedEntityType}, 'id', v.id, 'name', v.name)
 						from venue v where v.id = ${schema.managedEntity.refId} limit 1
+					)
+					when ${schema.managedEntity.managedEntityType} = 'facility'
+					then (
+						select json_build_object('type', ${schema.managedEntity.managedEntityType}, 'id', f.id, 'name', f.name)
+						from facility f where f.id = ${schema.managedEntity.refId} limit 1
 					)
 					else null
 				end`.as("scope"),
