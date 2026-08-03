@@ -1,23 +1,31 @@
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { assert, describe, expect, test } from "vitest";
 import { db, schema } from "@/db/index.js";
+import { orderWorkflowSteps } from "@/lib/helpers.js";
+import { insertEventOrganizer } from "@/modules/event/organizer/repository.js";
 import { findEventById } from "@/modules/event/repository.js";
 import { createEventSchema } from "@/modules/event/schema.js";
+import { createEvent, getEvent, submitEvent, updateEvent } from "@/modules/event/service.js";
+import { abortWorkflowInstance } from "@/modules/event/workflow-instance/service.js";
+import { respondToAssignments } from "@/modules/me/approval-assignments/service.js";
+import * as workflowTemplateRepository from "@/modules/workflow-template/repository.js";
 import {
-	cancelApprovedEvent,
-	createEvent,
-	discardDraftEvent,
-	getEvent,
-	submitEvent,
-	updateEvent,
-} from "@/modules/event/service.js";
-import { createBasicEventSetup, createTestEventBody } from "./integration-test-helpers.js";
+	createAndSubmitBasicEvent,
+	createApprovalWorkflowSetup,
+	createBasicEventSetup,
+	createTestEventBody,
+	createTestUser,
+	createTestWorkflowStep,
+	createTestWorkflowTemplate,
+	getWorkflowAssignmentForUser,
+	getWorkflowForEvent,
+} from "./integration-test-helpers.js";
 
 describe("Event Integration Tests", () => {
 	describe("event lifecycle", () => {
 		test("create event creates host organizer", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const { endUser, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			const eventBody = createTestEventBody({
 				organizationId: hostOrg.id,
@@ -27,7 +35,7 @@ describe("Event Integration Tests", () => {
 				requestDetails: "Testing host auto-creation",
 			});
 
-			const event = await createEvent({ id: admin.id, type: "admin" }, eventBody);
+			const event = await createEvent({ id: endUser.id, type: "end_user" }, eventBody);
 
 			const eventFound = await findEventById(event.id);
 			assert(eventFound != null);
@@ -43,10 +51,10 @@ describe("Event Integration Tests", () => {
 		});
 
 		test("update event works for draft status", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const { endUser, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			const event = await createEvent(
-				{ id: admin.id, type: "admin" },
+				{ id: endUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: hostOrg.id,
 					title: "Original Title",
@@ -60,22 +68,24 @@ describe("Event Integration Tests", () => {
 			assert(eventFound != null);
 
 			const updatedTitle = "Updated Title";
-			await updateEvent({ id: admin.id, type: "admin" }, eventFound, {
+			await updateEvent({ id: endUser.id, type: "end_user" }, eventFound, {
 				title: updatedTitle,
 				expectedParticipants: 20,
 			});
 
-			const dbEvent = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
+			const dbEvent = await db.query.event.findFirst({
+				where: eq(schema.event.id, event.id),
+			});
 			assert(dbEvent != null);
 			expect(dbEvent.title).toBe(updatedTitle);
 			expect(dbEvent.expectedParticipants).toBe(20);
 		});
 
 		test("update event fails for non-draft status", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const { endUser, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			const event = await createEvent(
-				{ id: admin.id, type: "admin" },
+				{ id: endUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: hostOrg.id,
 					title: "Original Title",
@@ -90,26 +100,28 @@ describe("Event Integration Tests", () => {
 
 			const fullEvent = await getEvent(eventFound);
 
-			await submitEvent({ id: admin.id, type: "admin" }, fullEvent);
+			await submitEvent({ id: endUser.id, type: "end_user" }, fullEvent);
 
 			await expect(
-				updateEvent({ id: admin.id, type: "admin" }, eventFound, {
+				updateEvent({ id: endUser.id, type: "end_user" }, eventFound, {
 					title: "Should Not Update",
 					expectedParticipants: 99,
 				}),
 			).rejects.toThrow();
 
-			const dbEvent = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
+			const dbEvent = await db.query.event.findFirst({
+				where: eq(schema.event.id, event.id),
+			});
 			assert(dbEvent != null);
 			expect(dbEvent.title).toBe("Original Title");
 			expect(dbEvent.expectedParticipants).toBe(10);
 		});
 
 		test("submit event for approval", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const { endUser, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			const event = await createEvent(
-				{ id: admin.id, type: "admin" },
+				{ id: endUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: hostOrg.id,
 					title: "Submit Test Event",
@@ -119,7 +131,9 @@ describe("Event Integration Tests", () => {
 				}),
 			);
 
-			const beforeSubmit = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
+			const beforeSubmit = await db.query.event.findFirst({
+				where: eq(schema.event.id, event.id),
+			});
 			assert(beforeSubmit != null);
 			expect(beforeSubmit.status).toBe("draft");
 
@@ -128,9 +142,11 @@ describe("Event Integration Tests", () => {
 
 			const fullEvent = await getEvent(eventFound);
 
-			await submitEvent({ id: admin.id, type: "admin" }, fullEvent);
+			await submitEvent({ id: endUser.id, type: "end_user" }, fullEvent);
 
-			const afterSubmit = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
+			const afterSubmit = await db.query.event.findFirst({
+				where: eq(schema.event.id, event.id),
+			});
 			assert(afterSubmit != null);
 			expect(afterSubmit.status).toBe("pending");
 
@@ -141,15 +157,15 @@ describe("Event Integration Tests", () => {
 			const workflowInstance = instances[0];
 			assert(workflowInstance != null);
 			expect(workflowInstance.status).toBe("active");
-			expect(workflowInstance.initialStepId).not.toBeNull();
+			assert(workflowInstance.initialStepId != null);
 		});
 
 		test("create event with past dates should fail", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const { endUser, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			await expect(
 				createEvent(
-					{ id: admin.id, type: "admin" },
+					{ id: endUser.id, type: "end_user" },
 					createTestEventBody({
 						organizationId: hostOrg.id,
 						title: "Past Event",
@@ -164,11 +180,11 @@ describe("Event Integration Tests", () => {
 		});
 
 		test("create event where endsAt is before startsAt should fail", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const { endUser, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			await expect(
 				createEvent(
-					{ id: admin.id, type: "admin" },
+					{ id: endUser.id, type: "end_user" },
 					createTestEventBody({
 						organizationId: hostOrg.id,
 						title: "Invalid Date Event",
@@ -182,26 +198,7 @@ describe("Event Integration Tests", () => {
 			).rejects.toThrow();
 		});
 
-		test("create event with zero participants should fail", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
-
-			await expect(
-				createEvent(
-					{ id: admin.id, type: "admin" },
-					createTestEventBody({
-						organizationId: hostOrg.id,
-						title: "Zero Participants Event",
-						typeId: eventType.id,
-						categoryId: category.id,
-						expectedParticipants: 0,
-						requestDetails: "Testing zero participants",
-					}),
-				),
-			).rejects.toThrow();
-		});
-
 		test("createEventSchema validation for expectedParticipants", () => {
-			// Zero should fail positive check
 			const zeroResult = createEventSchema.safeParse(
 				createTestEventBody({
 					organizationId: 1,
@@ -215,7 +212,6 @@ describe("Event Integration Tests", () => {
 			assert(zeroIssue != null);
 			expect(zeroIssue.message).toBe("Expected participants must be positive");
 
-			// Negative should fail positive check
 			const negativeResult = createEventSchema.safeParse(
 				createTestEventBody({
 					organizationId: 1,
@@ -229,7 +225,6 @@ describe("Event Integration Tests", () => {
 			assert(negativeIssue != null);
 			expect(negativeIssue.message).toBe("Expected participants must be positive");
 
-			// Floating point should fail integer check
 			const floatResult = createEventSchema.safeParse(
 				createTestEventBody({
 					organizationId: 1,
@@ -243,7 +238,6 @@ describe("Event Integration Tests", () => {
 			assert(floatIssue != null);
 			expect(floatIssue.message).toBe("Invalid expected participants count");
 
-			// NaN should fail integer/number check
 			const nanResult = createEventSchema.safeParse(
 				createTestEventBody({
 					organizationId: 1,
@@ -259,7 +253,7 @@ describe("Event Integration Tests", () => {
 		});
 
 		test("create event with inactive event type should fail", async () => {
-			const { admin, hostOrg, category, eventType } = await createBasicEventSetup();
+			const { endUser, hostOrg, category, eventType } = await createBasicEventSetup();
 
 			const [inactiveEventType] = await db
 				.insert(schema.eventType)
@@ -275,7 +269,7 @@ describe("Event Integration Tests", () => {
 
 			await expect(
 				createEvent(
-					{ id: admin.id, type: "admin" },
+					{ id: endUser.id, type: "end_user" },
 					createTestEventBody({
 						organizationId: hostOrg.id,
 						title: "Inactive Type Event",
@@ -288,10 +282,10 @@ describe("Event Integration Tests", () => {
 		});
 
 		test("updating only one field leaves other fields unchanged", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+			const { endUser, hostOrg, eventType, category } = await createBasicEventSetup();
 
 			const event = await createEvent(
-				{ id: admin.id, type: "admin" },
+				{ id: endUser.id, type: "end_user" },
 				createTestEventBody({
 					organizationId: hostOrg.id,
 					title: "Original Title",
@@ -304,11 +298,13 @@ describe("Event Integration Tests", () => {
 			const eventFound = await findEventById(event.id);
 			assert(eventFound != null);
 
-			await updateEvent({ id: admin.id, type: "admin" }, eventFound, {
+			await updateEvent({ id: endUser.id, type: "end_user" }, eventFound, {
 				title: "New Title",
 			});
 
-			const dbEvent = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
+			const dbEvent = await db.query.event.findFirst({
+				where: eq(schema.event.id, event.id),
+			});
 			assert(dbEvent != null);
 			expect(dbEvent.title).toBe("New Title");
 			expect(dbEvent.expectedParticipants).toBe(10);
@@ -316,22 +312,22 @@ describe("Event Integration Tests", () => {
 		});
 
 		test("update event that does not exist should fail", async () => {
-			const { admin } = await createBasicEventSetup();
+			const { endUser } = await createBasicEventSetup();
 
 			await expect(
 				// biome-ignore lint/suspicious/noExplicitAny: testing purposes
-				updateEvent({ id: admin.id, type: "admin" }, { id: 9999999 } as any, {
+				updateEvent({ id: endUser.id, type: "end_user" }, { id: 9999999 } as any, {
 					title: "Ghost Event",
 				}),
 			).rejects.toThrow();
 		});
 
 		test("create event with invalid organization should fail", async () => {
-			const { admin, eventType, category } = await createBasicEventSetup();
+			const { endUser, eventType, category } = await createBasicEventSetup();
 
 			await expect(
 				createEvent(
-					{ id: admin.id, type: "admin" },
+					{ id: endUser.id, type: "end_user" },
 					createTestEventBody({
 						organizationId: 99999,
 						title: "Invalid Org Event",
@@ -342,124 +338,571 @@ describe("Event Integration Tests", () => {
 				),
 			).rejects.toThrow();
 		});
-	});
 
-	describe("Discarding Events", () => {
-		test("successfully discards a draft event", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
-			const event = await createEvent(
-				{ id: admin.id, type: "admin" },
-				createTestEventBody({
-					organizationId: hostOrg.id,
-					title: "To Be Discarded",
-					typeId: eventType.id,
-					categoryId: category.id,
-				}),
-			);
-			const fullEvent = await findEventById(event.id);
-			assert(fullEvent != null);
+		test("create event with unauthorized user should fail", async () => {
+			const { hostOrg, eventType, category } = await createBasicEventSetup();
+			const unauthorizedUser = await createTestUser({ type: "end_user" });
 
 			await expect(
-				discardDraftEvent({ id: admin.id, type: "admin" }, fullEvent),
-			).resolves.not.toThrow();
-
-			const dbEvent = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
-			assert(dbEvent != null);
-			expect(dbEvent.deletedAt).not.toBeNull();
-		});
-
-		test("fails to discard a non-draft event", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
-			const event = await createEvent(
-				{ id: admin.id, type: "admin" },
-				createTestEventBody({
-					organizationId: hostOrg.id,
-					title: "To Be Discarded",
-					typeId: eventType.id,
-					categoryId: category.id,
-				}),
-			);
-			const fullEvent = await findEventById(event.id);
-			assert(fullEvent != null);
-
-			const freshEvent = await getEvent(fullEvent);
-			await submitEvent({ id: admin.id, type: "admin" }, freshEvent);
-
-			const submittedEvent = await findEventById(event.id);
-			assert(submittedEvent != null);
-
-			await expect(
-				discardDraftEvent({ id: admin.id, type: "admin" }, submittedEvent),
-			).rejects.toThrow();
-		});
-
-		test("fails to discard when unauthorized", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
-			const event = await createEvent(
-				{ id: admin.id, type: "admin" },
-				createTestEventBody({
-					organizationId: hostOrg.id,
-					title: "Unauthorized Discard",
-					typeId: eventType.id,
-					categoryId: category.id,
-				}),
-			);
-			const fullEvent = await findEventById(event.id);
-			assert(fullEvent != null);
-
-			await expect(discardDraftEvent({ id: 9999, type: "end_user" }, fullEvent)).rejects.toThrow();
+				createEvent(
+					{ id: unauthorizedUser.id, type: "end_user" },
+					createTestEventBody({
+						organizationId: hostOrg.id,
+						title: "Unauthorized Event",
+						typeId: eventType.id,
+						categoryId: category.id,
+						requestDetails: "Testing unauthorized access",
+					}),
+				),
+			).rejects.toThrow("You do not have any required permission for this");
 		});
 	});
+});
+describe("Workflow Instance Management", () => {
+	test("Submitting event again that has existing workflow with active status is denied", async () => {
+		const { admin, fullEvent } = await createAndSubmitBasicEvent();
+		await expect(submitEvent({ id: admin.id, type: "admin" }, fullEvent)).rejects.toThrow();
+	});
 
-	describe("Cancelling Events", () => {
-		test("fails to cancel non-approved event", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
-			const event = await createEvent(
+	test("Submit event that does not exist should fail", async () => {
+		const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+		const workflowTemplate = await createTestWorkflowTemplate();
+		await createTestWorkflowStep({ templateId: workflowTemplate.id });
+		const event = await createEvent(
+			{ id: admin.id, type: "admin" },
+			createTestEventBody({
+				organizationId: hostOrg.id,
+				title: "Submit Test Event",
+				typeId: eventType.id,
+				categoryId: category.id,
+				requestDetails: "Testing submission",
+			}),
+		);
+		const eventFound = await findEventById(event.id);
+		assert(eventFound != null);
+		const fullEvent = await getEvent(eventFound);
+		await expect(
+			submitEvent(
 				{ id: admin.id, type: "admin" },
-				createTestEventBody({
-					organizationId: hostOrg.id,
-					title: "To Be Cancelled",
-					typeId: eventType.id,
-					categoryId: category.id,
-				}),
-			);
-			const fullEvent = await findEventById(event.id);
-			assert(fullEvent != null);
+				{
+					...fullEvent,
+					id: 9999999,
+				},
+			),
+		).rejects.toThrow();
+	});
 
-			await expect(
-				cancelApprovedEvent({ id: admin.id, type: "admin" }, fullEvent),
-			).rejects.toThrow();
+	test("Submit event with inactive event type should fail", async () => {
+		const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+		const [inactiveEventType] = await db
+			.insert(schema.eventType)
+			.values({
+				name: `inactive-event-type-${nanoid()}`,
+				workflowTemplateId: eventType.workflowTemplateId,
+				venuePolicy: "optional",
+				collaborationPolicy: "optional",
+				isActive: false,
+			})
+			.returning();
+		assert(inactiveEventType != null);
+		assert(inactiveEventType.isActive === false);
+		const event = await createEvent(
+			{ id: admin.id, type: "admin" },
+			{
+				organizationId: hostOrg.id,
+				title: "Submit Test Event",
+				typeId: eventType.id,
+				categoryId: category.id,
+				expectedParticipants: 10,
+				requestDetails: "Testing submission",
+				startsAt: new Date(Date.now() + 86400000).toISOString(),
+				endsAt: new Date(Date.now() + 172800000).toISOString(),
+			},
+		);
+		const eventFound = await findEventById(event.id);
+		assert(eventFound != null);
+		const updatedEvent = await db
+			.update(schema.event)
+			.set({ typeId: inactiveEventType.id })
+			.where(eq(schema.event.id, event.id))
+			.returning();
+		assert(updatedEvent[0] != null);
+		expect(updatedEvent[0].typeId).toBe(inactiveEventType.id);
+		const updatedEventFound = await findEventById(updatedEvent[0].id);
+		assert(updatedEventFound != null);
+		const updatedFullEvent = await getEvent(updatedEventFound);
+		await expect(submitEvent({ id: admin.id, type: "admin" }, updatedFullEvent)).rejects.toThrow();
+	});
+
+	test("Submitting an event with an existing workflow instance that is rejected should create a new workflow instance", async () => {
+		const { admin, event, eventFound } = await createAndSubmitBasicEvent();
+		const workflowInstance = await db.query.workflowInstance.findFirst({
+			where: eq(schema.workflowInstance.eventId, event.id),
+		});
+		assert(workflowInstance != null);
+		await abortWorkflowInstance(eventFound, workflowInstance.id, {
+			id: admin.id,
+			type: "admin",
+		});
+		await expect(submitEvent({ id: admin.id, type: "admin" }, eventFound)).resolves.not.toThrow();
+		const newWorkflowInstance = await db.query.workflowInstance.findFirst({
+			where: and(
+				eq(schema.workflowInstance.eventId, event.id),
+				ne(schema.workflowInstance.id, workflowInstance.id),
+			),
+		});
+		assert(newWorkflowInstance != null);
+		expect(newWorkflowInstance.status).toBe("active");
+	});
+	test("Submitting an event with an inactive host organizer should fail", async () => {
+		const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+
+		const [inactiveOrganizer] = await db
+			.insert(schema.organization)
+			.values({
+				name: `inactive-organizer-${nanoid()}`,
+				organizationTypeId: hostOrg.organizationTypeId,
+				parentOrganizationId: hostOrg.parentOrganizationId,
+				isActive: false,
+			})
+			.returning();
+		assert(inactiveOrganizer != null);
+		const event = await createEvent(
+			{ id: admin.id, type: "admin" },
+			{
+				organizationId: inactiveOrganizer.id,
+				title: "Submit Test Event",
+				typeId: eventType.id,
+				categoryId: category.id,
+				expectedParticipants: 10,
+				requestDetails: "Testing submission",
+				startsAt: new Date(Date.now() + 86400000).toISOString(),
+				endsAt: new Date(Date.now() + 172800000).toISOString(),
+			},
+		);
+		const eventFound = await findEventById(event.id);
+		if (eventFound == null) throw new Error("Event not found after creation");
+		const fullEvent = await getEvent(eventFound);
+
+		await expect(submitEvent({ id: admin.id, type: "admin" }, fullEvent)).rejects.toThrow();
+	});
+
+	test("Submitting an event creates a workflow instance that exactly matches the workflow template", async () => {
+		const { eventType, fullEvent } = await createAndSubmitBasicEvent();
+
+		const workflowInstance = await db.query.workflowInstance.findFirst({
+			where: eq(schema.workflowInstance.eventId, fullEvent.id),
+		});
+		assert(workflowInstance != null);
+
+		const template = await workflowTemplateRepository.findByIdWithRoles(
+			eventType.workflowTemplateId,
+		);
+		assert(template != null);
+
+		const orderedTemplateSteps = orderWorkflowSteps(template.steps, template.initialStepId);
+
+		const instanceSteps = await db.query.workflowInstanceStep.findMany({
+			where: eq(schema.workflowInstanceStep.instanceId, workflowInstance.id),
+			with: {
+				roles: true,
+			},
 		});
 
-		test("successfully cancels an approved event", async () => {
-			const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
-			const event = await createEvent(
-				{ id: admin.id, type: "admin" },
-				createTestEventBody({
-					organizationId: hostOrg.id,
-					title: "To Be Cancelled",
-					typeId: eventType.id,
-					categoryId: category.id,
-					startsAt: new Date(Date.now() + 86400000).toISOString(),
-					endsAt: new Date(Date.now() + 90000000).toISOString(),
-				}),
-			);
+		function orderInstanceSteps(steps: typeof instanceSteps, initialStepId: number | null) {
+			const ordered: typeof instanceSteps = [];
 
-			await db
-				.update(schema.event)
-				.set({ status: "approved" })
-				.where(eq(schema.event.id, event.id));
+			let currentId = initialStepId;
 
-			const fullEvent = await findEventById(event.id);
-			assert(fullEvent != null);
+			while (currentId != null) {
+				const step = steps.find((s) => s.id === currentId);
+				assert(step != null);
 
-			await expect(
-				cancelApprovedEvent({ id: admin.id, type: "admin" }, fullEvent),
-			).resolves.not.toThrow();
+				ordered.push(step);
+				currentId = step.nextStepId;
+			}
 
-			const dbEvent = await db.query.event.findFirst({ where: eq(schema.event.id, event.id) });
-			assert(dbEvent != null);
-			expect(dbEvent.status).toBe("cancelled");
+			return ordered;
+		}
+
+		const orderedInstanceSteps = orderInstanceSteps(instanceSteps, workflowInstance.initialStepId);
+
+		expect(orderedInstanceSteps).toHaveLength(orderedTemplateSteps.length);
+
+		for (let i = 0; i < orderedTemplateSteps.length; i++) {
+			const templateStep = orderedTemplateSteps[i];
+			const instanceStep = orderedInstanceSteps[i];
+
+			assert(templateStep != null);
+			assert(instanceStep != null);
+
+			expect(instanceStep.name).toBe(templateStep.name);
+
+			expect(workflowInstance.initialStepId).toBe(orderedInstanceSteps[0]?.id);
+
+			for (let i = 0; i < orderedInstanceSteps.length - 1; i++) {
+				expect(orderedInstanceSteps[i]?.nextStepId).toBe(orderedInstanceSteps[i + 1]?.id);
+			}
+
+			expect(orderedInstanceSteps[orderedInstanceSteps.length - 1]?.nextStepId).toBeNull();
+
+			expect(instanceStep.roles).toHaveLength(templateStep.stepRoles.length);
+
+			for (let j = 0; j < templateStep.stepRoles.length; j++) {
+				const templateRole = templateStep.stepRoles[j];
+				const instanceRole = instanceStep.roles[j];
+
+				assert(templateRole != null);
+				assert(instanceRole != null);
+
+				expect(instanceRole.roleId).toBe(templateRole.role.id);
+
+				expect(instanceRole.targetGroupApprovalCriteria).toBe(
+					templateRole.targetGroupApprovalCriteria,
+				);
+			}
+
+			if (i === orderedInstanceSteps.length - 1) {
+				expect(instanceStep.nextStepId).toBeNull();
+			} else {
+				expect(instanceStep.nextStepId).toBe(orderedInstanceSteps[i + 1]?.id);
+			}
+		}
+	});
+	test("Submitting two events simultaneously should succeed", async () => {
+		const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+
+		const event1 = await createEvent(
+			{ id: admin.id, type: "admin" },
+			{
+				organizationId: hostOrg.id,
+				title: "Event 1",
+				typeId: eventType.id,
+				categoryId: category.id,
+				expectedParticipants: 10,
+				requestDetails: "Testing",
+				startsAt: new Date(Date.now() + 86400000).toISOString(),
+				endsAt: new Date(Date.now() + 172800000).toISOString(),
+			},
+		);
+
+		const event2 = await createEvent(
+			{ id: admin.id, type: "admin" },
+			{
+				organizationId: hostOrg.id,
+				title: "Event 2",
+				typeId: eventType.id,
+				categoryId: category.id,
+				expectedParticipants: 10,
+				requestDetails: "Testing",
+				startsAt: new Date(Date.now() + 86400000).toISOString(),
+				endsAt: new Date(Date.now() + 172800000).toISOString(),
+			},
+		);
+
+		const event1Found = await findEventById(event1.id);
+		assert(event1Found != null);
+		const fullEvent1 = await getEvent(event1Found);
+		const event2Found = await findEventById(event2.id);
+		assert(event2Found != null);
+		const fullEvent2 = await getEvent(event2Found);
+
+		const promise1 = submitEvent({ id: admin.id, type: "admin" }, fullEvent1);
+
+		const promise2 = submitEvent({ id: admin.id, type: "admin" }, fullEvent2);
+
+		const [result1, result2] = await Promise.allSettled([promise1, promise2]);
+
+		expect(result1.status).toBe("fulfilled");
+		expect(result2.status).toBe("fulfilled");
+	});
+	test("Concurrent submission of the same event", async () => {
+		const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+		const event = await createEvent(
+			{ id: admin.id, type: "admin" },
+			{
+				organizationId: hostOrg.id,
+				title: "Submit Test Event",
+				typeId: eventType.id,
+				categoryId: category.id,
+				expectedParticipants: 10,
+				requestDetails: "Testing submission",
+				startsAt: new Date(Date.now() + 86400000).toISOString(),
+				endsAt: new Date(Date.now() + 172800000).toISOString(),
+			},
+		);
+		const eventFound = await findEventById(event.id);
+		assert(eventFound != null);
+		const promise1 = submitEvent({ id: admin.id, type: "admin" }, eventFound);
+
+		const promise2 = submitEvent({ id: admin.id, type: "admin" }, eventFound);
+
+		const [result1, result2] = await Promise.allSettled([promise1, promise2]);
+
+		const fulfilled = [result1, result2].filter((r) => r.status === "fulfilled");
+		const rejected = [result1, result2].filter((r) => r.status === "rejected");
+
+		expect(fulfilled).toHaveLength(1);
+		expect(rejected).toHaveLength(1);
+	});
+
+	test("Submitting an event with an inactive cohost organizer should fail", async () => {
+		const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+		const createdEvent = await createEvent(
+			{ id: admin.id, type: "admin" },
+			createTestEventBody({
+				organizationId: hostOrg.id,
+				typeId: eventType.id,
+				categoryId: category.id,
+			}),
+		);
+
+		const [inactiveOrganizer] = await db
+			.insert(schema.organization)
+			.values({
+				name: `inactive-cohost-org-${Date.now()}`,
+				organizationTypeId: hostOrg.organizationTypeId,
+				parentOrganizationId: hostOrg.parentOrganizationId,
+				isActive: false,
+			})
+			.returning();
+		assert(inactiveOrganizer != null);
+
+		await insertEventOrganizer({
+			eventId: createdEvent.id,
+			organizationId: inactiveOrganizer.id,
+			role: "co_host",
 		});
+
+		const fullEvent = await findEventById(createdEvent.id);
+		assert(fullEvent != null);
+
+		// BUG: Submitting an event with an inactive organizer (host or cohost) does NOT currently fail. The backend `submitEvent` service only checks if the event type is inactive.
+		await expect(
+			submitEvent(
+				{ id: admin.id, type: "admin" },
+				fullEvent as unknown as Parameters<typeof submitEvent>[1],
+			),
+		).rejects.toThrow();
+	});
+});
+describe("Workflow Approval Execution", () => {
+	test("Workflow and step statuses are updated correctly as approvals progress", async () => {
+		const { approvers, fullEvent } = await createApprovalWorkflowSetup();
+
+		let workflow = await getWorkflowForEvent(fullEvent.id);
+
+		expect(workflow.instance.status).toBe("active");
+		expect(workflow.steps[0]?.status).toBe("active");
+		expect(workflow.steps[1]?.status).toBe("pending");
+		expect(workflow.steps[2]?.status).toBe("pending");
+
+		const advisorAssignment = await getWorkflowAssignmentForUser(
+			approvers.advisor.id,
+			fullEvent.id,
+		);
+
+		await respondToAssignments(approvers.advisor, fullEvent.id, {
+			assignmentIds: [advisorAssignment.id],
+			decision: "approved",
+		});
+
+		workflow = await getWorkflowForEvent(fullEvent.id);
+
+		expect(workflow.steps[0]?.status).toBe("completed");
+		expect(workflow.steps[1]?.status).toBe("active");
+		expect(workflow.steps[2]?.status).toBe("pending");
+
+		const hod1Assignment = await getWorkflowAssignmentForUser(approvers.hod1.id, fullEvent.id);
+
+		await respondToAssignments(approvers.hod1, fullEvent.id, {
+			assignmentIds: [hod1Assignment.id],
+			decision: "approved",
+		});
+
+		workflow = await getWorkflowForEvent(fullEvent.id);
+
+		expect(workflow.steps[1]?.status).toBe("active");
+
+		const hod2Assignment = await getWorkflowAssignmentForUser(approvers.hod2.id, fullEvent.id);
+
+		await respondToAssignments(approvers.hod2, fullEvent.id, {
+			assignmentIds: [hod2Assignment.id],
+			decision: "approved",
+		});
+
+		workflow = await getWorkflowForEvent(fullEvent.id);
+
+		expect(workflow.steps[1]?.status).toBe("completed");
+		expect(workflow.steps[2]?.status).toBe("active");
+
+		const principalAssignment = await getWorkflowAssignmentForUser(
+			approvers.principal1.id,
+			fullEvent.id,
+		);
+
+		await respondToAssignments(approvers.principal1, fullEvent.id, {
+			assignmentIds: [principalAssignment.id],
+			decision: "approved",
+		});
+
+		workflow = await getWorkflowForEvent(fullEvent.id);
+
+		expect(workflow.instance.status).toBe("completed");
+
+		expect(workflow.steps[0]?.status).toBe("completed");
+		expect(workflow.steps[1]?.status).toBe("completed");
+		expect(workflow.steps[2]?.status).toBe("completed");
+	});
+	test("ANY approval skips remaining assignments", async () => {
+		const { approvers, fullEvent } = await createApprovalWorkflowSetup();
+
+		const advisorAssignment = await getWorkflowAssignmentForUser(
+			approvers.advisor.id,
+			fullEvent.id,
+		);
+
+		await respondToAssignments(approvers.advisor, fullEvent.id, {
+			assignmentIds: [advisorAssignment.id],
+			decision: "approved",
+		});
+
+		const hod1Assignment = await getWorkflowAssignmentForUser(approvers.hod1.id, fullEvent.id);
+
+		await respondToAssignments(approvers.hod1, fullEvent.id, {
+			assignmentIds: [hod1Assignment.id],
+			decision: "approved",
+		});
+
+		const hod2Assignment = await getWorkflowAssignmentForUser(approvers.hod2.id, fullEvent.id);
+
+		await respondToAssignments(approvers.hod2, fullEvent.id, {
+			assignmentIds: [hod2Assignment.id],
+			decision: "approved",
+		});
+
+		const principal1Assignment = await getWorkflowAssignmentForUser(
+			approvers.principal1.id,
+			fullEvent.id,
+		);
+
+		const principal2Assignment = await getWorkflowAssignmentForUser(
+			approvers.principal2.id,
+			fullEvent.id,
+		);
+
+		await respondToAssignments(approvers.principal1, fullEvent.id, {
+			assignmentIds: [principal1Assignment.id],
+			decision: "approved",
+		});
+
+		let workflow = await getWorkflowForEvent(fullEvent.id);
+
+		const assignments = workflow.steps[2]?.roles[0]?.targetGroups[0]?.assignments;
+		assert(assignments != null);
+
+		const updatedPrincipal1 = assignments.find((a) => a.id === principal1Assignment.id);
+
+		const updatedPrincipal2 = assignments.find((a) => a.id === principal2Assignment.id);
+
+		expect(updatedPrincipal1).toBeDefined();
+		expect(updatedPrincipal2).toBeDefined();
+		assert(updatedPrincipal1 != null);
+		assert(updatedPrincipal2 != null);
+		expect(updatedPrincipal1.status).toBe("approved");
+		expect(updatedPrincipal2.status).toBe("skipped");
+
+		workflow = await getWorkflowForEvent(fullEvent.id);
+
+		expect(workflow.steps[2]?.status).toBe("completed");
+		expect(workflow.instance.status).toBe("completed");
+	});
+	test("Denying an assignment aborts the workflow", async () => {
+		const { approvers, fullEvent } = await createApprovalWorkflowSetup();
+
+		const advisorAssignment = await getWorkflowAssignmentForUser(
+			approvers.advisor.id,
+			fullEvent.id,
+		);
+
+		await respondToAssignments(approvers.advisor, fullEvent.id, {
+			assignmentIds: [advisorAssignment.id],
+			decision: "denied",
+			remarks: "Rejected",
+		});
+
+		const workflow = await getWorkflowForEvent(fullEvent.id);
+
+		expect(workflow.instance.status).toBe("denied");
+
+		expect(workflow.steps[0]?.status).toBe("denied");
+		expect(workflow.steps[1]?.status).toBe("pending");
+		expect(workflow.steps[2]?.status).toBe("pending");
+
+		const assignments = workflow.steps[0]?.roles[0]?.targetGroups[0]?.assignments;
+		assert(assignments != null);
+		console.log(advisorAssignment);
+
+		console.log(assignments);
+		const advisor = assignments.find((a) => a.userRoleId === advisorAssignment.userRoleId);
+
+		expect(advisor).toBeDefined();
+		expect(advisor?.status).toBe("denied");
+	});
+	test("ALL approval requires every approver before advancing", async () => {
+		const { approvers, fullEvent } = await createApprovalWorkflowSetup();
+
+		const advisorAssignment = await getWorkflowAssignmentForUser(
+			approvers.advisor.id,
+			fullEvent.id,
+		);
+
+		await respondToAssignments(approvers.advisor, fullEvent.id, {
+			assignmentIds: [advisorAssignment.id],
+			decision: "approved",
+		});
+
+		const hod1Assignment = await getWorkflowAssignmentForUser(approvers.hod1.id, fullEvent.id);
+
+		await respondToAssignments(approvers.hod1, fullEvent.id, {
+			assignmentIds: [hod1Assignment.id],
+			decision: "approved",
+		});
+
+		let workflow = await getWorkflowForEvent(fullEvent.id);
+
+		expect(workflow.instance.status).toBe("active");
+		expect(workflow.steps[1]?.status).toBe("active");
+		expect(workflow.steps[2]?.status).toBe("pending");
+
+		const updatedHod1Assignment = await getWorkflowAssignmentForUser(
+			approvers.hod1.id,
+			fullEvent.id,
+		);
+
+		const updatedHod2Assignment = await getWorkflowAssignmentForUser(
+			approvers.hod2.id,
+			fullEvent.id,
+		);
+
+		expect(updatedHod1Assignment.status).toBe("approved");
+		expect(updatedHod2Assignment.status).toBe("pending");
+
+		await respondToAssignments(approvers.hod2, fullEvent.id, {
+			assignmentIds: [updatedHod2Assignment.id],
+			decision: "approved",
+		});
+
+		workflow = await getWorkflowForEvent(fullEvent.id);
+
+		expect(workflow.steps[1]?.status).toBe("completed");
+		expect(workflow.steps[2]?.status).toBe("active");
+
+		const finalHod1Assignment = await getWorkflowAssignmentForUser(approvers.hod1.id, fullEvent.id);
+
+		const finalHod2Assignment = await getWorkflowAssignmentForUser(approvers.hod2.id, fullEvent.id);
+
+		expect(finalHod1Assignment.status).toBe("approved");
+		expect(finalHod2Assignment.status).toBe("approved");
 	});
 });

@@ -1,9 +1,12 @@
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { assert } from "vitest";
 import { db, schema } from "@/db/index.js";
 import { hashPassword } from "@/lib/argon2.js";
+import { orderWorkflowSteps } from "@/lib/helpers.js";
 import { findEventById } from "@/modules/event/repository.js";
-import { createEvent } from "@/modules/event/service.js";
+import { createEvent, getEvent, submitEvent } from "@/modules/event/service.js";
+import { respondToAssignments } from "@/modules/me/approval-assignments/service.js";
 
 export async function createTestUser(data?: Partial<typeof schema.user.$inferInsert>) {
 	const [user] = await db
@@ -62,6 +65,28 @@ export async function getManagedEntity(data: {
 		),
 	});
 	return entity;
+}
+
+export async function getManagedEntityForOrganization(organizationId: number) {
+	let managedentity = await db.query.managedEntity.findFirst({
+		where: and(
+			eq(schema.managedEntity.managedEntityType, "organization"),
+			eq(schema.managedEntity.refId, organizationId),
+		),
+	});
+
+	if (!managedentity) {
+		[managedentity] = await db
+			.insert(schema.managedEntity)
+			.values({
+				managedEntityType: "organization",
+				refId: organizationId,
+			})
+			.returning();
+	}
+
+	if (!managedentity) throw new Error("Failed to create or find managed entity");
+	return managedentity;
 }
 
 export async function createTestEventType(data: { name?: string; workflowTemplateId: number }) {
@@ -174,10 +199,20 @@ export async function createTestUserRole(data: {
 }
 
 export async function grantPermissionToRole(roleId: number, permissionCode: PermissionCode) {
-	const [perm] = await db
+	let [perm] = await db
 		.select()
 		.from(schema.permission)
 		.where(eq(schema.permission.code, permissionCode));
+
+	if (!perm) {
+		[perm] = await db
+			.insert(schema.permission)
+			.values({
+				code: permissionCode,
+				description: `Description for ${permissionCode}`,
+			})
+			.returning();
+	}
 
 	if (!perm) throw new Error(`Failed to ensure permission ${permissionCode} exists`);
 
@@ -193,7 +228,7 @@ export async function grantPermissionToRole(roleId: number, permissionCode: Perm
 export async function createTestWorkflowStepRole(data: {
 	stepId: number;
 	roleId: number;
-	targetGroupApprovalCriteria?: WorkflowTargetGroupApprovalCriteria;
+	targetGroupApprovalCriteria?: (typeof schema.workflowTargetGroupApprovalCriteriaEnum.enumValues)[number];
 }) {
 	const [stepRole] = await db
 		.insert(schema.workflowTemplateStepRole)
@@ -252,8 +287,27 @@ export async function createBasicEventSetup() {
 
 	const category = await createTestEventCategory();
 
+	const hostME = await getManagedEntity({
+		managedEntityType: "organization",
+		refId: hostOrg.id,
+	});
+	if (!hostME) throw new Error("Expected managed entity for host organization");
+
+	const endUser = await createTestUser({ type: "end_user" });
+	const endUserRole = await createTestRole({
+		managedEntityType: "organization",
+		typeRefId: orgType.id,
+	});
+	await grantPermissionToRole(endUserRole.id, "event:manage" as PermissionCode);
+	await createTestUserRole({
+		userId: endUser.id,
+		roleId: endUserRole.id,
+		managedEntityId: hostME.id,
+	});
+
 	return {
 		admin,
+		endUser,
 		orgType,
 		hostOrg,
 		eventType,
@@ -274,8 +328,8 @@ export async function createOrganizerTestSetup() {
 		typeRefId: setup.orgType.id,
 	});
 
-	await grantPermissionToRole(mockRole.id, "event_organizer_invitation:respond");
-	await grantPermissionToRole(mockRole.id, "event:manage");
+	await grantPermissionToRole(mockRole.id, "event_organizer_invitation:respond" as PermissionCode);
+	await grantPermissionToRole(mockRole.id, "event:manage" as PermissionCode);
 
 	const userRole = await createTestUserRole({
 		userId: setup.admin.id,
@@ -283,9 +337,9 @@ export async function createOrganizerTestSetup() {
 		managedEntityId: hostME.id,
 	});
 
-	const actor: AuthenticatedUser = {
+	const actor = {
 		id: setup.admin.id,
-		type: "admin",
+		type: "admin" as const,
 	};
 
 	const createdEvent = await createEvent(
@@ -333,6 +387,348 @@ export function createTestEventBody(overrides: {
 	};
 }
 
+export async function createAndSubmitBasicEvent() {
+	const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
+
+	const event = await createEvent(
+		{ id: admin.id, type: "admin" },
+		{
+			organizationId: hostOrg.id,
+			title: "Submit Test Event",
+			typeId: eventType.id,
+			categoryId: category.id,
+			expectedParticipants: 10,
+			requestDetails: "Testing submission",
+			startsAt: new Date(Date.now() + 86400000).toISOString(),
+			endsAt: new Date(Date.now() + 172800000).toISOString(),
+		},
+	);
+	const eventFound = await findEventById(event.id);
+	if (eventFound == null) throw new Error("Event not found after creation");
+	const fullEvent = await getEvent(eventFound);
+
+	await submitEvent({ id: admin.id, type: "admin" }, fullEvent);
+	return {
+		admin,
+		hostOrg,
+		eventType,
+		category,
+		fullEvent,
+		event,
+		eventFound,
+	};
+}
+
+// AI CODE FROM HERE. ANALYZE CAREFULLY AND SALVAGE CODE
+
+export async function createApprovalWorkflowSetup() {
+	const admin = await createTestUser({ type: "admin" });
+
+	//
+	// Users
+	//
+
+	const advisor = await createTestUser();
+
+	const hod1 = await createTestUser();
+	const hod2 = await createTestUser();
+
+	const principal1 = await createTestUser();
+	const principal2 = await createTestUser();
+
+	//
+	// Organization
+	//
+
+	const orgType = await createTestOrganizationType();
+
+	const hostOrg = await createTestOrganization({
+		organizationTypeId: orgType.id,
+	});
+
+	const managedEntity = await getManagedEntityForOrganization(hostOrg.id);
+
+	assert(managedEntity != null);
+
+	//
+	// Workflow Template
+	//
+
+	const template = await createTestWorkflowTemplate();
+
+	const advisorStep = await createTestWorkflowStep({
+		templateId: template.id,
+		name: "Faculty Advisor",
+	});
+
+	const hodStep = await createTestWorkflowStep({
+		templateId: template.id,
+		name: "HOD",
+	});
+
+	const principalStep = await createTestWorkflowStep({
+		templateId: template.id,
+		name: "Principal",
+	});
+
+	await db
+		.update(schema.workflowTemplateStep)
+		.set({
+			nextStepId: hodStep.id,
+		})
+		.where(eq(schema.workflowTemplateStep.id, advisorStep.id));
+
+	await db
+		.update(schema.workflowTemplateStep)
+		.set({
+			nextStepId: principalStep.id,
+		})
+		.where(eq(schema.workflowTemplateStep.id, hodStep.id));
+
+	await db
+		.update(schema.workflowTemplate)
+		.set({
+			initialStepId: advisorStep.id,
+		})
+		.where(eq(schema.workflowTemplate.id, template.id));
+
+	//
+	// Roles
+	//
+
+	const advisorRole = await createTestRole({
+		managedEntityType: "organization",
+		typeRefId: orgType.id,
+		name: "Faculty Advisor",
+	});
+
+	const hodRole = await createTestRole({
+		managedEntityType: "organization",
+		typeRefId: orgType.id,
+		name: "HOD",
+	});
+
+	const principalRole = await createTestRole({
+		managedEntityType: "organization",
+		typeRefId: orgType.id,
+		name: "Principal",
+	});
+
+	//
+	// Step Roles
+	//
+
+	await createTestWorkflowStepRole({
+		stepId: advisorStep.id,
+		roleId: advisorRole.id,
+		targetGroupApprovalCriteria: "all",
+	});
+
+	await createTestWorkflowStepRole({
+		stepId: hodStep.id,
+		roleId: hodRole.id,
+		targetGroupApprovalCriteria: "all",
+	});
+
+	await createTestWorkflowStepRole({
+		stepId: principalStep.id,
+		roleId: principalRole.id,
+		targetGroupApprovalCriteria: "any",
+	});
+
+	//
+	// User Roles
+	//
+
+	await createTestUserRole({
+		userId: advisor.id,
+		roleId: advisorRole.id,
+		managedEntityId: managedEntity.id,
+	});
+
+	await createTestUserRole({
+		userId: hod1.id,
+		roleId: hodRole.id,
+		managedEntityId: managedEntity.id,
+	});
+
+	await createTestUserRole({
+		userId: hod2.id,
+		roleId: hodRole.id,
+		managedEntityId: managedEntity.id,
+	});
+
+	await createTestUserRole({
+		userId: principal1.id,
+		roleId: principalRole.id,
+		managedEntityId: managedEntity.id,
+	});
+
+	await createTestUserRole({
+		userId: principal2.id,
+		roleId: principalRole.id,
+		managedEntityId: managedEntity.id,
+	});
+
+	//
+	// Event
+	//
+
+	const eventType = await createTestEventType({
+		workflowTemplateId: template.id,
+	});
+
+	const category = await createTestEventCategory();
+
+	const event = await createEvent(
+		{ id: admin.id, type: "admin" },
+		{
+			organizationId: hostOrg.id,
+			title: "Workflow Progression Test",
+			typeId: eventType.id,
+			categoryId: category.id,
+			expectedParticipants: 100,
+			requestDetails: "Workflow testing",
+			startsAt: new Date(Date.now() + 86400000).toISOString(),
+			endsAt: new Date(Date.now() + 172800000).toISOString(),
+		},
+	);
+
+	const eventFound = await findEventById(event.id);
+	assert(eventFound != null);
+
+	const fullEvent = await getEvent(eventFound);
+
+	await submitEvent(
+		{
+			id: admin.id,
+			type: "admin",
+		},
+		fullEvent,
+	);
+
+	return {
+		admin,
+
+		event,
+		eventFound,
+		fullEvent,
+
+		hostOrg,
+		eventType,
+		category,
+
+		template,
+
+		approvers: {
+			advisor,
+
+			hod1,
+			hod2,
+
+			principal1,
+			principal2,
+		},
+
+		roles: {
+			advisor: advisorRole,
+			hod: hodRole,
+			principal: principalRole,
+		},
+
+		steps: {
+			advisor: advisorStep,
+			hod: hodStep,
+			principal: principalStep,
+		},
+	};
+}
+export async function getWorkflowForEvent(eventId: number) {
+	const instance = await db.query.workflowInstance.findFirst({
+		where: eq(schema.workflowInstance.eventId, eventId),
+		with: {
+			steps: {
+				with: {
+					roles: {
+						with: {
+							targetGroups: {
+								with: {
+									assignments: {
+										columns: {
+											id: true,
+											userRoleId: true,
+											status: true,
+											remarks: true,
+											completedAt: true,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	});
+
+	assert(instance != null);
+	assert(instance.initialStepId != null);
+
+	const orderedSteps = orderWorkflowSteps(instance.steps, instance.initialStepId);
+
+	return {
+		instance,
+		steps: orderedSteps,
+		activeStep: orderedSteps.find((s) => s.status === "active") ?? null,
+	};
+}
+
+export function getAssignmentsForStep(
+	workflow: Awaited<ReturnType<typeof getWorkflowForEvent>>,
+	stepIndex: number,
+) {
+	return workflow.steps[stepIndex]?.roles[0]?.targetGroups[0]?.assignments;
+}
+
+export async function getWorkflowAssignmentForUser(userId: number, eventId: number) {
+	const assignments = await db.query.workflowInstanceStepAssignment.findMany({
+		where: (t, { isNull }) => isNull(t.deletedAt),
+		with: {
+			userRole: true,
+			targetGroup: {
+				with: {
+					stepRole: {
+						with: {
+							step: {
+								with: {
+									instance: true,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	});
+
+	const assignment = assignments.find(
+		(a) => a.userRole.userId === userId && a.targetGroup.stepRole.step.instance.eventId === eventId,
+	);
+
+	assert(assignment != null);
+
+	return assignment;
+}
+export async function approveCurrentAssignment(approver: AuthenticatedUser, eventId: number) {
+	const assignment = await getWorkflowAssignmentForUser(approver.id, eventId);
+
+	await respondToAssignments(approver, eventId, {
+		assignmentIds: [assignment.id],
+		decision: "approved",
+	});
+
+	return assignment;
+}
 export async function setupRecipientUser(organizationId: number, organizationTypeId: number) {
 	const user = await createTestUser({ type: "end_user" });
 	const role = await createTestRole({
