@@ -39,7 +39,8 @@ const envSchema = z.object({
 	PORT: z.coerce.number().int().positive().max(65_535).optional(),
 	HOSTNAME: z.xor([z.ipv4(), z.string()]).optional(),
 	QUIET: z.transform((x) => (typeof x === "string" ? Boolean(x) : false)).optional(),
-
+	UPSTASH_REDIS_REST_URL: z.url(),
+	UPSTASH_REDIS_REST_TOKEN: z.string(),
 	// debug stuff
 	DEBUG_BYPASS_AUTH: z.coerce.boolean().optional(),
 	DEBUG_BYPASS_PERMISSIONS: z.coerce.boolean().optional(),

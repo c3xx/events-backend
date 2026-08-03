@@ -1,10 +1,54 @@
 import { sql } from "drizzle-orm";
-import { beforeAll } from "vitest";
+import type { RequestHandler } from "express";
+import { beforeAll, vi } from "vitest";
 import { db, schema } from "@/db/index.js";
 import { hashPassword } from "@/lib/argon2.js";
 import { FLATTENED_PERMISSIONS } from "@/lib/constants.js";
 import { env } from "@/lib/env.js";
 import { isPermission, unreachable } from "@/lib/helpers.js";
+
+vi.mock("@/middlewares/rate-limiter.js", () => ({
+	rateLimiter: (): RequestHandler => (_req, _res, next) => next(),
+}));
+
+vi.mock("@/redis/index.js", () => {
+	const store = new Map<string, string>();
+	const expiries = new Map<string, number>();
+
+	return {
+		redis: {
+			pttl: vi.fn(async (key: string) => {
+				const exp = expiries.get(key);
+				if (exp == null) return -1;
+				const remaining = exp - Date.now();
+				return remaining > 0 ? remaining : -2;
+			}),
+			incr: vi.fn(async (key: string) => {
+				const current = Number(store.get(key) ?? 0);
+				const next = current + 1;
+				store.set(key, String(next));
+				return next;
+			}),
+			pexpire: vi.fn(async (key: string, ms: number) => {
+				expiries.set(key, Date.now() + ms);
+				return 1;
+			}),
+			set: vi.fn(async (key: string, value: string, opts?: { px?: number }) => {
+				store.set(key, value);
+				if (opts?.px != null) expiries.set(key, Date.now() + opts.px);
+				return "OK";
+			}),
+			del: vi.fn(async (...keys: string[]) => {
+				let count = 0;
+				for (const key of keys) {
+					if (store.delete(key)) count++;
+					expiries.delete(key);
+				}
+				return count;
+			}),
+		},
+	};
+});
 
 beforeAll(async () => {
 	const tables = await db.execute<{ tablename: string }>(

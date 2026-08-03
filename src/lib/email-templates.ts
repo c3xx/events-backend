@@ -51,3 +51,14 @@ export function getPasswordChangedContent(loginUrl: string) {
 <p>This is an automated security notification. Please do not reply.</p>
 `;
 }
+
+export function getAccountLockedContent(retryAfterMinutes: number, adminEmail: string) {
+	return `
+<p>Hello,</p>
+<p>Your account has been <strong>temporarily locked</strong> due to too many failed login attempts.</p>
+<p>You can try again in <strong>${retryAfterMinutes} minute${retryAfterMinutes !== 1 ? "s" : ""}</strong>.</p>
+<p>If you need immediate access, please contact the administrator at <a href="mailto:${adminEmail}">${adminEmail}</a> and request an account unlock.</p>
+<p>If you did not attempt to log in, please contact the administrator immediately as your account may be at risk.</p>
+<p>This is an automated security notification. Please do not reply.</p>
+`;
+}

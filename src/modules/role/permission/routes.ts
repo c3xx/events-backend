@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { requireUserType } from "@/middlewares/require-user-type.js";
+import { rateLimiter, requireUserType } from "@/middlewares/index.js";
 import * as controller from "./controller.js";
 
 const router: Router = Router({ mergeParams: true });
 
-router.get("/", controller.getRolePermissions);
-router.put("/", requireUserType("admin"), controller.setRolePermissions);
+router.get("/", rateLimiter(), controller.getRolePermissions);
+router.put("/", rateLimiter(), requireUserType("admin"), controller.setRolePermissions);
 
 export default router;
