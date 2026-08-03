@@ -132,7 +132,7 @@ export const getFullUser = dbAction(async (userId: number) => {
 		.select({
 			id: schema.managedEntity.id,
 			scope: sql<{
-				type: "organization" | "venue";
+				type: ManagedEntityType;
 				id: number;
 				name: string;
 				kind: {
@@ -172,6 +172,23 @@ export const getFullUser = dbAction(async (userId: number) => {
 					from venue v
 					inner join venue_type vt on v.venue_type_id = vt.id
 					where v.id = ${schema.managedEntity.refId}
+					limit 1
+				)
+				when ${schema.managedEntity.managedEntityType} = 'facility'
+				then (
+					select
+						json_build_object(
+							'type', ${schema.managedEntity.managedEntityType},
+							'id', f.id,
+							'name', f.name,
+							'kind', json_build_object(
+								'id', ft.id,
+								'name', ft.name
+							)
+						)
+					from facility f
+					inner join facility_type ft on f.type_id = ft.id
+					where f.id = ${schema.managedEntity.refId}
 					limit 1
 				)
 				else null

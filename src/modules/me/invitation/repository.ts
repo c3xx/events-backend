@@ -39,7 +39,7 @@ export const findPendingInvitationsForUser = dbAction(
 						id: schema.role.id,
 						name: schema.role.name,
 						// scope: sql<{
-						// 	type: "organization" | "venue";
+						// 	type: ManagedEntityType;
 						// 	kindId: number;
 						// 	kindName: string;
 						// }>`case
@@ -52,6 +52,11 @@ export const findPendingInvitationsForUser = dbAction(
 						// 	then (
 						// 		select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', vt.id, 'kindName', vt.name)
 						// 		from venue_type vt where vt.id = ${schema.role.typeRefId} limit 1
+						// 	)
+						//  when ${schema.role.managedEntityType} = 'facility'
+						// 	then (
+						// 		select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', ft.id, 'kindName', ft.name)
+						// 		from facility_type ft where ft.id = ${schema.role.typeRefId} limit 1
 						// 	)
 						// 	else null
 						// end`,
@@ -202,7 +207,13 @@ export const findPendingInvitationById = dbAction(async (invitationId: number) =
 		.leftJoin(parentEvent, eq(parentEvent.id, schema.event.parentEventId))
 		.innerJoin(schema.eventType, eq(schema.eventType.id, schema.event.typeId))
 		.innerJoin(schema.eventCategory, eq(schema.eventCategory.id, schema.event.categoryId))
-		.innerJoin(schema.eventOrganizer, eq(schema.eventOrganizer.eventId, schema.event.id))
+		.leftJoin(
+			schema.eventOrganizer,
+			and(
+				eq(schema.eventOrganizer.eventId, schema.event.id),
+				isNull(schema.eventOrganizer.deletedAt),
+			),
+		)
 		.innerJoin(
 			schema.organization,
 			eq(schema.organization.id, schema.eventOrganizer.organizationId),

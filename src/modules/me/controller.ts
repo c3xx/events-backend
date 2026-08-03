@@ -25,3 +25,14 @@ export const updateProfile: ApiRequestHandler<true> = async (req, res) => {
 	await service.updateProfile(user.id, body);
 	return ok(res, true);
 };
+
+export const getCalendar: ApiRequestHandler<
+	{
+		utcDate: string;
+		events: CalculatedCalendarDayEvent[];
+	}[]
+> = async (req, res) => {
+	const params = schemas.getCalendarParamsSchema.parse(req.query);
+	const result = await service.getCalendar(params);
+	return ok(res, result);
+};

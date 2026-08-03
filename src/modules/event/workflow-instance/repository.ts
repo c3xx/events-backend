@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
+import { jsonAggDistinct, jsonBuildObject } from "@/db/helpers.js";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 import { resolveStep } from "./progression.js";
@@ -47,26 +48,113 @@ export const findAncestorOrganizationManagedEntities = dbAction(
 	},
 );
 
-export const findVenueManagedEntityIds = dbAction(async (venueIds: number[]) => {
-	if (venueIds.length === 0) return [];
+export const findVenueManagedEntities = dbAction(async (ids: number[]) => {
+	if (ids.length === 0) return [];
+
 	const rows = await db
 		.select({
 			id: schema.managedEntity.id,
 			typeRefId: schema.venue.venueTypeId,
+			organizationId: schema.venue.organizationId,
 		})
 		.from(schema.managedEntity)
-		.innerJoin(schema.venue, eq(schema.managedEntity.refId, schema.venue.id))
+		.innerJoin(
+			schema.venue,
+			and(eq(schema.managedEntity.refId, schema.venue.id), isNull(schema.venue.deletedAt)),
+		)
 		.where(
 			and(
 				eq(schema.managedEntity.managedEntityType, "venue"),
-				inArray(schema.managedEntity.refId, venueIds),
+				inArray(schema.managedEntity.refId, ids),
 				isNull(schema.managedEntity.deletedAt),
 			),
 		);
+
 	return rows.map((r) => ({
 		managedEntityId: r.id,
 		managedEntityType: "venue" as const,
 		typeRefId: r.typeRefId,
+
+		parentOrganizationId: r.organizationId,
+	}));
+});
+
+export const findFacilityManagedEntities = dbAction(async (ids: number[]) => {
+	if (ids.length === 0) return [];
+
+	const rows = await db
+		.select({
+			id: schema.managedEntity.id,
+			typeRefId: schema.facility.typeId,
+			workflowParticipationPolicy: schema.facility.workflowParticipationPolicy,
+			providers: jsonAggDistinct(
+				jsonBuildObject({
+					scope: sql<{
+						type: FacilityProviderEntityType;
+						id: number;
+						name: string;
+					}>`case
+					when ${schema.facilityProvider.providerEntityType} = 'organization'
+					then (
+						select
+							json_build_object(
+								'type', ${schema.facilityProvider.providerEntityType},
+								'id', o.id,
+								'name', o.name
+							)
+						from organization o
+						where o.id = ${schema.facilityProvider.providerEntityRefId}
+						limit 1
+					)
+					when ${schema.facilityProvider.providerEntityType} = 'venue'
+					then (
+						select
+							json_build_object(
+								'type', ${schema.facilityProvider.providerEntityType},
+								'id', v.id,
+								'name', v.name
+							)
+						from venue v
+						where v.id = ${schema.facilityProvider.providerEntityRefId}
+						limit 1
+					)
+					else null
+				end`,
+				}),
+				schema.facilityProvider.id,
+			),
+		})
+		.from(schema.managedEntity)
+		.innerJoin(
+			schema.facility,
+			and(
+				eq(schema.managedEntity.refId, schema.facility.id),
+				eq(schema.facility.workflowParticipationPolicy, "include"),
+				isNull(schema.facility.deletedAt),
+			),
+		)
+		.leftJoin(
+			schema.facilityProvider,
+			and(
+				eq(schema.facilityProvider.facilityId, schema.facility.id),
+				isNull(schema.facilityProvider.deletedAt),
+			),
+		)
+		.where(
+			and(
+				eq(schema.managedEntity.managedEntityType, "facility"),
+				inArray(schema.managedEntity.refId, ids),
+				isNull(schema.managedEntity.deletedAt),
+			),
+		);
+
+	return rows.map((r) => ({
+		managedEntityId: r.id,
+		managedEntityType: "facility" as const,
+		typeRefId: r.typeRefId,
+
+		workflowParticipationPolicy: r.workflowParticipationPolicy,
+		providers: r.providers.map((provider) => provider.scope),
 	}));
 });
 
@@ -298,7 +386,7 @@ const workflowInstanceWith = {
 						},
 						extras: {
 							scope: sql<{
-								type: "organization" | "venue";
+								type: ManagedEntityType;
 								kindId: number;
 								kindName: string;
 							}>`case
@@ -312,6 +400,11 @@ const workflowInstanceWith = {
 									select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', vt.id, 'kindName', vt.name)
 									from venue_type vt where vt.id = ${schema.role.typeRefId} limit 1
 								)
+								when ${schema.role.managedEntityType} = 'venue'
+								then (
+									select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', ft.id, 'kindName', ft.name)
+									from facility_type ft where ft.id = ${schema.role.typeRefId} limit 1
+								)
 								else null
 							end`.as("scope"),
 						},
@@ -322,17 +415,19 @@ const workflowInstanceWith = {
 						},
 						extras: {
 							scope: sql<{
-								type: "organization" | "venue";
+								type: ManagedEntityType;
 								id: number;
 								name: string;
 							}>`(SELECT CASE
 								WHEN me.managed_entity_type = 'organization' THEN json_build_object('type', me.managed_entity_type, 'id', o.id, 'name', o.name)
 								WHEN me.managed_entity_type = 'venue' THEN json_build_object('type', me.managed_entity_type, 'id', v.id, 'name', v.name)
+								WHEN me.managed_entity_type = 'facility' THEN json_build_object('type', me.managed_entity_type, 'id', f.id, 'name', f.name)
 								ELSE null
 							END
 							FROM managed_entity me
 							LEFT JOIN organization o ON me.managed_entity_type = 'organization' AND o.id = me.ref_id
 							LEFT JOIN venue v ON me.managed_entity_type = 'venue' AND v.id = me.ref_id
+							LEFT JOIN facility f ON me.managed_entity_type = 'facility' AND f.id = me.ref_id
 							WHERE me.id = ${schema.workflowInstanceStepTargetGroup.managedEntityId}
 							LIMIT 1)`.as("scope"),
 						},

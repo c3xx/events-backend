@@ -33,6 +33,9 @@ export async function createVenueAllotment(
 		throw new ConflictError("Venue is not available for the requested time slot", result.conflict);
 	}
 
+	if (input.startsAt < event.startsAt || event.startsAt > event.endsAt) {
+		throw new BadRequestError("You cannot allot venues beyond an event's period");
+	}
 	return { id: result.id };
 }
 
