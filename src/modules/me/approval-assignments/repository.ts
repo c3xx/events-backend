@@ -141,7 +141,7 @@ export const findAssignmentsForUserInEvent = dbAction(async (userId: number, eve
 					when ${schema.role.managedEntityType} = 'facility'
 					then (
 						select json_build_object('type', ${schema.role.managedEntityType}, 'kindId', ft.id, 'kindName', ft.name)
-						from facility_type ft where vt.id = ${schema.role.typeRefId} limit 1
+						from facility_type ft where ft.id = ${schema.role.typeRefId} limit 1
 					)
 					else null
 				end`.as("scope"),
