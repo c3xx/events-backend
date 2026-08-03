@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 import { resolveStep } from "./progression.js";
+import { jsonAggDistinct, jsonBuildObject } from "@/db/helpers.js";
 
 export const findActiveInstance = dbAction(async (eventId: number) => {
 	return await db.query.workflowInstance.findFirst({
@@ -47,32 +48,115 @@ export const findAncestorOrganizationManagedEntities = dbAction(
 	},
 );
 
-export const findManagedEntityIdsOfType = dbAction(
-	async <T extends ManagedEntityType>(type: T, ids: number[]) => {
-		if (ids.length === 0) return [];
+export const findVenueManagedEntities = dbAction(async (ids: number[]) => {
+	if (ids.length === 0) return [];
 
-		const rows = await db
-			.select({
-				id: schema.managedEntity.id,
-				typeRefId: schema.venue.venueTypeId,
-			})
-			.from(schema.managedEntity)
-			.innerJoin(schema.venue, eq(schema.managedEntity.refId, schema.venue.id))
-			.where(
-				and(
-					eq(schema.managedEntity.managedEntityType, type),
-					inArray(schema.managedEntity.refId, ids),
-					isNull(schema.managedEntity.deletedAt),
-				),
-			);
+	const rows = await db
+		.select({
+			id: schema.managedEntity.id,
+			typeRefId: schema.venue.venueTypeId,
+			organizationId: schema.venue.organizationId,
+		})
+		.from(schema.managedEntity)
+		.innerJoin(
+			schema.venue,
+			and(eq(schema.managedEntity.refId, schema.venue.id), isNull(schema.venue.deletedAt)),
+		)
+		.where(
+			and(
+				eq(schema.managedEntity.managedEntityType, "venue"),
+				inArray(schema.managedEntity.refId, ids),
+				isNull(schema.managedEntity.deletedAt),
+			),
+		);
 
-		return rows.map((r) => ({
-			managedEntityId: r.id,
-			managedEntityType: type as T,
-			typeRefId: r.typeRefId,
-		}));
-	},
-);
+	return rows.map((r) => ({
+		managedEntityId: r.id,
+		managedEntityType: "venue" as const,
+		typeRefId: r.typeRefId,
+
+		parentOrganizationId: r.organizationId,
+	}));
+});
+
+export const findFacilityManagedEntities = dbAction(async (ids: number[]) => {
+	if (ids.length === 0) return [];
+
+	const rows = await db
+		.select({
+			id: schema.managedEntity.id,
+			typeRefId: schema.facility.typeId,
+			workflowParticipationPolicy: schema.facility.workflowParticipationPolicy,
+			providers: jsonAggDistinct(
+				jsonBuildObject({
+					scope: sql<{
+						type: FacilityProviderEntityType;
+						id: number;
+						name: string;
+					}>`case
+					when ${schema.facilityProvider.providerEntityType} = 'organization'
+					then (
+						select
+							json_build_object(
+								'type', ${schema.facilityProvider.providerEntityType},
+								'id', o.id,
+								'name', o.name
+							)
+						from organization o
+						where o.id = ${schema.facilityProvider.providerEntityRefId}
+						limit 1
+					)
+					when ${schema.facilityProvider.providerEntityType} = 'venue'
+					then (
+						select
+							json_build_object(
+								'type', ${schema.facilityProvider.providerEntityType},
+								'id', v.id,
+								'name', v.name
+							)
+						from venue v
+						where v.id = ${schema.facilityProvider.providerEntityRefId}
+						limit 1
+					)
+					else null
+				end`,
+				}),
+				schema.facilityProvider.id,
+			),
+		})
+		.from(schema.managedEntity)
+		.innerJoin(
+			schema.facility,
+			and(
+				eq(schema.managedEntity.refId, schema.facility.id),
+				eq(schema.facility.workflowParticipationPolicy, "include"),
+				isNull(schema.facility.deletedAt),
+			),
+		)
+		.leftJoin(
+			schema.facilityProvider,
+			and(
+				eq(schema.facilityProvider.facilityId, schema.facility.id),
+				isNull(schema.facilityProvider.deletedAt),
+			),
+		)
+		.where(
+			and(
+				eq(schema.managedEntity.managedEntityType, "facility"),
+				inArray(schema.managedEntity.refId, ids),
+				isNull(schema.managedEntity.deletedAt),
+			),
+		);
+
+	return rows.map((r) => ({
+		managedEntityId: r.id,
+		managedEntityType: "facility" as const,
+		typeRefId: r.typeRefId,
+
+		workflowParticipationPolicy: r.workflowParticipationPolicy,
+		providers: r.providers.map((provider) => provider.scope),
+	}));
+});
 
 export const insertWorkflowInstance = dbAction(
 	async (data: {
