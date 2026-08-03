@@ -1,8 +1,8 @@
 import { and, desc, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
+import { jsonAggDistinct, jsonBuildObject } from "@/db/helpers.js";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 import { resolveStep } from "./progression.js";
-import { jsonAggDistinct, jsonBuildObject } from "@/db/helpers.js";
 
 export const findActiveInstance = dbAction(async (eventId: number) => {
 	return await db.query.workflowInstance.findFirst({
