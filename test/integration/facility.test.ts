@@ -1,8 +1,7 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { assert, beforeAll, describe, expect, test } from "vitest";
 import { db, schema } from "@/db/index.js";
-import { insertFacilityAssignment } from "@/modules/event/facility-assignments/repository.js";
 import {
 	assignEventFacility,
 	unassignEventFacility,
@@ -14,12 +13,11 @@ import {
 	findFacilities,
 	findFacilityById,
 } from "@/modules/facility/repository.js";
-import { changeAvailability, createFacility } from "@/modules/facility/service.js";
+import { createFacility } from "@/modules/facility/service.js";
 import {
 	createOrganizerTestSetup,
 	createTestEventBody,
 	createTestVenue,
-	getManagedEntityForOrganization,
 	getWorkflowForEvent,
 	setupWorkflowTestEnvironment,
 } from "./integration-test-helpers.js";
@@ -76,7 +74,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 
 			const dbRecord = await db.query.facility.findFirst({
 				where: eq(schema.facility.id, facility.id),
@@ -101,7 +99,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 
 			await changeAvailabilityDb(facility.id, { availability: true });
 			const recordTrue = await db.query.facility.findFirst({
@@ -117,14 +115,14 @@ describe("Facility Integration Tests", () => {
 		});
 
 		test.skip("BUG: changeAvailability on non-existent facility id throws instead of being a no-op", async () => {
-			await expect(changeAvailabilityDb(999999, { availability: true })).resolves.not.toThrow();
+			await expect(changeAvailabilityDb(32767, { availability: true })).resolves.not.toThrow();
 		});
 
 		test("rejects facility creation with non-existent typeId (FK violation)", async () => {
 			await expect(
 				createFacility({
 					name: `GhostType-${nanoid()}`,
-					typeId: 999999,
+					typeId: 32767,
 					association: "event",
 					workflowParticipationPolicy: "exclude",
 					overlapPolicy: "shared",
@@ -139,7 +137,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 			const fetched = await findFacilityById(facility.id);
 			assert(fetched);
 			expect(fetched.providers).toEqual([]);
@@ -163,7 +161,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 
 			// Soft delete the type
 			await db
@@ -187,7 +185,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 
 			await db
 				.update(schema.facility)
@@ -207,7 +205,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 
 			await db.insert(schema.facilityProvider).values({
 				facilityId: facility.id,
@@ -219,8 +217,8 @@ describe("Facility Integration Tests", () => {
 
 			assert(fetched);
 			expect(fetched.providers.length).toBe(1);
-			expect(fetched!.providers[0]?.scope?.kind?.name).toBeDefined();
-			expect(fetched!.providers[0]?.scope?.id).toBe(validOrgId);
+			expect(fetched?.providers[0]?.scope?.kind?.name).toBeDefined();
+			expect(fetched?.providers[0]?.scope?.id).toBe(validOrgId);
 		});
 
 		test("provider with providerEntityType: 'venue' resolves scope with correct id, name, and kind", async () => {
@@ -230,7 +228,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 
 			await db.insert(schema.facilityProvider).values({
 				facilityId: facility.id,
@@ -242,8 +240,8 @@ describe("Facility Integration Tests", () => {
 
 			assert(fetched);
 			expect(fetched.providers.length).toBe(1);
-			expect(fetched!.providers[0]?.scope?.kind?.name).toBeDefined();
-			expect(fetched!.providers[0]?.scope?.id).toBe(validVenueId);
+			expect(fetched?.providers[0]?.scope?.kind?.name).toBeDefined();
+			expect(fetched?.providers[0]?.scope?.id).toBe(validVenueId);
 		});
 
 		test.skip("BUG: provider with unrecognized providerEntityType appears with scope: null", async () => {
@@ -254,7 +252,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 
 			await db.insert(schema.facilityProvider).values({
 				facilityId: facility.id,
@@ -273,7 +271,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 
 			await db.insert(schema.facilityProvider).values({
 				facilityId: facility.id,
@@ -297,7 +295,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 
 			await db.insert(schema.facilityProvider).values([
 				{
@@ -310,8 +308,8 @@ describe("Facility Integration Tests", () => {
 
 			const fetched = await findFacilityById(facility.id);
 			expect(fetched?.providers.length).toBe(2);
-			const scopes = fetched!.providers.map((p) => p.scope?.kind?.name);
-			expect(scopes.length).toBe(2);
+			const scopes = fetched?.providers.map((p) => p.scope?.kind?.name);
+			expect(scopes!.length).toBe(2);
 		});
 	});
 
@@ -324,7 +322,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 			await changeAvailabilityDb(facility.id, { availability: true });
 
 			const assignment = await assignEventFacility(admin, event, {
@@ -341,7 +339,7 @@ describe("Facility Integration Tests", () => {
 				association: "venue_allotment",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 			await changeAvailabilityDb(facility.id, { availability: true });
 
 			await expect(assignEventFacility(admin, event, { facilityId: facility.id })).rejects.toThrow(
@@ -357,7 +355,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 			await changeAvailabilityDb(facEvent.id, { availability: true });
 
 			await expect(
@@ -373,7 +371,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 
 			// DO NOT make it available
 			await expect(
@@ -389,7 +387,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 			await changeAvailabilityDb(facility.id, { availability: true });
 
 			await assignEventFacility(admin, event, { facilityId: facility.id });
@@ -411,7 +409,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 			await changeAvailabilityDb(facility.id, { availability: true });
 
 			const promises = Array.from({ length: 5 }).map(() =>
@@ -451,14 +449,14 @@ describe("Facility Integration Tests", () => {
 				association: "venue_allotment",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 			await changeAvailabilityDb(facility.id, { availability: true });
 
 			// Requesting assignment on Event A but providing Event B's allotment
 			await expect(
 				assignEventFacility(admin, eventA, {
 					facilityId: facility.id,
-					venueAllotmentId: allotmentB!.id,
+					venueAllotmentId: allotmentB?.id,
 				}),
 			).rejects.toThrow("Could not find the venue allotment in this event");
 		});
@@ -488,7 +486,7 @@ describe("Facility Integration Tests", () => {
 				association: "venue_allotment",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 
 			// Provider is diffVenue rather than validVenueId
 			await db.insert(schema.facilityProvider).values({
@@ -506,7 +504,7 @@ describe("Facility Integration Tests", () => {
 			await expect(
 				assignEventFacility(admin, freshEvent, {
 					facilityId: facRaw.id,
-					venueAllotmentId: allotment!.id,
+					venueAllotmentId: allotment?.id,
 				}),
 			).rejects.toThrow(
 				"Facility cannot be assigned to this venue allotment, as the venue isn't the provider of this facility",
@@ -515,7 +513,7 @@ describe("Facility Integration Tests", () => {
 
 		test("Unassignment strictly enforces ownership permissions and valid ID bindings", async () => {
 			const { event, admin } = await createOrganizerTestSetup();
-			await expect(unassignEventFacility(admin, event, 9999999)).rejects.toThrow(
+			await expect(unassignEventFacility(admin, event, 327679)).rejects.toThrow(
 				"Could not find the facility assignment",
 			);
 		});
@@ -543,7 +541,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "include",
 				overlapPolicy: "shared",
-			} as any);
+			});
 
 			// Give it a provider Org!
 			await db.insert(schema.facilityProvider).values({
@@ -602,7 +600,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 			await db.insert(schema.facilityProvider).values({
 				facilityId: facility.id,
 				providerEntityType: "organization",
@@ -654,7 +652,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "include",
 				overlapPolicy: "shared",
-			} as any);
+			});
 			await changeAvailabilityDb(facility.id, { availability: true });
 
 			await assignEventFacility({ id: setup.hostUser.id, type: "end_user" }, fullEventScope, {
@@ -701,7 +699,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "exclusive",
-			} as any);
+			});
 			await changeAvailabilityDb(facility.id, { availability: true });
 
 			// Assign to Event A
@@ -730,7 +728,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "exclusive",
-			} as any);
+			});
 			await changeAvailabilityDb(facility.id, { availability: true });
 
 			// Assign to Event A
@@ -755,7 +753,7 @@ describe("Facility Integration Tests", () => {
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
-			} as any);
+			});
 			await changeAvailabilityDb(facility.id, { availability: true });
 
 			await assignEventFacility(admin, eventA, { facilityId: facility.id });
