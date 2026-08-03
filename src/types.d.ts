@@ -17,6 +17,11 @@ declare global {
 	export type VenueAccessLevel = (typeof schema.venueAccessLevelEnum.enumValues)[number];
 	export type FacilityProviderEntityType =
 		(typeof schema.facilityProviderEntityTypeEnum.enumValues)[number];
+	export type FacilityAssociationMethod =
+		(typeof schema.facilityAssociationMethodEnum.enumValues)[number];
+	export type FacilityOverlapPolicy = (typeof schema.facilityOverlapPolicyEnum.enumValues)[number];
+	export type FacilityWorkflowParticipationPolicy =
+		(typeof schema.facilityWorkflowParticipationPolicyEnum.enumValues)[number];
 	export type PasswordTokenType = (typeof schema.passwordTokenTypeEnum.enumValues)[number];
 
 	// -- events

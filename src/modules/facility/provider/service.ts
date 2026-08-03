@@ -27,5 +27,8 @@ export async function removeFacilityProvider(
 	if (existingProvider == null)
 		throw new Error(`Specified provider is not a provider of the facility`);
 
-	return await repository.removeFacilityProvider(facility.id, providerId);
+	return await repository.removeFacilityProvider(facility.id, {
+		providerId: providerId,
+		markAsUnavailable: facility.providers.length === 1,
+	});
 }

@@ -24,6 +24,9 @@ export const PASSWORD_TOKEN_TYPES = ["set_password", "reset_password"] as const;
 export const MANAGED_ENTITY_TYPES = ["organization", "venue", "facility"] as const;
 export const VENUE_ACCESS_LEVELS = ["public", "private"] as const;
 export const FACILITY_PROVIDER_ENTITY_TYPES = ["organization", "venue"] as const;
+export const FACILITY_OVERLAP_POLICIES = ["shared", "exclusive"] as const;
+export const FACILITY_WORKFLOW_PARTICIPATION_POLICIES = ["include", "exclude"] as const;
+export const FACILITY_ASSOCIATION_METHODS = ["event", "venue_allotment"] as const;
 
 // Events
 export const EVENT_TYPE_VENUE_POLICY = ["required", "optional", "forbidden"] as const;

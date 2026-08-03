@@ -10,11 +10,14 @@ export type FacilityScope = {
 			id: number;
 			name: string;
 		};
+		association: FacilityAssociationMethod;
+		overlapPolicy: FacilityOverlapPolicy;
+		workflowParticipationPolicy: FacilityWorkflowParticipationPolicy;
 		isAvailable: boolean;
 		providers: {
 			id: number;
 			scope: {
-				type: FacilityScope;
+				type: FacilityProviderEntityType;
 				id: number;
 				name: string;
 				kind: {

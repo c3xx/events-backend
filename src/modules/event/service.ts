@@ -161,13 +161,21 @@ export async function submitEvent(user: AuthenticatedUser, event: EventScope["ev
 
 	const organizerOrgIds = event.organizers.map((o) => o.organization.id);
 	const venueIds = event.venueAllotments.map((va) => va.venue.id);
+	const facilityIds = event.facilities
+		.map((f) => f.facility.id)
+		.concat(event.venueAllotments.flatMap((va) => va.facilities.map((f) => f.facility.id)));
 
-	const [orgManagedEntities, venueManagedEntities] = await Promise.all([
-		workflowInstanceRepository.findAncestorOrganizationManagedEntities(organizerOrgIds), // get all managed entity related to event organizers
-		workflowInstanceRepository.findVenueManagedEntityIds(venueIds), // get all managed entity related to the venues
+	const [orgManagedEntities, venueManagedEntities, facilityManagedEntities] = await Promise.all([
+		workflowInstanceRepository.findAncestorOrganizationManagedEntities(organizerOrgIds), // organizer organizations + their ancestors
+		workflowInstanceRepository.findManagedEntityIdsOfType("venue", venueIds), // venues
+		workflowInstanceRepository.findManagedEntityIdsOfType("facility", facilityIds), // facilities
 	]);
 
-	const allManagedEntities = [...orgManagedEntities, ...venueManagedEntities];
+	const allManagedEntities = [
+		...orgManagedEntities,
+		...venueManagedEntities,
+		...facilityManagedEntities,
+	];
 	const allManagedEntityIds = allManagedEntities.map((e) => e.managedEntityId);
 
 	const roleIds = [
@@ -250,7 +258,7 @@ export async function getParentableEvents(
 	user: AuthenticatedUser,
 	parentableFor: schemas.GetParentableEventsSchema,
 ) {
-	const hasPermission = permissionRepository.hasPermissionInManagedEntity(
+	const hasPermission = await permissionRepository.hasPermissionInManagedEntity(
 		user,
 		"organization",
 		[parentableFor.organizationId],

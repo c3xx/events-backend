@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
@@ -25,16 +25,40 @@ export const addFacilityProvider = dbAction(
 	},
 );
 
-export const removeFacilityProvider = dbAction(async (facilityId: number, providerId: number) => {
-	await db
-		.update(schema.facilityProvider)
-		.set({
-			deletedAt: sql`now`,
-		})
-		.where(
-			and(
-				eq(schema.facilityProvider.id, providerId),
-				eq(schema.facilityProvider.facilityId, facilityId),
-			),
-		);
-});
+export const removeFacilityProvider = dbAction(
+	async (
+		facilityId: number,
+		data: {
+			providerId: number;
+			markAsUnavailable: boolean;
+		},
+	) => {
+		await db.transaction(async (tx) => {
+			await tx
+				.update(schema.facilityProvider)
+				.set({ deletedAt: sql`now` })
+				.where(
+					and(
+						eq(schema.facilityProvider.id, data.providerId),
+						eq(schema.facilityProvider.facilityId, facilityId),
+					),
+				);
+
+			const providers = await tx
+				.select({ id: schema.facilityProvider.id })
+				.from(schema.facilityProvider)
+				.where(
+					and(
+						eq(schema.facilityProvider.facilityId, facilityId),
+						isNull(schema.facilityProvider.deletedAt),
+					),
+				);
+
+			if (providers.length === 0)
+				await tx
+					.update(schema.facility)
+					.set({ isAvailable: false })
+					.where(and(eq(schema.facility.id, facilityId), isNull(schema.facility.deletedAt)));
+		});
+	},
+);

@@ -12,6 +12,9 @@ export const findFacilities = dbAction(async () => {
 				id: schema.facilityType.id,
 				name: schema.facilityType.name,
 			}),
+			association: schema.facility.association,
+			overlapPolicy: schema.facility.overlapPolicy,
+			workflowParticipationPolicy: schema.facility.workflowParticipationPolicy,
 			isAvailable: schema.facility.isAvailable,
 			providers: jsonAgg(
 				jsonBuildObject({
@@ -84,20 +87,31 @@ export const findFacilities = dbAction(async () => {
 		.groupBy(schema.facility.id, schema.facilityType.id);
 });
 
-export const insertFacility = dbAction(async (data: { name: string; typeId: number }) => {
-	const [inserted] = await db
-		.insert(schema.facility)
-		.values({
-			name: data.name,
-			typeId: data.typeId,
-			isAvailable: false,
-		})
-		.returning({ id: schema.facility.id });
+export const insertFacility = dbAction(
+	async (data: {
+		name: string;
+		typeId: number;
+		association: FacilityAssociationMethod;
+		overlapPolicy: FacilityOverlapPolicy;
+		workflowParticipationPolicy: FacilityWorkflowParticipationPolicy;
+	}) => {
+		const [inserted] = await db
+			.insert(schema.facility)
+			.values({
+				name: data.name,
+				typeId: data.typeId,
+				isAvailable: false,
+				association: data.association,
+				overlapPolicy: data.overlapPolicy,
+				workflowParticipationPolicy: data.workflowParticipationPolicy,
+			})
+			.returning({ id: schema.facility.id });
 
-	if (inserted == null) unreachable();
+		if (inserted == null) unreachable();
 
-	return inserted;
-});
+		return inserted;
+	},
+);
 
 export const findFacilityById = dbAction(async (id: number) => {
 	const [facility] = await db
@@ -108,6 +122,9 @@ export const findFacilityById = dbAction(async (id: number) => {
 				id: schema.facilityType.id,
 				name: schema.facilityType.name,
 			}),
+			association: schema.facility.association,
+			overlapPolicy: schema.facility.overlapPolicy,
+			workflowParticipationPolicy: schema.facility.workflowParticipationPolicy,
 			isAvailable: schema.facility.isAvailable,
 			providers: jsonAgg(
 				jsonBuildObject({

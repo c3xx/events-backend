@@ -7,6 +7,26 @@ export const getFacilities: ApiRequestHandler<
 	{
 		id: number;
 		name: string;
+		type: {
+			id: number;
+			name: string;
+		};
+		association: FacilityAssociationMethod;
+		overlapPolicy: FacilityOverlapPolicy;
+		workflowParticipationPolicy: FacilityWorkflowParticipationPolicy;
+		isAvailable: boolean;
+		providers: {
+			id: number;
+			scope: {
+				type: FacilityProviderEntityType;
+				id: number;
+				name: string;
+				kind: {
+					id: number;
+					name: string;
+				};
+			};
+		}[];
 	}[]
 > = async (_req, res) => {
 	const result = await service.getFacilities();
@@ -26,6 +46,13 @@ export const getFacility: ScopedApiRequestHandler<
 	{
 		id: number;
 		name: string;
+		type: {
+			id: number;
+			name: string;
+		};
+		association: FacilityAssociationMethod;
+		overlapPolicy: FacilityOverlapPolicy;
+		workflowParticipationPolicy: FacilityWorkflowParticipationPolicy;
 		isAvailable: boolean;
 		providers: {
 			id: number;

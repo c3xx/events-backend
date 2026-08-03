@@ -47,28 +47,32 @@ export const findAncestorOrganizationManagedEntities = dbAction(
 	},
 );
 
-export const findVenueManagedEntityIds = dbAction(async (venueIds: number[]) => {
-	if (venueIds.length === 0) return [];
-	const rows = await db
-		.select({
-			id: schema.managedEntity.id,
-			typeRefId: schema.venue.venueTypeId,
-		})
-		.from(schema.managedEntity)
-		.innerJoin(schema.venue, eq(schema.managedEntity.refId, schema.venue.id))
-		.where(
-			and(
-				eq(schema.managedEntity.managedEntityType, "venue"),
-				inArray(schema.managedEntity.refId, venueIds),
-				isNull(schema.managedEntity.deletedAt),
-			),
-		);
-	return rows.map((r) => ({
-		managedEntityId: r.id,
-		managedEntityType: "venue" as const,
-		typeRefId: r.typeRefId,
-	}));
-});
+export const findManagedEntityIdsOfType = dbAction(
+	async <T extends ManagedEntityType>(type: T, ids: number[]) => {
+		if (ids.length === 0) return [];
+
+		const rows = await db
+			.select({
+				id: schema.managedEntity.id,
+				typeRefId: schema.venue.venueTypeId,
+			})
+			.from(schema.managedEntity)
+			.innerJoin(schema.venue, eq(schema.managedEntity.refId, schema.venue.id))
+			.where(
+				and(
+					eq(schema.managedEntity.managedEntityType, type),
+					inArray(schema.managedEntity.refId, ids),
+					isNull(schema.managedEntity.deletedAt),
+				),
+			);
+
+		return rows.map((r) => ({
+			managedEntityId: r.id,
+			managedEntityType: type as T,
+			typeRefId: r.typeRefId,
+		}));
+	},
+);
 
 export const insertWorkflowInstance = dbAction(
 	async (data: {

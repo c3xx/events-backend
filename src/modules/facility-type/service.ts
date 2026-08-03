@@ -13,5 +13,7 @@ export async function getFacilityType(facilityTypeId: number) {
 }
 
 export async function createFacilityType(input: schemas.CreateFacilityTypeSchema) {
-	return await repository.insertFacilityType(input);
+	return await repository.insertFacilityType({
+		name: input.name,
+	});
 }

@@ -16,7 +16,9 @@ export const getFacilityTypes = dbAction(async () => {
 export const insertFacilityType = dbAction(async (data: { name: string }) => {
 	const [inserted] = await db
 		.insert(schema.facilityType)
-		.values({ name: data.name })
+		.values({
+			name: data.name,
+		})
 		.returning({ id: schema.facilityType.id });
 
 	if (inserted == null) unreachable();

@@ -1,4 +1,9 @@
 import z from "zod";
+import {
+	FACILITY_ASSOCIATION_METHODS,
+	FACILITY_OVERLAP_POLICIES,
+	FACILITY_WORKFLOW_PARTICIPATION_POLICIES,
+} from "@/lib/constants.js";
 import { idLike } from "@/lib/helpers.js";
 
 export const createFacilitySchema = z.object({
@@ -10,6 +15,9 @@ export const createFacilitySchema = z.object({
 			error: "Facility name length cannot exceed 256 characters",
 		}),
 	typeId: idLike("Invalid facility type ID"),
+	association: z.enum(FACILITY_ASSOCIATION_METHODS),
+	overlapPolicy: z.enum(FACILITY_OVERLAP_POLICIES),
+	workflowParticipationPolicy: z.enum(FACILITY_WORKFLOW_PARTICIPATION_POLICIES),
 });
 
 export const changeAvailabilitySchema = z.object({
