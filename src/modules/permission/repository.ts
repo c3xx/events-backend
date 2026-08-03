@@ -37,6 +37,7 @@ export const hasPermissionInManagedEntity = dbAction(
 					inArray(schema.managedEntity.refId, refId),
 					eq(schema.managedEntity.managedEntityType, managedEntityType),
 					eq(schema.permission.code, permission),
+					eq(schema.userRole.isActive, true),
 					isNull(schema.userRole.deletedAt),
 				),
 			)

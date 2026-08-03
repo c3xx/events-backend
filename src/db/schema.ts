@@ -880,13 +880,7 @@ export const workflowInstance = pgTable(
 	},
 	(t) => [
 		// only one active instance per event
-		uniqueIndex()
-			.on(t.eventId, t.initialStepId)
-			.where(sql`${t.deletedAt} IS NULL AND ${t.status} = 'active'`),
-		// while generation, initialstepid can be null. so can't allow generating two active ones for an event.
-		uniqueIndex()
-			.on(t.eventId)
-			.where(sql`${t.deletedAt} IS NULL AND ${t.status} = 'active' AND ${t.initialStepId} IS NULL`),
+		uniqueIndex().on(t.eventId).where(sql`${t.deletedAt} IS NULL AND ${t.status} = 'active'`),
 	],
 );
 
