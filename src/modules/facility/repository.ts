@@ -217,3 +217,19 @@ export const changeAvailability = dbAction(
 			.where(and(eq(schema.facility.id, facilityId), isNull(schema.facility.deletedAt)));
 	},
 );
+
+export const findFacilityanagedEntity = dbAction(async (facilityId: number) => {
+	const [relatedManagedEntity] = await db
+		.select({ id: schema.managedEntity.id })
+		.from(schema.managedEntity)
+		.where(
+			and(
+				eq(schema.managedEntity.managedEntityType, "facility"),
+				eq(schema.managedEntity.refId, facilityId),
+				isNull(schema.managedEntity.deletedAt),
+			),
+		)
+		.limit(1);
+
+	return relatedManagedEntity;
+});
