@@ -3,31 +3,32 @@ import { jsonAgg, jsonBuildObject } from "@/db/helpers.js";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
-export const findFacilities = dbAction(async () => {
-	return await db
-		.select({
-			id: schema.facility.id,
-			name: schema.facility.name,
-			type: jsonBuildObject({
-				id: schema.facilityType.id,
-				name: schema.facilityType.name,
-			}),
-			association: schema.facility.association,
-			overlapPolicy: schema.facility.overlapPolicy,
-			workflowParticipationPolicy: schema.facility.workflowParticipationPolicy,
-			isAvailable: schema.facility.isAvailable,
-			providers: jsonAgg(
-				jsonBuildObject({
-					id: schema.facilityProvider.id,
-					scope: sql<{
-						type: FacilityProviderEntityType; // todo: search for this and add "facility" where matterss
-						id: number;
-						name: string;
-						kind: {
+export const findFacilities = dbAction(
+	async (data: { association?: FacilityAssociationMethod }) => {
+		return await db
+			.select({
+				id: schema.facility.id,
+				name: schema.facility.name,
+				type: jsonBuildObject({
+					id: schema.facilityType.id,
+					name: schema.facilityType.name,
+				}),
+				association: schema.facility.association,
+				overlapPolicy: schema.facility.overlapPolicy,
+				workflowParticipationPolicy: schema.facility.workflowParticipationPolicy,
+				isAvailable: schema.facility.isAvailable,
+				providers: jsonAgg(
+					jsonBuildObject({
+						id: schema.facilityProvider.id,
+						scope: sql<{
+							type: FacilityProviderEntityType; // todo: search for this and add "facility" where matterss
 							id: number;
 							name: string;
-						};
-					}>`case
+							kind: {
+								id: number;
+								name: string;
+							};
+						}>`case
 					when ${schema.facilityProvider.providerEntityType} = 'organization'
 					then (
 						select
@@ -64,28 +65,34 @@ export const findFacilities = dbAction(async () => {
 					)
 					else null
 				end`,
-				}),
-				schema.facilityProvider.id,
-			),
-		})
-		.from(schema.facility)
-		.innerJoin(
-			schema.facilityType,
-			and(
-				eq(schema.facility.typeId, schema.facilityType.id),
-				isNull(schema.facilityType.deletedAt),
-			),
-		)
-		.leftJoin(
-			schema.facilityProvider,
-			and(
-				eq(schema.facilityProvider.facilityId, schema.facility.id),
-				isNull(schema.facilityProvider.deletedAt),
-			),
-		)
-		.where(isNull(schema.facility.deletedAt))
-		.groupBy(schema.facility.id, schema.facilityType.id);
-});
+					}),
+					schema.facilityProvider.id,
+				),
+			})
+			.from(schema.facility)
+			.innerJoin(
+				schema.facilityType,
+				and(
+					eq(schema.facility.typeId, schema.facilityType.id),
+					isNull(schema.facilityType.deletedAt),
+				),
+			)
+			.leftJoin(
+				schema.facilityProvider,
+				and(
+					eq(schema.facilityProvider.facilityId, schema.facility.id),
+					isNull(schema.facilityProvider.deletedAt),
+				),
+			)
+			.where(
+				and(
+					data.association != null ? eq(schema.facility.association, data.association) : undefined,
+					isNull(schema.facility.deletedAt),
+				),
+			)
+			.groupBy(schema.facility.id, schema.facilityType.id);
+	},
+);
 
 export const insertFacility = dbAction(
 	async (data: {

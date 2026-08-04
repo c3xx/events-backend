@@ -5,7 +5,14 @@ import type * as schemas from "./schema.js";
 import type { FacilityScope } from "./scopes.js";
 
 export async function getFacilities() {
-	const facilities = await repository.findFacilities();
+	const facilities = await repository.findFacilities({});
+	return facilities;
+}
+
+export async function getEventAssociatedFacilities() {
+	const facilities = await repository.findFacilities({
+		association: "event",
+	});
 	return facilities;
 }
 

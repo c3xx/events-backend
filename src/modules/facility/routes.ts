@@ -8,6 +8,8 @@ import { facilityIdParamHandler } from "./scopes.js";
 const router: Router = Router();
 
 router.get("/", controller.getFacilities);
+router.get("/event-associated", controller.getEventAssociatedFacilities);
+
 router.post("/", requireUserType("admin"), controller.createFacility);
 
 router.param("facilityId", facilityIdParamHandler);
