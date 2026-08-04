@@ -73,8 +73,12 @@ export async function getCalendar(params: schemas.GetCalendarParamsSchema) {
 				continue;
 			}
 
+			if (event.id === 1) {
+				console.log(event.id, dayStartsAt.toLocaleDateString(), lastDate.toLocaleDateString());
+			}
+
 			// if this day is not within the last date
-			if (dayStartsAt > lastDate) break;
+			if (dayStartsAt > endsAt || dayStartsAt > lastDate) break;
 
 			const calculatedEvent: CalculatedCalendarDayEvent = {
 				id: event.id,
