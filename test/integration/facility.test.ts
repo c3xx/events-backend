@@ -142,7 +142,7 @@ describe("Facility Integration Tests", () => {
 		});
 
 		test("findFacilities returns all facilities, each with correctly nested type and providers", async () => {
-			const all = await findFacilities();
+			const all = await findFacilities({});
 			expect(all.length).toBeGreaterThan(0);
 			expect(all[0]?.type).toBeDefined();
 			expect(all[0]?.providers).toBeDefined();
@@ -171,7 +171,7 @@ describe("Facility Integration Tests", () => {
 			const fetched = await findFacilityById(facility.id);
 			expect(fetched).toBeUndefined();
 
-			const all = await findFacilities();
+			const all = await findFacilities({});
 			const sameFacilityInAll = all.find((f) => f.id === facility.id);
 			expect(sameFacilityInAll).toBeUndefined();
 		});
