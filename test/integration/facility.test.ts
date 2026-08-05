@@ -70,7 +70,7 @@ describe("Facility Integration Tests", () => {
 	});
 
 	describe("1. Core Facility CRUD & Managed Entity Integrity", () => {
-		test("BUG: creates facility securely with isAvailable: false by default... missing managedEntity trigger", async () => {
+		test("creates facility securely with isAvailable: false by default", async () => {
 			const facility = await createFacility({
 				name: `AutoFalse-${nanoid()}`,
 				typeId: validFacilityTypeId,
