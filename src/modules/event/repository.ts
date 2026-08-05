@@ -4,6 +4,149 @@ import { jsonAggDistinct, jsonBuildObject, jsonBuildObjectNullable } from "@/db/
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
+export const findEventReportData = dbAction(async (eventId: number) => {
+	const [event, latestInstance] = await Promise.all([
+		db.query.event.findFirst({
+			where: and(eq(schema.event.id, eventId), isNull(schema.event.deletedAt)),
+			columns: {
+				id: true,
+				title: true,
+				requestDetails: true,
+				status: true,
+				startsAt: true,
+				endsAt: true,
+			},
+			with: {
+				category: {
+					columns: { name: true },
+				},
+				creator: {
+					columns: { fullName: true, email: true },
+				},
+				organizers: {
+					where: isNull(schema.eventOrganizer.deletedAt),
+					columns: { role: true },
+					with: {
+						organization: {
+							columns: { id: true, name: true },
+						},
+					},
+				},
+				invitations: {
+					where: and(
+						eq(schema.eventOrganizerInvitation.status, "accepted"),
+						isNull(schema.eventOrganizerInvitation.deletedAt),
+					),
+					with: {
+						recipientOrganization: {
+							columns: { id: true, name: true },
+						},
+						respondedByUser: {
+							with: {
+								user: {
+									columns: { fullName: true, email: true },
+								},
+							},
+						},
+					},
+				},
+				venueAllotments: {
+					where: isNull(schema.venueAllotment.deletedAt),
+					columns: { startsAt: true, endsAt: true },
+					with: {
+						venue: {
+							columns: { id: true, name: true },
+							with: {
+								facilities: {
+									where: eq(schema.venueFacility.isActive, true),
+									columns: {},
+									with: {
+										facility: { columns: { id: true, name: true } },
+									},
+								},
+							},
+						},
+					},
+				},
+				report: {
+					columns: { details: true, participantsCount: true },
+					with: {
+						images: {
+							columns: { imageUrl: true },
+						},
+					},
+				},
+			},
+		}),
+		db
+			.select({ id: schema.workflowInstance.id })
+			.from(schema.workflowInstance)
+			.where(
+				and(
+					eq(schema.workflowInstance.eventId, eventId),
+					eq(schema.workflowInstance.status, "completed"),
+					isNull(schema.workflowInstance.deletedAt),
+				),
+			)
+			.orderBy(sql`${schema.workflowInstance.completedAt} DESC`)
+			.limit(1)
+			.then((rows) => rows[0]),
+	]);
+
+	if (!event) return null;
+
+	const approvedSteps = latestInstance
+		? await db
+				.select({
+					stepId: schema.workflowInstanceStep.id,
+					stepName: schema.workflowInstanceStep.name,
+					stepCompletedAt: schema.workflowInstanceStep.completedAt,
+					roleName: schema.role.name,
+					approverName: schema.user.fullName,
+					approverEmail: schema.user.email,
+					status: schema.workflowInstanceStepAssignment.status,
+					completedAt: schema.workflowInstanceStepAssignment.completedAt,
+				})
+				.from(schema.workflowInstanceStep)
+				.innerJoin(
+					schema.workflowInstanceStepRole,
+					eq(schema.workflowInstanceStepRole.stepId, schema.workflowInstanceStep.id),
+				)
+				.innerJoin(
+					schema.workflowInstanceStepTargetGroup,
+					eq(schema.workflowInstanceStepTargetGroup.stepRoleId, schema.workflowInstanceStepRole.id),
+				)
+				.innerJoin(
+					schema.workflowInstanceStepAssignment,
+					eq(
+						schema.workflowInstanceStepAssignment.targetGroupId,
+						schema.workflowInstanceStepTargetGroup.id,
+					),
+				)
+				.innerJoin(
+					schema.userRole,
+					eq(schema.userRole.id, schema.workflowInstanceStepAssignment.userRoleId),
+				)
+				.innerJoin(schema.user, eq(schema.user.id, schema.userRole.userId))
+				.innerJoin(schema.role, eq(schema.role.id, schema.userRole.roleId))
+				.where(
+					and(
+						eq(schema.workflowInstanceStep.instanceId, latestInstance.id),
+						eq(schema.workflowInstanceStepAssignment.status, "approved"),
+						isNull(schema.workflowInstanceStep.deletedAt),
+						isNull(schema.workflowInstanceStepRole.deletedAt),
+						isNull(schema.workflowInstanceStepTargetGroup.deletedAt),
+						isNull(schema.workflowInstanceStepAssignment.deletedAt),
+					),
+				)
+		: [];
+
+	return {
+		...event,
+		approvedSteps,
+	};
+});
+
 const EVENT_ASSOCIATED_FACILITIES_KEY = Symbol("event associated facilities");
 
 export const createEvent = dbAction(

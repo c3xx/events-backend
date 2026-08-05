@@ -167,6 +167,11 @@ declare global {
 		never
 	>;
 
+	export type ScopedBinaryRequestHandler<
+		S extends Record<string, unknown>,
+		P = express.core.ParamsDictionary,
+	> = express.RequestHandler<P, Buffer, unknown, express.core.ParsedQs, S>;
+
 	export type ScopedApiRequestHandler<
 		S extends Record<string, unknown>,
 		T = unknown,
