@@ -1,5 +1,4 @@
 import { sendEmail } from "@/lib/email/index.js";
-import { env } from "@/lib/env.js";
 import {
 	getStepActivatedContent,
 	getStepTransitionContent,
@@ -7,6 +6,7 @@ import {
 	getWorkflowDeniedContent,
 	getWorkflowSubmittedContent,
 } from "@/lib/email/workflow-email-templates.js";
+import { env } from "@/lib/env.js";
 import * as repository from "./repository.js";
 
 const APPROVALS_URL = `${env.FRONTEND_ORIGIN}/approvals`;
