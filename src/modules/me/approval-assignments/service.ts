@@ -2,7 +2,7 @@ import { BadRequestError, ConflictError, NotFoundError, ValidationError } from "
 import { orderWorkflowSteps, unreachable } from "@/lib/helpers.js";
 import * as eventRepository from "@/modules/event/repository.js";
 import * as workflowInstanceRepository from "@/modules/event/workflow-instance/repository.js";
-import * as notificationService from "@/modules/notification/workflow-notification.service.js";
+import * as notificationService from "@/modules/notification/service.js";
 import { hasPermissionInManagedEntity } from "@/modules/permission/repository.js";
 import * as repository from "./repository.js";
 import type { RespondToAssignmentsSchema } from "./schema.js";

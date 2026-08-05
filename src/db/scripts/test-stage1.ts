@@ -3,7 +3,7 @@ import { db, schema } from "@/db/index.js";
 import {
 	findOrganizerEmails,
 	findPendingApproverEmailsForStep,
-} from "@/modules/notification/workflow-notification.repository.js";
+} from "@/modules/notification/repository.js";
 
 async function main() {
 	console.log("=== STAGE 1 NOTIFICATION RECIPIENT RESOLUTION TEST ===");

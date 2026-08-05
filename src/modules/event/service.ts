@@ -1,7 +1,7 @@
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
 import { orderWorkflowSteps, unreachable } from "@/lib/helpers.js";
 import * as eventTypeRepository from "@/modules/event-type/repository.js";
-import * as notificationService from "@/modules/notification/workflow-notification.service.js";
+import * as notificationService from "@/modules/notification/service.js";
 import * as organizationRepository from "@/modules/organization/repository.js";
 import * as permissionRepository from "@/modules/permission/repository.js";
 import * as roleRepository from "@/modules/role/repository.js";

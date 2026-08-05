@@ -7,7 +7,7 @@ import {
 	getWorkflowDeniedContent,
 	getWorkflowSubmittedContent,
 } from "@/lib/workflow-email-templates.js";
-import * as repository from "./workflow-notification.repository.js";
+import * as repository from "./repository.js";
 
 const APPROVALS_URL = `${env.FRONTEND_ORIGIN}/approvals`;
 
