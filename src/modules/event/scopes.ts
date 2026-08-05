@@ -10,7 +10,6 @@ export type EventScope = {
 		expectedParticipants: number;
 		requestDetails: string;
 		status: EventStatus;
-		parentEventId: number | null;
 		createdAt: string;
 		startsAt: string;
 		endsAt: string;
@@ -43,6 +42,32 @@ export type EventScope = {
 			venue: {
 				id: number;
 				name: string;
+			};
+			facilities: {
+				id: number;
+				venueAllotmentId: number | null;
+				facility: {
+					id: number;
+					name: string;
+					type: {
+						id: number;
+						name: string;
+					};
+					isAvailable: boolean;
+				};
+			}[];
+		}[];
+		facilities: {
+			id: number;
+			venueAllotmentId: number | null;
+			facility: {
+				id: number;
+				name: string;
+				type: {
+					id: number;
+					name: string;
+				};
+				isAvailable: boolean;
 			};
 		}[];
 	};

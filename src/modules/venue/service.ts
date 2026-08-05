@@ -19,7 +19,7 @@ export async function getVenues() {
 }
 
 export async function getVenue(venueId: number) {
-	const venue = await repository.getVenue(venueId);
+	const venue = await repository.findVenueById(venueId);
 	if (venue == null) throw new NotFoundError("Could not find the venue");
 	return venue;
 }

@@ -4,7 +4,7 @@ import * as controller from "./controller.js";
 
 const router: Router = Router({ mergeParams: true });
 
-router.get("/", controller.getVenueFacilities);
-router.put("/", requireUserType("admin"), controller.setVenueFacilities);
+router.get("/", controller.getFacilityTypeRoles);
+router.post("/", requireUserType("admin"), controller.createFacilityTypeRole);
 
 export default router;

@@ -46,7 +46,6 @@ export const getEvent: ScopedApiRequestHandler<
 		expectedParticipants: number;
 		requestDetails: string;
 		status: EventStatus;
-		parentEventId: number | null;
 		createdAt: string;
 		startsAt: string;
 		endsAt: string;
@@ -68,6 +67,32 @@ export const getEvent: ScopedApiRequestHandler<
 			startsAt: string;
 			endsAt: string;
 			venue: { id: number; name: string };
+			facilities: {
+				id: number;
+				venueAllotmentId: number | null;
+				facility: {
+					id: number;
+					name: string;
+					type: {
+						id: number;
+						name: string;
+					};
+					isAvailable: boolean;
+				};
+			}[];
+		}[];
+		facilities: {
+			id: number;
+			venueAllotmentId: number | null;
+			facility: {
+				id: number;
+				name: string;
+				type: {
+					id: number;
+					name: string;
+				};
+				isAvailable: boolean;
+			};
 		}[];
 	}
 > = async (_req, res) => {
@@ -92,8 +117,8 @@ export const submitEvent: ScopedApiRequestHandler<
 	{
 		id: number;
 	}
-> = async (_req, res) => {
-	const user = getAuthenticatedUser(_req);
+> = async (req, res) => {
+	const user = getAuthenticatedUser(req);
 	const result = await service.submitEvent(user, res.locals.event);
 	return ok(res, result);
 };

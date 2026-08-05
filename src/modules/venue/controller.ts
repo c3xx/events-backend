@@ -28,16 +28,31 @@ export const getVenues: ApiRequestHandler<
 };
 
 export const getVenue: ApiRequestHandler<{
+	id: number;
 	name: string;
-	venueTypeId: number;
-	organizationId: number | null;
+	type: {
+		id: number;
+		name: string;
+	};
 	maxCapacity: number;
 	accessLevel: VenueAccessLevel;
 	isAvailable: boolean;
 	unavailabilityReason: string | null;
-	id: number;
-	createdAt: string;
 	isActive: boolean;
+	createdAt: string;
+	organization: {
+		id: number;
+		name: string;
+	} | null;
+	facilities: {
+		id: number;
+		name: string;
+		type: {
+			id: number;
+			name: string;
+		};
+		isAvailable: boolean;
+	}[];
 }> = async (req, res) => {
 	const params = schemas.venueScopedSchema.parse(req.params);
 	const result = await service.getVenue(params.id);

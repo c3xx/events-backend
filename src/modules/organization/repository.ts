@@ -172,5 +172,18 @@ export const softDeleteOrganization = dbAction(async (id: number) => {
 		}
 
 		return result;
+    });
+});
+
+export const getOrganizationsByIds = dbAction(async (organizationIds: number[]) => {
+	return await db.query.organization.findMany({
+		where: and(
+			inArray(schema.organization.id, organizationIds),
+			isNull(schema.organization.deletedAt),
+		),
+		columns: {
+			id: true,
+			isActive: true,
+		},
 	});
 });

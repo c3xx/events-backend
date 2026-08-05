@@ -15,6 +15,13 @@ declare global {
 	export type Role = typeof schema.role.$inferSelect;
 	export type Permission = typeof schema.permission.$inferSelect;
 	export type VenueAccessLevel = (typeof schema.venueAccessLevelEnum.enumValues)[number];
+	export type FacilityProviderEntityType =
+		(typeof schema.facilityProviderEntityTypeEnum.enumValues)[number];
+	export type FacilityAssociationMethod =
+		(typeof schema.facilityAssociationMethodEnum.enumValues)[number];
+	export type FacilityOverlapPolicy = (typeof schema.facilityOverlapPolicyEnum.enumValues)[number];
+	export type FacilityWorkflowParticipationPolicy =
+		(typeof schema.facilityWorkflowParticipationPolicyEnum.enumValues)[number];
 	export type PasswordTokenType = (typeof schema.passwordTokenTypeEnum.enumValues)[number];
 
 	// -- events
@@ -179,4 +186,64 @@ declare global {
 		typeof schema,
 		ExtractTablesWithRelations<typeof schema>
 	>;
+
+	type ParsedDate = {
+		date: number;
+		month: number;
+		year: number;
+	};
+
+	type CalculatedCalendarDayEvent = {
+		id: number;
+		title: string;
+		status: "draft" | "pending" | "approved" | "cancelled" | "overridden";
+		startsAt: string;
+		endsAt: string;
+		parentEvent: {
+			id: number;
+			title: string;
+		} | null;
+		hostOrganization: {
+			id: number;
+			name: string;
+			type: {
+				id: number;
+				name: string;
+			};
+		};
+		category: {
+			id: number;
+			name: string;
+		};
+		timings: {
+			startsAt: string;
+			endsAt: string;
+		};
+		venueAllotments: {
+			id: number;
+			venue: {
+				id: number;
+				name: string;
+				type: {
+					id: number;
+					name: string;
+				};
+			};
+			startsAt: string;
+			endsAt: string;
+			timings: {
+				startsAt: string;
+				endsAt: string;
+			};
+		}[];
+		allVenueAllotments: {
+			id: number;
+			venue: {
+				id: number;
+				name: string;
+			};
+			startsAt: string;
+			endsAt: string;
+		}[];
+	};
 }

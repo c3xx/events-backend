@@ -21,6 +21,12 @@ BEGIN
         RETURN NEW;
     END IF;
 
+    IF NEW.parent_organization_id = NEW.id THEN
+        RAISE EXCEPTION
+            'organization: organization % cannot be its own parent',
+            NEW.id;
+    END IF;
+
     -- Get the parent's organization type
     SELECT organization_type_id INTO v_parent_type_id
     FROM organization

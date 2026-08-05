@@ -23,11 +23,21 @@ export function jsonBuildObject<T extends SelectedFields<any, any>>(shape: T) {
 		}
 	});
 
-	return sql<SelectResultFields<T>>`json_build_object(${sql.join(chunks)})`;
+	return sql<SelectResultFields<T>>`jsonb_build_object(${sql.join(chunks)})`;
 }
 
-export function jsonAgg<T>(shape: SQL<T>) {
-	return sql<T[]>`coalesce(json_agg(${shape}), '[]')`;
+export function jsonAgg<T>(shape: SQL<T>, filterOn?: SQL | PgColumn) {
+	return filterOn
+		? sql<T[]>`coalesce(json_agg(${shape}) filter (where ${filterOn} is not null),'[]'::json)`
+		: sql<T[]>`coalesce(json_agg(${shape}), '[]'::json)`;
+}
+
+export function jsonAggDistinct<T>(shape: SQL<T>, filterOn?: SQL | PgColumn) {
+	return filterOn
+		? sql<
+				T[]
+			>`coalesce(json_agg(distinct ${shape}) filter (where ${filterOn} is not null),'[]'::json)`
+		: sql<T[]>`coalesce(json_agg(distinct ${shape}), '[]'::json)`;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: I dont know how & I dont have time
@@ -51,5 +61,5 @@ export function jsonBuildObjectNullable<T extends SelectedFields<any, any>>(
 		}
 	});
 
-	return sql<SelectResultFields<T> | null>`case when ${nullableOn} is null then null else json_build_object(${sql.join(chunks)}) end`;
+	return sql<SelectResultFields<T> | null>`case when ${nullableOn} is null then null else jsonb_build_object(${sql.join(chunks)}) end`;
 }

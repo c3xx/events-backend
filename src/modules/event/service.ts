@@ -12,6 +12,10 @@ import type { EventScope } from "./scopes.js";
 import * as workflowInstanceRepository from "./workflow-instance/repository.js";
 
 export async function createEvent(user: AuthenticatedUser, input: schemas.CreateEventSchema) {
+	if (new Date(input.startsAt) < new Date()) {
+		throw new ForbiddenError("Event cannot start in the past");
+	}
+
 	if (
 		!(await permissionRepository.hasPermissionInManagedEntity(
 			user,
@@ -37,6 +41,9 @@ export async function createEvent(user: AuthenticatedUser, input: schemas.Create
 		(await repository.findEventById(input.parentEventId)) == null
 	) {
 		throw new NotFoundError("Parent event not found");
+	}
+	if (Date.parse(input.startsAt) < Date.now() || Date.parse(input.endsAt) < Date.now()) {
+		throw new BadRequestError("Must not be able to create events in the past");
 	}
 
 	return await repository.createEvent({
@@ -126,6 +133,21 @@ export async function submitEvent(user: AuthenticatedUser, event: EventScope["ev
 	if (!host) {
 		throw new NotFoundError("Host organizer not found");
 	}
+
+	const organizerOrganizationIds = event.organizers.map((organizer) => organizer.organization.id);
+
+	const organizerOrganization =
+		await organizationRepository.getOrganizationsByIds(organizerOrganizationIds);
+
+	const inactiveOrganizerOrganizations = organizerOrganization.filter((org) => !org.isActive);
+
+	if (inactiveOrganizerOrganizations.length > 0) {
+		throw new ConflictError(
+			`Cannot submit an event with inactive organizer organizations. Remove them and re-submit.`,
+			inactiveOrganizerOrganizations,
+		);
+	}
+
 	// Only host organization can submit event
 	const hasPermission = await permissionRepository.hasPermissionInManagedEntity(
 		user,
@@ -147,6 +169,10 @@ export async function submitEvent(user: AuthenticatedUser, event: EventScope["ev
 		throw new NotFoundError("Event type not found");
 	}
 
+	if (!eventType.isActive) {
+		throw new ForbiddenError("Event cannot be submitted as the event type is inactive.");
+	}
+
 	const template = await workflowTemplateRepository.findByIdWithRoles(
 		eventType.workflowTemplate.id,
 	);
@@ -161,18 +187,57 @@ export async function submitEvent(user: AuthenticatedUser, event: EventScope["ev
 
 	const organizerOrgIds = event.organizers.map((o) => o.organization.id);
 	const venueIds = event.venueAllotments.map((va) => va.venue.id);
+	const facilityIds = event.facilities
+		.map((f) => f.facility.id)
+		.concat(event.venueAllotments.flatMap((va) => va.facilities.map((f) => f.facility.id)));
 
-	const [orgManagedEntities, venueManagedEntities] = await Promise.all([
-		workflowInstanceRepository.findAncestorOrganizationManagedEntities(organizerOrgIds), // get all managed entity related to event organizers
-		workflowInstanceRepository.findVenueManagedEntityIds(venueIds), // get all managed entity related to the venues
-	]);
+	const facilities = await workflowInstanceRepository
+		.findFacilityManagedEntities(facilityIds)
+		.then((facilities) =>
+			facilities.filter((facility) => facility.workflowParticipationPolicy === "include"),
+		);
 
-	const allManagedEntities = [...orgManagedEntities, ...venueManagedEntities];
+	const allVenueIds = venueIds.concat(
+		facilities.flatMap(({ providers }) =>
+			providers.filter((provider) => provider.type === "venue").map((provider) => provider.id),
+		),
+	);
+	const venues = await workflowInstanceRepository.findVenueManagedEntities(allVenueIds);
+
+	const allOrganizationIds = organizerOrgIds.concat(
+		venues.map((venue) => venue.parentOrganizationId).filter((pid) => pid != null),
+		facilities.flatMap(({ providers }) =>
+			providers
+				.filter((provider) => provider.type === "organization")
+				.map((provider) => provider.id),
+		),
+	);
+
+	const orgManagedEntities =
+		await workflowInstanceRepository.findAncestorOrganizationManagedEntities(allOrganizationIds); // all responsible organizations + their ancestors
+
+	const allManagedEntities: {
+		managedEntityId: number;
+		managedEntityType: ManagedEntityType;
+		typeRefId: number;
+	}[] = [
+		...orgManagedEntities,
+		...venues.map((v) => ({
+			managedEntityId: v.managedEntityId,
+			managedEntityType: v.managedEntityType,
+			typeRefId: v.typeRefId,
+		})),
+		...facilities.map((f) => ({
+			managedEntityId: f.managedEntityId,
+			managedEntityType: f.managedEntityType,
+			typeRefId: f.typeRefId,
+		})),
+	];
 	const allManagedEntityIds = allManagedEntities.map((e) => e.managedEntityId);
 
-	const roleIds = [
-		...new Set(orderedSteps.flatMap((step) => step.stepRoles.map((stepRole) => stepRole.role.id))),
-	];
+	const roleIds = Array.from(
+		new Set(orderedSteps.flatMap((step) => step.stepRoles.map((stepRole) => stepRole.role.id))),
+	);
 
 	const assignments = await roleRepository.findAssignmentsForRoles(roleIds, allManagedEntityIds); // Find the userRole of all roles in the related managed entities
 
@@ -250,7 +315,7 @@ export async function getParentableEvents(
 	user: AuthenticatedUser,
 	parentableFor: schemas.GetParentableEventsSchema,
 ) {
-	const hasPermission = permissionRepository.hasPermissionInManagedEntity(
+	const hasPermission = await permissionRepository.hasPermissionInManagedEntity(
 		user,
 		"organization",
 		[parentableFor.organizationId],
