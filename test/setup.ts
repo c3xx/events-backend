@@ -1,10 +1,10 @@
 import { sql } from "drizzle-orm";
 import { beforeAll } from "vitest";
-import { db, schema } from "@/db/index.js";
-import { hashPassword } from "@/lib/argon2.js";
-import { FLATTENED_PERMISSIONS } from "@/lib/constants.js";
-import { env } from "@/lib/env.js";
-import { isPermission, unreachable } from "@/lib/helpers.js";
+import { db, schema } from "../src/db/index.js";
+import { hashPassword } from "../src/lib/argon2.js";
+import { FLATTENED_PERMISSIONS } from "../src/lib/constants.js";
+import { env } from "../src/lib/env.js";
+import { isPermission, unreachable } from "../src/lib/helpers.js";
 
 beforeAll(async () => {
 	const tables = await db.execute<{ tablename: string }>(
