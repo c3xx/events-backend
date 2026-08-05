@@ -74,7 +74,7 @@ export async function getCalendar(params: schemas.GetCalendarParamsSchema) {
 			}
 
 			// if this day is not within the last date
-			if (dayStartsAt > lastDate) break;
+			if (dayStartsAt > endsAt || dayStartsAt > lastDate) break;
 
 			const calculatedEvent: CalculatedCalendarDayEvent = {
 				id: event.id,

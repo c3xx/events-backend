@@ -24,6 +24,12 @@ export const changeAvailabilitySchema = z.object({
 	availability: z.boolean(),
 });
 
+export const facilityScopedSchema = z
+	.object({
+		facilityId: idLike("Invalid facility ID"),
+	})
+	.strict();
+
 export type CreateFacilitySchema = z.output<typeof createFacilitySchema>;
 
 export type ChangeAvailabilitySchema = z.output<typeof changeAvailabilitySchema>;
