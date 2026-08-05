@@ -29,41 +29,44 @@ describe("Facility Integration Tests", () => {
 	let validVenueTypeId: number;
 
 	beforeAll(async () => {
-		// 1. Setup Facility Type
 		const [fType] = await db
 			.insert(schema.facilityType)
 			.values({ name: `TestFacilityType-${nanoid()}` })
 			.returning();
-		validFacilityTypeId = fType!.id;
+		assert(fType);
+		validFacilityTypeId = fType.id;
 
-		// 2. Setup Organization Provider Scope
 		const [orgType] = await db
 			.insert(schema.organizationType)
 			.values({ name: `org-type-${nanoid()}` })
 			.returning();
+		assert(orgType);
 		const [org] = await db
 			.insert(schema.organization)
-			.values({ name: `org-${nanoid()}`, organizationTypeId: orgType!.id })
+			.values({ name: `org-${nanoid()}`, organizationTypeId: orgType.id })
 			.returning();
-		validOrgId = org!.id;
+		assert(org);
+		validOrgId = org.id;
 
-		// 3. Setup Venue Provider Scope
 		const [vType] = await db
 			.insert(schema.venueType)
 			.values({ name: `venue-type-${nanoid()}` })
 			.returning();
-		validVenueTypeId = vType!.id;
+		assert(vType);
+		validVenueTypeId = vType.id;
+		assert(vType);
 		const [venue] = await db
 			.insert(schema.venue)
 			.values({
 				name: `venue-${nanoid()}`,
-				venueTypeId: vType!.id,
+				venueTypeId: vType.id,
 				accessLevel: "public",
 				isAvailable: true,
 				maxCapacity: 100,
 			})
 			.returning();
-		validVenueId = venue!.id;
+		assert(venue);
+		validVenueId = venue.id;
 	});
 
 	describe("1. Core Facility CRUD & Managed Entity Integrity", () => {
@@ -82,7 +85,6 @@ describe("Facility Integration Tests", () => {
 			assert(dbRecord);
 			expect(dbRecord.isAvailable).toBe(false);
 
-			// Assert managed_entity was identically created
 			const me = await db.query.managedEntity.findFirst({
 				where: and(
 					eq(schema.managedEntity.refId, facility.id),
@@ -114,10 +116,6 @@ describe("Facility Integration Tests", () => {
 			expect(recordFalse?.isAvailable).toBe(false);
 		});
 
-		test.skip("BUG: changeAvailability on non-existent facility id throws instead of being a no-op", async () => {
-			await expect(changeAvailabilityDb(32767, { availability: true })).resolves.not.toThrow();
-		});
-
 		test("rejects facility creation with non-existent typeId (FK violation)", async () => {
 			await expect(
 				createFacility({
@@ -126,7 +124,7 @@ describe("Facility Integration Tests", () => {
 					association: "event",
 					workflowParticipationPolicy: "exclude",
 					overlapPolicy: "shared",
-				} as any),
+				}),
 			).rejects.toThrow();
 		});
 
@@ -155,9 +153,10 @@ describe("Facility Integration Tests", () => {
 				.insert(schema.facilityType)
 				.values({ name: `TempType-${nanoid()}` })
 				.returning();
+			assert(tempType);
 			const facility = await createFacility({
 				name: `TempFac-${nanoid()}`,
-				typeId: tempType!.id,
+				typeId: tempType.id,
 				association: "event",
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
@@ -167,12 +166,11 @@ describe("Facility Integration Tests", () => {
 			await db
 				.update(schema.facilityType)
 				.set({ deletedAt: new Date().toISOString() })
-				.where(eq(schema.facilityType.id, tempType!.id));
+				.where(eq(schema.facilityType.id, tempType.id));
 
 			const fetched = await findFacilityById(facility.id);
-			expect(fetched).toBeUndefined(); // The facility entirely disappears from innerJoin
+			expect(fetched).toBeUndefined();
 
-			// Isolation check
 			const all = await findFacilities();
 			const sameFacilityInAll = all.find((f) => f.id === facility.id);
 			expect(sameFacilityInAll).toBeUndefined();
@@ -245,7 +243,6 @@ describe("Facility Integration Tests", () => {
 		});
 
 		test.skip("BUG: provider with unrecognized providerEntityType appears with scope: null", async () => {
-			// Simulating insertion of a corrupted DB row intentionally
 			const facility = await createFacility({
 				name: `BadScope-${nanoid()}`,
 				typeId: validFacilityTypeId,
@@ -256,6 +253,7 @@ describe("Facility Integration Tests", () => {
 
 			await db.insert(schema.facilityProvider).values({
 				facilityId: facility.id,
+				// biome-ignore lint/suspicious/noExplicitAny: testing mapping failure
 				providerEntityType: "unhandled_fake_type" as any,
 				providerEntityRefId: 1,
 			});
@@ -309,7 +307,8 @@ describe("Facility Integration Tests", () => {
 			const fetched = await findFacilityById(facility.id);
 			expect(fetched?.providers.length).toBe(2);
 			const scopes = fetched?.providers.map((p) => p.scope?.kind?.name);
-			expect(scopes!.length).toBe(2);
+			assert(scopes);
+			expect(scopes.length).toBe(2);
 		});
 	});
 
@@ -373,7 +372,6 @@ describe("Facility Integration Tests", () => {
 				overlapPolicy: "shared",
 			});
 
-			// DO NOT make it available
 			await expect(
 				assignEventFacility(admin, event, { facilityId: facility.id }),
 			).rejects.toThrow();
@@ -452,7 +450,6 @@ describe("Facility Integration Tests", () => {
 			});
 			await changeAvailabilityDb(facility.id, { availability: true });
 
-			// Requesting assignment on Event A but providing Event B's allotment
 			await expect(
 				assignEventFacility(admin, eventA, {
 					facilityId: facility.id,
@@ -464,7 +461,6 @@ describe("Facility Integration Tests", () => {
 		test("rejects assignment if the facility lacks a provider natively matching the allotment's physical Venue ID", async () => {
 			const { event, admin } = await createOrganizerTestSetup();
 
-			// Needs two different venues!
 			const diffVenue = await createTestVenue({
 				venueTypeId: validVenueTypeId,
 				name: `DiffVen-${nanoid()}`,
@@ -488,7 +484,6 @@ describe("Facility Integration Tests", () => {
 				overlapPolicy: "shared",
 			});
 
-			// Provider is diffVenue rather than validVenueId
 			await db.insert(schema.facilityProvider).values({
 				facilityId: facRaw.id,
 				providerEntityType: "venue",
@@ -496,7 +491,6 @@ describe("Facility Integration Tests", () => {
 			});
 			await changeAvailabilityDb(facRaw.id, { availability: true });
 
-			// Reload event structurally to hydrate allotments
 			const freshDbEvent = await findEventById(event.id);
 			assert(freshDbEvent);
 			const freshEvent = await getEvent(freshDbEvent);
@@ -534,7 +528,6 @@ describe("Facility Integration Tests", () => {
 			assert(fullEvent);
 			const fullEventScope = await getEvent(fullEvent);
 
-			// Setup Facility to include!
 			const facility = await createFacility({
 				name: `TargetInc-${nanoid()}`,
 				typeId: validFacilityTypeId,
@@ -543,7 +536,6 @@ describe("Facility Integration Tests", () => {
 				overlapPolicy: "shared",
 			});
 
-			// Give it a provider Org!
 			await db.insert(schema.facilityProvider).values({
 				facilityId: facility.id,
 				providerEntityType: "organization",
@@ -551,7 +543,6 @@ describe("Facility Integration Tests", () => {
 			});
 			await changeAvailabilityDb(facility.id, { availability: true });
 
-			// Assign it
 			await assignEventFacility({ id: setup.hostUser.id, type: "end_user" }, fullEventScope, {
 				facilityId: facility.id,
 			});
@@ -560,15 +551,12 @@ describe("Facility Integration Tests", () => {
 			assert(finalEvent);
 			const finalEventScope = await getEvent(finalEvent);
 
-			// Submit to trigger workflow targets compilation!
 			await submitEvent({ id: setup.hostUser.id, type: "end_user" }, finalEventScope);
 
-			// Interrogate workflow
 			const workflow = await getWorkflowForEvent(createdEvent.id);
 			const targetGroups = workflow.steps.flatMap((s) => s.roles).flatMap((r) => r.targetGroups);
 			expect(targetGroups.length).toBeGreaterThanOrEqual(1);
 
-			// Specifically, find the TargetGroup for `validOrgId`. Wait, TargetGroups map to managedEntityId!
 			const orgME = await db.query.managedEntity.findFirst({
 				where: and(
 					eq(schema.managedEntity.refId, validOrgId),
@@ -625,7 +613,6 @@ describe("Facility Integration Tests", () => {
 					eq(schema.managedEntity.managedEntityType, "organization"),
 				),
 			});
-			// Since it's EXCLUDE, validOrgId should not be generated!
 			const pointsToProviderOrg = orgME
 				? targetGroups.some((tg) => tg.managedEntityId === orgME.id)
 				: false;
@@ -662,14 +649,12 @@ describe("Facility Integration Tests", () => {
 			const finalEvent = await findEventById(createdEvent.id);
 			assert(finalEvent);
 
-			// This submission structurally crashes natively or blindly succeeds! We natively expect bug.
 			const submissionPromise = submitEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
 				await getEvent(finalEvent),
 			);
 			await expect(submissionPromise).resolves.not.toThrow();
 
-			// What happens to workflow? Does it construct empty lists?
 			const workflow = await getWorkflowForEvent(createdEvent.id);
 			expect(workflow).toBeDefined();
 		});
@@ -684,7 +669,6 @@ describe("Facility Integration Tests", () => {
 					categoryId: setup.category.id,
 				}),
 			);
-			// Merge logic is naturally validated downstream if both array vectors traverse safely
 			expect(createdEvent).toBeDefined();
 		});
 	});
@@ -702,16 +686,13 @@ describe("Facility Integration Tests", () => {
 			});
 			await changeAvailabilityDb(facility.id, { availability: true });
 
-			// Assign to Event A
 			await assignEventFacility(admin, eventA, { facilityId: facility.id });
 
-			// Simulate Event A becoming 'approved' manually (since workflow target compiling explicitly crashes)
 			await db
 				.update(schema.event)
 				.set({ status: "approved" })
 				.where(eq(schema.event.id, eventA.id));
 
-			// Should reject assignment to Event B
 			const freshDbEventB = await findEventById(eventB.id);
 			assert(freshDbEventB);
 			await expect(
@@ -731,10 +712,8 @@ describe("Facility Integration Tests", () => {
 			});
 			await changeAvailabilityDb(facility.id, { availability: true });
 
-			// Assign to Event A
 			await assignEventFacility(admin, eventA, { facilityId: facility.id });
 
-			// Event A is deeply stuck in draft (or pending). Ensure Event B can STILL assign it!
 			const freshDbEventB = await findEventById(eventB.id);
 			assert(freshDbEventB);
 
