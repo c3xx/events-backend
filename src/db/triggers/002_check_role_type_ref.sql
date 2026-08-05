@@ -26,6 +26,17 @@ BEGIN
                 'role: type_ref_id % does not exist in venue_type',
                 NEW.type_ref_id;
         END IF;
+
+    ELSIF NEW.managed_entity_type = 'facility' THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM facility_type
+            WHERE id = NEW.type_ref_id
+            AND deleted_at IS NULL
+        ) THEN
+            RAISE EXCEPTION
+                'role: type_ref_id % does not exist in facility_type',
+                NEW.type_ref_id;
+        END IF;
     END IF;
 
     RETURN NEW;

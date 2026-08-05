@@ -26,6 +26,17 @@ BEGIN
                 'managed_entity: ref_id % does not exist in venue',
                 NEW.ref_id;
         END IF;
+
+    ELSIF NEW.managed_entity_type = 'facility' THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM facility
+            WHERE id = NEW.ref_id
+            AND deleted_at IS NULL
+        ) THEN
+            RAISE EXCEPTION
+                'managed_entity: ref_id % does not exist in facility',
+                NEW.ref_id;
+        END IF;
     END IF;
 
     RETURN NEW;
