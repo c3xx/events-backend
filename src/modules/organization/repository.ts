@@ -172,7 +172,7 @@ export const softDeleteOrganization = dbAction(async (id: number) => {
 		}
 
 		return result;
-    });
+	});
 });
 
 export const getOrganizationsByIds = dbAction(async (organizationIds: number[]) => {

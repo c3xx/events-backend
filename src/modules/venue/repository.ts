@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { jsonAggDistinct, jsonBuildObject, jsonBuildObjectNullable } from "@/db/helpers.js";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
@@ -203,12 +203,24 @@ export const softDeleteVenue = dbAction(async (id: number) => {
 				);
 		}
 
-		await tx.delete(schema.venueFacility).where(eq(schema.venueFacility.venueId, id));
-
-		await tx
+		const venueAllotments = await tx
 			.update(schema.venueAllotment)
 			.set({ deletedAt: sql`NOW()` })
-			.where(and(eq(schema.venueAllotment.venueId, id), isNull(schema.venueAllotment.deletedAt)));
+			.where(and(eq(schema.venueAllotment.venueId, id), isNull(schema.venueAllotment.deletedAt)))
+			.returning({ id: schema.venueAllotment.id });
+
+		await tx
+			.update(schema.eventFacility)
+			.set({ deletedAt: sql`NOW()` })
+			.where(
+				and(
+					inArray(
+						schema.eventFacility.venueAllotmentId,
+						venueAllotments.map((va) => va.id),
+					),
+					isNull(schema.eventFacility.deletedAt),
+				),
+			);
 
 		return result;
 	});
