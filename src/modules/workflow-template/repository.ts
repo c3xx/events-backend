@@ -125,3 +125,30 @@ export const findByIdWithRoles = dbAction(async (id: number) => {
 		},
 	});
 });
+
+export const updateWorkflowTemplate = dbAction(async (id: number, data: { name: string }) => {
+	const [updated] = await db
+		.update(schema.workflowTemplate)
+		.set({ name: data.name })
+		.where(and(eq(schema.workflowTemplate.id, id), isNull(schema.workflowTemplate.deletedAt)))
+		.returning({ id: schema.workflowTemplate.id });
+	return updated;
+});
+
+export const findEventTypesUsingTemplate = dbAction(async (templateId: number) => {
+	return await db
+		.select({ id: schema.eventType.id, name: schema.eventType.name })
+		.from(schema.eventType)
+		.where(
+			and(eq(schema.eventType.workflowTemplateId, templateId), isNull(schema.eventType.deletedAt)),
+		);
+});
+
+export const softDeleteWorkflowTemplate = dbAction(async (id: number) => {
+	const [deleted] = await db
+		.update(schema.workflowTemplate)
+		.set({ deletedAt: sql`NOW()` })
+		.where(and(eq(schema.workflowTemplate.id, id), isNull(schema.workflowTemplate.deletedAt)))
+		.returning({ id: schema.workflowTemplate.id });
+	return deleted;
+});

@@ -233,3 +233,20 @@ export const findFacilityanagedEntity = dbAction(async (facilityId: number) => {
 
 	return relatedManagedEntity;
 });
+
+export const updateFacility = dbAction(async (id: number, data: { name: string }) => {
+	const [updated] = await db
+		.update(schema.facility)
+		.set({ name: data.name })
+		.where(and(eq(schema.facility.id, id), isNull(schema.facility.deletedAt)))
+		.returning({ id: schema.facility.id });
+	return updated;
+});
+
+export const softDeleteFacility = dbAction(async (id: number) => {
+	const result = await db
+		.update(schema.facility)
+		.set({ deletedAt: sql`NOW()` })
+		.where(and(eq(schema.facility.id, id), isNull(schema.facility.deletedAt)));
+	return result;
+});

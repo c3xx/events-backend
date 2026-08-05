@@ -87,3 +87,23 @@ export const deleteEventType = dbAction(async (id: number) => {
 		.where(and(eq(schema.eventType.id, id), isNull(schema.eventType.deletedAt)));
 	return result;
 });
+
+export const updateEventType = dbAction(
+	async (
+		id: number,
+		data: {
+			name?: string | undefined;
+			isActive?: boolean | undefined;
+			venuePolicy?: EventTypeVenuePolicy | undefined;
+			collaborationPolicy?: EventTypeCollaborationPolicy | undefined;
+			workflowTemplateId?: number | undefined;
+		},
+	) => {
+		const [updated] = await db
+			.update(schema.eventType)
+			.set(data)
+			.where(and(eq(schema.eventType.id, id), isNull(schema.eventType.deletedAt)))
+			.returning({ id: schema.eventType.id });
+		return updated;
+	},
+);

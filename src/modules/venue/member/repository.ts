@@ -81,10 +81,11 @@ export const assignVenueMemberRoles = dbAction(
 				if (newRoleIds.has(userRole.roleId)) {
 					roleIdToId.set(userRole.roleId, userRole.id);
 				} else {
-					// currently has, but not in the new list.
 					toBeDeletedPks.push(userRole.id);
 				}
 			}
+
+			const deletedUserRoles = userRoles.filter((ur) => toBeDeletedPks.includes(ur.id));
 
 			const existingRoleIds = new Set(userRoles.map((ur) => ur.roleId));
 			const toBeAdded = data.roleIds.filter((roleId) => !existingRoleIds.has(roleId));
@@ -110,6 +111,22 @@ export const assignVenueMemberRoles = dbAction(
 
 				for (const row of inserted) {
 					roleIdToId.set(row.roleId, row.id);
+				}
+			}
+
+			for (const oldUr of deletedUserRoles) {
+				const newUrId = roleIdToId.get(oldUr.roleId);
+				if (newUrId != null) {
+					await tx
+						.update(schema.workflowInstanceStepAssignment)
+						.set({ userRoleId: newUrId })
+						.where(
+							and(
+								eq(schema.workflowInstanceStepAssignment.userRoleId, oldUr.id),
+								eq(schema.workflowInstanceStepAssignment.status, "pending"),
+								isNull(schema.workflowInstanceStepAssignment.deletedAt),
+							),
+						);
 				}
 			}
 

@@ -35,3 +35,16 @@ export const getOrganization: ApiRequestHandler<{
 	const result = await service.getOrganization(params.id);
 	return ok(res, result);
 };
+
+export const updateOrganization: ApiRequestHandler<{ id: number }> = async (req, res) => {
+	const params = schemas.organizationScopedSchema.parse(req.params);
+	const body = schemas.updateOrganizationSchema.parse(req.body);
+	const result = await service.updateOrganization(params.id, body);
+	return ok(res, result);
+};
+
+export const deleteOrganization: ApiRequestHandler<true> = async (req, res) => {
+	const params = schemas.organizationScopedSchema.parse(req.params);
+	await service.deleteOrganization(params.id);
+	return ok(res, true);
+};

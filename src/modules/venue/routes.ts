@@ -10,6 +10,8 @@ router.get("/", controller.getVenues);
 router.post("/", requireUserType("admin"), controller.createVenue);
 
 router.get("/:id", controller.getVenue);
+router.patch("/:id", requireUserType("admin"), controller.updateVenue);
+router.delete("/:id", requireUserType("admin"), controller.deleteVenue);
 
 router.use("/:id/members", membersRouter);
 

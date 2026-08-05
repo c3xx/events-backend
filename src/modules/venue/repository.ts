@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { jsonAggDistinct, jsonBuildObject, jsonBuildObjectNullable } from "@/db/helpers.js";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
@@ -142,4 +142,86 @@ export const findVenueManagedEntity = dbAction(async (venueId: number) => {
 		.limit(1);
 
 	return relatedManagedEntity;
+});
+
+export const updateVenue = dbAction(
+	async (
+		id: number,
+		data: {
+			name?: string | undefined;
+			maxCapacity?: number | undefined;
+			accessLevel?: VenueAccessLevel | undefined;
+			isAvailable?: boolean | undefined;
+			unavailabilityReason?: string | null | undefined;
+			isActive?: boolean | undefined;
+		},
+	) => {
+		const [updated] = await db
+			.update(schema.venue)
+			.set(data)
+			.where(and(eq(schema.venue.id, id), isNull(schema.venue.deletedAt)))
+			.returning({ id: schema.venue.id });
+		return updated;
+	},
+);
+
+export const softDeleteVenue = dbAction(async (id: number) => {
+	return await db.transaction(async (tx) => {
+		const [result] = await tx
+			.update(schema.venue)
+			.set({ deletedAt: sql`NOW()` })
+			.where(and(eq(schema.venue.id, id), isNull(schema.venue.deletedAt)))
+			.returning({ id: schema.venue.id });
+
+		if (result == null) return null;
+
+		const [managedEntity] = await tx
+			.select({ id: schema.managedEntity.id })
+			.from(schema.managedEntity)
+			.where(
+				and(
+					eq(schema.managedEntity.managedEntityType, "venue"),
+					eq(schema.managedEntity.refId, id),
+					isNull(schema.managedEntity.deletedAt),
+				),
+			);
+
+		if (managedEntity != null) {
+			await tx
+				.update(schema.managedEntity)
+				.set({ deletedAt: sql`NOW()` })
+				.where(eq(schema.managedEntity.id, managedEntity.id));
+
+			await tx
+				.update(schema.userRole)
+				.set({ deletedAt: sql`NOW()` })
+				.where(
+					and(
+						eq(schema.userRole.managedEntityId, managedEntity.id),
+						isNull(schema.userRole.deletedAt),
+					),
+				);
+		}
+
+		const venueAllotments = await tx
+			.update(schema.venueAllotment)
+			.set({ deletedAt: sql`NOW()` })
+			.where(and(eq(schema.venueAllotment.venueId, id), isNull(schema.venueAllotment.deletedAt)))
+			.returning({ id: schema.venueAllotment.id });
+
+		await tx
+			.update(schema.eventFacility)
+			.set({ deletedAt: sql`NOW()` })
+			.where(
+				and(
+					inArray(
+						schema.eventFacility.venueAllotmentId,
+						venueAllotments.map((va) => va.id),
+					),
+					isNull(schema.eventFacility.deletedAt),
+				),
+			);
+
+		return result;
+	});
 });

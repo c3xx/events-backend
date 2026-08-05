@@ -13,3 +13,15 @@ export const createWorkflowTemplateStepSchema = z
 	.strict();
 
 export type CreateWorkflowTemplateStepSchema = z.output<typeof createWorkflowTemplateStepSchema>;
+
+export const updateWorkflowTemplateStepSchema = z
+	.object({
+		name: z
+			.string({ error: "Invalid workflow template step name" })
+			.trim()
+			.min(3, { error: "Invalid workflow template step name" })
+			.max(256, { error: "Invalid workflow template step name" }),
+	})
+	.strict();
+
+export type UpdateWorkflowTemplateStepSchema = z.output<typeof updateWorkflowTemplateStepSchema>;

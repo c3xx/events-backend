@@ -43,6 +43,13 @@ export const createEventType: ApiRequestHandler<{
 	return ok(res, result);
 };
 
+export const updateEventType: ApiRequestHandler<{ id: number }> = async (req, res) => {
+	const params = schemas.eventTypeScopedSchema.parse(req.params);
+	const body = schemas.updateEventTypeSchema.parse(req.body);
+	const result = await service.updateEventType(params.id, body);
+	return ok(res, result);
+};
+
 export const deleteEventType: ApiRequestHandler<true> = async (req, res) => {
 	const params = schemas.eventTypeScopedSchema.parse(req.params);
 	await service.deleteEventType(params.id);

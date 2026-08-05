@@ -29,3 +29,16 @@ export const getUsers: ApiRequestHandler<
 	const result = await service.getUsers();
 	return ok(res, result);
 };
+
+export const updateUser: ApiRequestHandler<{ id: number }> = async (req, res) => {
+	const params = schemas.userScopedSchema.parse(req.params);
+	const body = schemas.updateUserSchema.parse(req.body);
+	const result = await service.updateUser(params.userId, body);
+	return ok(res, result);
+};
+
+export const deleteUser: ApiRequestHandler<true> = async (req, res) => {
+	const params = schemas.userScopedSchema.parse(req.params);
+	await service.deleteUser(params.userId);
+	return ok(res, true);
+};

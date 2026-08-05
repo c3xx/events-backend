@@ -7,4 +7,7 @@ const router: Router = Router();
 router.get("/", controller.getEventCategories);
 router.post("/", requireUserType("admin"), controller.createEventType);
 
+router.patch("/:id", requireUserType("admin"), controller.updateEventCategory);
+router.delete("/:id", requireUserType("admin"), controller.deleteEventCategory);
+
 export default router;

@@ -21,6 +21,12 @@ export async function createEventType(input: schemas.CreateEventTypeSchema) {
 	});
 }
 
+export async function updateEventType(id: number, input: schemas.UpdateEventTypeSchema) {
+	const updated = await repository.updateEventType(id, input);
+	if (updated == null) throw new NotFoundError("Event type not found");
+	return updated;
+}
+
 export async function deleteEventType(eventTypeId: number) {
 	const result = await repository.deleteEventType(eventTypeId);
 	if ((result.rowCount ?? 0) === 0) throw new NotFoundError("Event type not found");
