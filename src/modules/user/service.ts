@@ -16,6 +16,8 @@ export async function createUser(input: schemas.CreateUserSchema) {
 		to: [input.email],
 		subject: "Your account has been created",
 		html: html,
+	}).catch(() => {
+		/* ignore */
 	});
 
 	return user;
