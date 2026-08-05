@@ -8,6 +8,7 @@ import {
 	assignRolePermission,
 	assignUserRole,
 	createTestOrganization,
+	createTestOrganizationHierarchyLayer,
 	createTestOrganizationType,
 	createTestPermission,
 	createTestRole,
@@ -134,8 +135,14 @@ describe("Permissions Integration Tests", () => {
 	describe("User-Role-ManagedEntity Assignment", () => {
 		test("assigns a role to a user scoped to a specific managedEntity", async () => {
 			const user = await createTestUser();
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const orgType = await createTestOrganizationType();
-			const org = await createTestOrganization({ organizationTypeId: orgType.id });
+			const org = await createTestOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: orgType.id,
+			});
 			const me = await findOrganizationManagedEntity(org.id);
 			assert(me != null);
 			const role = await createTestRole({
@@ -150,8 +157,14 @@ describe("Permissions Integration Tests", () => {
 
 		test("rejects duplicate (userId, roleId, managedEntityId) while active", async () => {
 			const user = await createTestUser();
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const orgType = await createTestOrganizationType();
-			const org = await createTestOrganization({ organizationTypeId: orgType.id });
+			const org = await createTestOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: orgType.id,
+			});
 			const me = await findOrganizationManagedEntity(org.id);
 			assert(me != null);
 			const role = await createTestRole({
@@ -173,10 +186,19 @@ describe("Permissions Integration Tests", () => {
 				typeRefId: orgType.id,
 			});
 
-			const org1 = await createTestOrganization({ organizationTypeId: orgType.id });
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
+			const org1 = await createTestOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: orgType.id,
+			});
 			const me1 = await findOrganizationManagedEntity(org1.id);
 			assert(me1 != null);
-			const org2 = await createTestOrganization({ organizationTypeId: orgType.id });
+			const org2 = await createTestOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: orgType.id,
+			});
 			const me2 = await findOrganizationManagedEntity(org2.id);
 			assert(me2 != null);
 
@@ -190,8 +212,14 @@ describe("Permissions Integration Tests", () => {
 
 		test("userRole.isActive is respected by the RBAC queries and denies action when false", async () => {
 			const user = await createTestUser({ type: "end_user" });
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const orgType = await createTestOrganizationType();
-			const org = await createTestOrganization({ organizationTypeId: orgType.id });
+			const org = await createTestOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: orgType.id,
+			});
 			const me = await findOrganizationManagedEntity(org.id);
 			assert(me != null);
 			const role = await createTestRole({
@@ -225,8 +253,14 @@ describe("Permissions Integration Tests", () => {
 	describe("Permission Check — Core Logic (hasPermissionInManagedEntity)", () => {
 		test("grants action when user's active role has the required permission", async () => {
 			const user = await createTestUser({ type: "end_user" });
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const orgType = await createTestOrganizationType();
-			const org = await createTestOrganization({ organizationTypeId: orgType.id });
+			const org = await createTestOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: orgType.id,
+			});
 			const me = await findOrganizationManagedEntity(org.id);
 			assert(me != null);
 			const role = await createTestRole({
@@ -249,8 +283,14 @@ describe("Permissions Integration Tests", () => {
 
 		test("denies action when user has a role on that managedEntity but lacks permission", async () => {
 			const user = await createTestUser({ type: "end_user" });
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const orgType = await createTestOrganizationType();
-			const org = await createTestOrganization({ organizationTypeId: orgType.id });
+			const org = await createTestOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: orgType.id,
+			});
 			const me = await findOrganizationManagedEntity(org.id);
 			assert(me != null);
 			const role = await createTestRole({
@@ -272,8 +312,14 @@ describe("Permissions Integration Tests", () => {
 
 		test("denies action when user's userRole is soft-deleted", async () => {
 			const user = await createTestUser({ type: "end_user" });
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const orgType = await createTestOrganizationType();
-			const org = await createTestOrganization({ organizationTypeId: orgType.id });
+			const org = await createTestOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: orgType.id,
+			});
 			const me = await findOrganizationManagedEntity(org.id);
 			assert(me != null);
 			const role = await createTestRole({
@@ -307,19 +353,26 @@ describe("Permissions Integration Tests", () => {
 	describe("ManagedEntity Scoping & Hierarchy Assertions", () => {
 		test("Parent-level DB queries do NOT automatically cascade downward natively in RBAC without explicitly passing the child refId array", async () => {
 			const user = await createTestUser({ type: "end_user" });
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const parentType = await createTestOrganizationType();
 			const childType = await createTestOrganizationType();
 			await db
 				.insert(schema.organizationTypeAllowedParent)
 				.values({ childTypeId: childType.id, parentTypeId: parentType.id });
 
-			const parentOrg = await createTestOrganization({ organizationTypeId: parentType.id });
+			const parentOrg = await createTestOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: parentType.id,
+			});
 			const meParent = await findOrganizationManagedEntity(parentOrg.id);
 			assert(meParent != null);
 
 			const childOrg = await createTestOrganization({
 				organizationTypeId: childType.id,
 				parentOrganizationId: parentOrg.id,
+				layerId: orgLayer.id,
 			});
 
 			const role = await createTestRole({

@@ -9,15 +9,23 @@ import {
 	getOrganization,
 	getOrganizations,
 } from "@/modules/organization/service.js";
-import { createTestOrganization, createTestOrganizationType } from "./integration-test-helpers.js";
+import {
+	createTestOrganization,
+	createTestOrganizationHierarchyLayer,
+	createTestOrganizationType,
+} from "./integration-test-helpers.js";
 
 describe("Organization Integration Tests", () => {
 	describe("Create Organization", () => {
 		test("creates organization with valid organizationTypeId and no parentOrganizationId", async () => {
 			const orgType = await createTestOrganizationType();
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const org = await createOrganization({
 				organizationTypeId: orgType.id,
 				name: `TKMCE-${nanoid()}`,
+				layerId: orgLayer.id,
 			});
 			expect(org.id).toBeDefined();
 		});
@@ -25,63 +33,109 @@ describe("Organization Integration Tests", () => {
 		test("creates organization with valid organizationTypeId and valid parentOrganizationId", async () => {
 			const parentType = await createTestOrganizationType();
 			const childType = await createTestOrganizationType();
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			await db.insert(schema.organizationTypeAllowedParent).values({
 				childTypeId: childType.id,
 				parentTypeId: parentType.id,
 			});
-			const parentOrg = await createTestOrganization({ organizationTypeId: parentType.id });
+			const parentOrg = await createTestOrganization({
+				organizationTypeId: parentType.id,
+				layerId: orgLayer.id,
+			});
 			const childOrg = await createOrganization({
 				organizationTypeId: childType.id,
 				name: `Child-${nanoid()}`,
 				parentOrganizationId: parentOrg.id,
+				layerId: orgLayer.id,
 			});
 			expect(childOrg.id).toBeDefined();
 		});
 
 		test("rejects creation with non-existent organizationTypeId (FK)", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			await expect(
 				createOrganization({
 					organizationTypeId: 9999999,
 					name: "Ghost Org",
+					layerId: orgLayer.id,
 				}),
 			).rejects.toThrow();
 		});
 
 		test("rejects creation with non-existent parentOrganizationId (FK)", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const orgType = await createTestOrganizationType();
 			await expect(
 				createOrganization({
 					organizationTypeId: orgType.id,
 					name: "Orphan Org",
 					parentOrganizationId: 9999999,
+					layerId: orgLayer.id,
 				}),
 			).rejects.toThrow();
 		});
 
 		test("rejects duplicate (organizationTypeId, name) while active", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const orgType = await createTestOrganizationType();
 			const name = `Dup-${nanoid()}`;
-			await createOrganization({ organizationTypeId: orgType.id, name });
-			await expect(createOrganization({ organizationTypeId: orgType.id, name })).rejects.toThrow();
+			await createOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: orgType.id,
+				name,
+			});
+			await expect(
+				createOrganization({
+					layerId: orgLayer.id,
+					organizationTypeId: orgType.id,
+					name,
+				}),
+			).rejects.toThrow();
 		});
 
 		test("allows same name under different organizationTypeId", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const typeA = await createTestOrganizationType();
 			const typeB = await createTestOrganizationType();
 			const name = `Shared-${nanoid()}`;
 
 			await expect(
-				createOrganization({ organizationTypeId: typeA.id, name }),
+				createOrganization({
+					layerId: orgLayer.id,
+					organizationTypeId: typeA.id,
+					name,
+				}),
 			).resolves.not.toThrow();
 			await expect(
-				createOrganization({ organizationTypeId: typeB.id, name }),
+				createOrganization({
+					layerId: orgLayer.id,
+					organizationTypeId: typeB.id,
+					name,
+				}),
 			).resolves.not.toThrow();
 		});
 
 		test("allows name reuse after prior org with that name+type is soft-deleted", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const orgType = await createTestOrganizationType();
 			const name = `Recycled-${nanoid()}`;
-			const org = await createOrganization({ organizationTypeId: orgType.id, name });
+			const org = await createOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: orgType.id,
+				name,
+			});
 
 			await db
 				.update(schema.organization)
@@ -89,15 +143,23 @@ describe("Organization Integration Tests", () => {
 				.where(eq(schema.organization.id, org.id));
 
 			await expect(
-				createOrganization({ organizationTypeId: orgType.id, name }),
+				createOrganization({
+					layerId: orgLayer.id,
+					organizationTypeId: orgType.id,
+					name,
+				}),
 			).resolves.not.toThrow();
 		});
 
 		test("created org defaults isActive: true", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const orgType = await createTestOrganizationType();
 			const org = await createOrganization({
 				organizationTypeId: orgType.id,
 				name: `ActiveCheck-${nanoid()}`,
+				layerId: orgLayer.id,
 			});
 
 			const fetched = await getOrganization(org.id);
@@ -105,10 +167,14 @@ describe("Organization Integration Tests", () => {
 		});
 
 		test("findOrganizationManagedEntity returns valid row immediately after createOrganization (DB Triggers)", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const orgType = await createTestOrganizationType();
 			const org = await createOrganization({
 				organizationTypeId: orgType.id,
 				name: `NoME-${nanoid()}`,
+				layerId: orgLayer.id,
 			});
 
 			const me = await findOrganizationManagedEntity(org.id);
@@ -117,16 +183,23 @@ describe("Organization Integration Tests", () => {
 		});
 
 		test("rejects creating org with (type, parentType) not in allowed parent list (DB trigger enforced)", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const parentType = await createTestOrganizationType();
 			const childType = await createTestOrganizationType();
 
-			const parentOrg = await createTestOrganization({ organizationTypeId: parentType.id });
+			const parentOrg = await createTestOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: parentType.id,
+			});
 
 			await expect(
 				createOrganization({
 					organizationTypeId: childType.id,
 					name: `PermissiveChild-${nanoid()}`,
 					parentOrganizationId: parentOrg.id,
+					layerId: orgLayer.id,
 				}),
 			).rejects.toThrow();
 		});
@@ -134,16 +207,23 @@ describe("Organization Integration Tests", () => {
 
 	describe("Get Organization (single)", () => {
 		test("returns correct organization for valid id, including parentOrganizationId", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const parentType = await createTestOrganizationType();
 			const childType = await createTestOrganizationType();
 			await db.insert(schema.organizationTypeAllowedParent).values({
 				childTypeId: childType.id,
 				parentTypeId: parentType.id,
 			});
-			const parentOrg = await createTestOrganization({ organizationTypeId: parentType.id });
+			const parentOrg = await createTestOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: parentType.id,
+			});
 			const childOrg = await createTestOrganization({
 				organizationTypeId: childType.id,
 				parentOrganizationId: parentOrg.id,
+				layerId: orgLayer.id,
 			});
 
 			const fetched = await getOrganization(childOrg.id);
@@ -156,8 +236,14 @@ describe("Organization Integration Tests", () => {
 		});
 
 		test("throws NotFoundError for soft-deleted id", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const orgType = await createTestOrganizationType();
-			const org = await createTestOrganization({ organizationTypeId: orgType.id });
+			const org = await createTestOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: orgType.id,
+			});
 
 			await db
 				.update(schema.organization)
@@ -170,9 +256,18 @@ describe("Organization Integration Tests", () => {
 
 	describe("Get Organizations (list)", () => {
 		test("returns all active organizations and excludes soft-deleted organizations", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const orgType = await createTestOrganizationType();
-			const org1 = await createTestOrganization({ organizationTypeId: orgType.id });
-			const org2 = await createTestOrganization({ organizationTypeId: orgType.id });
+			const org1 = await createTestOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: orgType.id,
+			});
+			const org2 = await createTestOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: orgType.id,
+			});
 
 			await db
 				.update(schema.organization)
@@ -194,8 +289,14 @@ describe("Organization Integration Tests", () => {
 
 	describe("findOrganizationManagedEntity", () => {
 		test("returns the implicitly created managedEntity id natively via DB triggers", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const orgType = await createTestOrganizationType();
-			const org = await createTestOrganization({ organizationTypeId: orgType.id });
+			const org = await createTestOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: orgType.id,
+			});
 
 			const result = await findOrganizationManagedEntity(org.id);
 			expect(result).toBeDefined();
@@ -203,8 +304,14 @@ describe("Organization Integration Tests", () => {
 		});
 
 		test("returns undefined when the managedEntity row is soft-deleted", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const orgType = await createTestOrganizationType();
-			const org = await createTestOrganization({ organizationTypeId: orgType.id });
+			const org = await createTestOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: orgType.id,
+			});
 
 			await db
 				.update(schema.managedEntity)
@@ -223,16 +330,23 @@ describe("Organization Integration Tests", () => {
 
 	describe("Parent-Child Data Integrity", () => {
 		test("2-level chain: child's parent resolves, soft-deleting parent does not cascade", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const parentType = await createTestOrganizationType();
 			const childType = await createTestOrganizationType();
 			await db.insert(schema.organizationTypeAllowedParent).values({
 				childTypeId: childType.id,
 				parentTypeId: parentType.id,
 			});
-			const parentOrg = await createTestOrganization({ organizationTypeId: parentType.id });
+			const parentOrg = await createTestOrganization({
+				layerId: orgLayer.id,
+				organizationTypeId: parentType.id,
+			});
 			const childOrg = await createTestOrganization({
 				organizationTypeId: childType.id,
 				parentOrganizationId: parentOrg.id,
+				layerId: orgLayer.id,
 			});
 
 			const fetchedParent = await getOrganization(parentOrg.id);
@@ -252,8 +366,14 @@ describe("Organization Integration Tests", () => {
 
 	describe("Soft-Delete Cascades", () => {
 		test("soft-deleting an organization cascades to its auto-generated managedEntity", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const orgType = await createTestOrganizationType();
-			const org = await createTestOrganization({ organizationTypeId: orgType.id });
+			const org = await createTestOrganization({
+				organizationTypeId: orgType.id,
+				layerId: orgLayer.id,
+			});
 
 			const initialMe = await findOrganizationManagedEntity(org.id);
 			expect(initialMe).toBeDefined();

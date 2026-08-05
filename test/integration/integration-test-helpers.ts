@@ -23,6 +23,21 @@ export async function createTestUser(data?: Partial<typeof schema.user.$inferIns
 	return user;
 }
 
+export async function createTestOrganizationHierarchyLayer(data: {
+	sameLevelControlPolicy: OrganizationSameLayerControlPolicy;
+	nextStepId?: number | null;
+}) {
+	const [orgLayer] = await db
+		.insert(schema.organizationHierarchyLayer)
+		.values({
+			label: `org-type-${nanoid()}`,
+			...data,
+		})
+		.returning();
+	if (!orgLayer) throw new Error("Failed to create test organization layer");
+	return orgLayer;
+}
+
 export async function createTestOrganizationType(
 	data?: Partial<typeof schema.organizationType.$inferInsert>,
 ) {
@@ -41,6 +56,7 @@ export async function createTestOrganization(data: {
 	name?: string;
 	organizationTypeId: number;
 	parentOrganizationId?: number;
+	layerId: number;
 }) {
 	const [org] = await db
 		.insert(schema.organization)
@@ -48,6 +64,7 @@ export async function createTestOrganization(data: {
 			name: data.name ?? `org-${nanoid()}`,
 			organizationTypeId: data.organizationTypeId,
 			parentOrganizationId: data.parentOrganizationId,
+			layerId: data.layerId,
 		})
 		.returning();
 	if (!org) throw new Error("Failed to create test organization");
@@ -254,9 +271,13 @@ export async function allowParentType(childTypeId: number, parentTypeId: number)
 
 export async function createBasicEventSetup() {
 	const admin = await createTestUser({ type: "admin" });
+	const orgLayer = await createTestOrganizationHierarchyLayer({
+		sameLevelControlPolicy: "disallowed",
+	});
 	const orgType = await createTestOrganizationType();
 	const hostOrg = await createTestOrganization({
 		organizationTypeId: orgType.id,
+		layerId: orgLayer.id,
 	});
 
 	const template = await createTestWorkflowTemplate();
@@ -312,6 +333,7 @@ export async function createBasicEventSetup() {
 		hostOrg,
 		eventType,
 		category,
+		orgLayer,
 	};
 }
 
@@ -440,10 +462,15 @@ export async function createApprovalWorkflowSetup() {
 	// Organization
 	//
 
+	const orgLayer = await createTestOrganizationHierarchyLayer({
+		sameLevelControlPolicy: "disallowed",
+	});
+
 	const orgType = await createTestOrganizationType();
 
 	const hostOrg = await createTestOrganization({
 		organizationTypeId: orgType.id,
+		layerId: orgLayer.id,
 	});
 
 	const managedEntity = await getManagedEntityForOrganization(hostOrg.id);
@@ -790,8 +817,14 @@ export async function createTestVenue(data: {
 export async function setupWorkflowTestEnvironment(options?: { noInitialStep?: boolean }) {
 	const admin = await createTestUser({ type: "admin" });
 
+	const orgLayer = await createTestOrganizationHierarchyLayer({
+		sameLevelControlPolicy: "disallowed",
+	});
 	const orgType = await createTestOrganizationType();
-	const eventOrg = await createTestOrganization({ organizationTypeId: orgType.id });
+	const eventOrg = await createTestOrganization({
+		organizationTypeId: orgType.id,
+		layerId: orgLayer.id,
+	});
 	const orgME = await getManagedEntity({ managedEntityType: "organization", refId: eventOrg.id });
 	if (!orgME) throw new Error("Org ME missing");
 

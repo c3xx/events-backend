@@ -21,11 +21,12 @@ import {
 describe("Organizer Integration Tests", () => {
 	describe("resource provider organizer", () => {
 		test("successfully add a resource provider", async () => {
-			const { admin, event, mockRole } = await createOrganizerTestSetup();
+			const { admin, event, mockRole, orgLayer } = await createOrganizerTestSetup();
 
 			const guestOrgType = await createTestOrganizationType();
 			const resourceProviderOrg = await createTestOrganization({
 				organizationTypeId: guestOrgType.id,
+				layerId: orgLayer.id,
 			});
 
 			const result = await addEventOrganizer(
@@ -51,11 +52,12 @@ describe("Organizer Integration Tests", () => {
 		});
 
 		test("fails when adding same resource provider twice", async () => {
-			const { admin, event, mockRole } = await createOrganizerTestSetup();
+			const { admin, event, mockRole, orgLayer } = await createOrganizerTestSetup();
 
 			const guestOrgType = await createTestOrganizationType();
 			const resourceProviderOrg = await createTestOrganization({
 				organizationTypeId: guestOrgType.id,
+				layerId: orgLayer.id,
 			});
 
 			await addEventOrganizer(
@@ -85,11 +87,12 @@ describe("Organizer Integration Tests", () => {
 		});
 
 		test("successfully remove a resource provider organizer", async () => {
-			const { admin, event, mockRole } = await createOrganizerTestSetup();
+			const { admin, event, mockRole, orgLayer } = await createOrganizerTestSetup();
 
 			const guestOrgType = await createTestOrganizationType();
 			const resourceProviderOrg = await createTestOrganization({
 				organizationTypeId: guestOrgType.id,
+				layerId: orgLayer.id,
 			});
 
 			const added = await addEventOrganizer(
@@ -117,11 +120,12 @@ describe("Organizer Integration Tests", () => {
 
 	describe("co-host invitations", () => {
 		test("successfully invite co-host", async () => {
-			const { admin, event, mockRole } = await createOrganizerTestSetup();
+			const { admin, event, mockRole, orgLayer } = await createOrganizerTestSetup();
 
 			const guestOrgType = await createTestOrganizationType();
 			const coHostOrg = await createTestOrganization({
 				organizationTypeId: guestOrgType.id,
+				layerId: orgLayer.id,
 			});
 
 			const invitation = await addEventOrganizer(
@@ -146,11 +150,12 @@ describe("Organizer Integration Tests", () => {
 		});
 
 		test("fails when inviting same organization twice", async () => {
-			const { admin, event, mockRole } = await createOrganizerTestSetup();
+			const { admin, event, mockRole, orgLayer } = await createOrganizerTestSetup();
 
 			const guestOrgType = await createTestOrganizationType();
 			const coHostOrg = await createTestOrganization({
 				organizationTypeId: guestOrgType.id,
+				layerId: orgLayer.id,
 			});
 
 			await addEventOrganizer(
@@ -177,11 +182,12 @@ describe("Organizer Integration Tests", () => {
 		});
 
 		test("successfully accept invitation", async () => {
-			const { admin, event, mockRole } = await createOrganizerTestSetup();
+			const { admin, event, mockRole, orgLayer } = await createOrganizerTestSetup();
 
 			const guestOrgType = await createTestOrganizationType();
 			const coHostOrg = await createTestOrganization({
 				organizationTypeId: guestOrgType.id,
+				layerId: orgLayer.id,
 			});
 
 			const invitation = await addEventOrganizer(
@@ -220,11 +226,12 @@ describe("Organizer Integration Tests", () => {
 		});
 
 		test("successfully reject invitation", async () => {
-			const { admin, event, mockRole } = await createOrganizerTestSetup();
+			const { admin, event, mockRole, orgLayer } = await createOrganizerTestSetup();
 
 			const guestOrgType = await createTestOrganizationType();
 			const coHostOrg = await createTestOrganization({
 				organizationTypeId: guestOrgType.id,
+				layerId: orgLayer.id,
 			});
 
 			const invitation = await addEventOrganizer(
@@ -262,11 +269,12 @@ describe("Organizer Integration Tests", () => {
 		});
 
 		test("successfully revoke invitation", async () => {
-			const { admin, event, mockRole } = await createOrganizerTestSetup();
+			const { admin, event, mockRole, orgLayer } = await createOrganizerTestSetup();
 
 			const guestOrgType = await createTestOrganizationType();
 			const coHostOrg = await createTestOrganization({
 				organizationTypeId: guestOrgType.id,
+				layerId: orgLayer.id,
 			});
 
 			const invitation = await addEventOrganizer(
@@ -310,11 +318,12 @@ describe("Organizer Integration Tests", () => {
 		});
 
 		test("fails when non-host (unauthorized user) tries to invite", async () => {
-			const { event, orgType, hostOrg } = await createOrganizerTestSetup();
+			const { event, orgType, hostOrg, orgLayer } = await createOrganizerTestSetup();
 
 			const guestOrgType = await createTestOrganizationType();
 			const coHostOrg = await createTestOrganization({
 				organizationTypeId: guestOrgType.id,
+				layerId: orgLayer.id,
 			});
 
 			const unauthorizedUser = await createTestUser({ type: "end_user" });
@@ -348,11 +357,12 @@ describe("Organizer Integration Tests", () => {
 		});
 
 		test("fails when user has no role in host organization", async () => {
-			const { event, mockRole } = await createOrganizerTestSetup();
+			const { event, mockRole, orgLayer } = await createOrganizerTestSetup();
 
 			const guestOrgType = await createTestOrganizationType();
 			const coHostOrg = await createTestOrganization({
 				organizationTypeId: guestOrgType.id,
+				layerId: orgLayer.id,
 			});
 
 			const unrelatedUser = await createTestUser({ type: "end_user" });
@@ -371,11 +381,12 @@ describe("Organizer Integration Tests", () => {
 		});
 
 		test("fails when responding to an already closed invitation", async () => {
-			const { admin, event, mockRole } = await createOrganizerTestSetup();
+			const { admin, event, mockRole, orgLayer } = await createOrganizerTestSetup();
 
 			const guestOrgType = await createTestOrganizationType();
 			const coHostOrg = await createTestOrganization({
 				organizationTypeId: guestOrgType.id,
+				layerId: orgLayer.id,
 			});
 
 			const invitation = await addEventOrganizer(
@@ -407,11 +418,12 @@ describe("Organizer Integration Tests", () => {
 		});
 
 		test("fails when responding to a revoked invitation", async () => {
-			const { admin, event, mockRole } = await createOrganizerTestSetup();
+			const { admin, event, mockRole, orgLayer } = await createOrganizerTestSetup();
 
 			const guestOrgType = await createTestOrganizationType();
 			const coHostOrg = await createTestOrganization({
 				organizationTypeId: guestOrgType.id,
+				layerId: orgLayer.id,
 			});
 
 			const invitation = await addEventOrganizer(
@@ -445,11 +457,12 @@ describe("Organizer Integration Tests", () => {
 		});
 
 		test("fails when wrong organization tries to accept/respond to invitation", async () => {
-			const { admin, event, mockRole } = await createOrganizerTestSetup();
+			const { admin, event, mockRole, orgLayer } = await createOrganizerTestSetup();
 
 			const guestOrgType = await createTestOrganizationType();
 			const coHostOrg = await createTestOrganization({
 				organizationTypeId: guestOrgType.id,
+				layerId: orgLayer.id,
 			});
 
 			const invitation = await addEventOrganizer(
@@ -465,6 +478,7 @@ describe("Organizer Integration Tests", () => {
 			const unrelatedOrgType = await createTestOrganizationType();
 			const unrelatedOrg = await createTestOrganization({
 				organizationTypeId: unrelatedOrgType.id,
+				layerId: orgLayer.id,
 			});
 
 			const { user: unrelatedUser, role: unrelatedRole } = await setupRecipientUser(

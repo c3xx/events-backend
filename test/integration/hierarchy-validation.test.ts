@@ -9,6 +9,7 @@ import {
 	createOrganizerTestSetup,
 	createTestEventBody,
 	createTestEventType,
+	createTestOrganizationHierarchyLayer,
 	createTestOrganizationType,
 	createTestWorkflowStep,
 	createTestWorkflowTemplate,
@@ -97,6 +98,9 @@ describe("Type Hierarchy Validation", () => {
 
 	describe("Organization Hierarchy Enforcement", () => {
 		test("allows creating org with parentOrganizationId when the child/parent orgType pair exists", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const parentType = await createTestOrganizationType();
 			const childType = await createTestOrganizationType();
 			await addOrgAllowedChild({ id: parentType.id, childId: childType.id });
@@ -104,6 +108,7 @@ describe("Type Hierarchy Validation", () => {
 			const parentOrg = await createOrganization({
 				name: "Parent",
 				organizationTypeId: parentType.id,
+				layerId: orgLayer.id,
 			});
 
 			await expect(
@@ -111,16 +116,21 @@ describe("Type Hierarchy Validation", () => {
 					name: "Child",
 					organizationTypeId: childType.id,
 					parentOrganizationId: parentOrg.id,
+					layerId: orgLayer.id,
 				}),
 			).resolves.not.toThrow();
 		});
 
 		test("rejects creating org when the orgType pair is NOT in allowed-parent table", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const parentType = await createTestOrganizationType();
 			const childType = await createTestOrganizationType();
 			const parentOrg = await createOrganization({
 				name: "Parent",
 				organizationTypeId: parentType.id,
+				layerId: orgLayer.id,
 			});
 
 			await expect(
@@ -128,21 +138,29 @@ describe("Type Hierarchy Validation", () => {
 					name: "Child",
 					organizationTypeId: childType.id,
 					parentOrganizationId: parentOrg.id,
+					layerId: orgLayer.id,
 				}),
 			).rejects.toThrow();
 		});
 
 		test("allows creating a root/top-level organization with parentOrganizationId = null", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const orgType = await createTestOrganizationType();
 			await expect(
 				createOrganization({
 					name: "RootOrg",
 					organizationTypeId: orgType.id,
+					layerId: orgLayer.id,
 				}),
 			).resolves.not.toThrow();
 		});
 
 		test("rejects org creation where the parent organization itself is soft-deleted", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const parentType = await createTestOrganizationType();
 			const childType = await createTestOrganizationType();
 			await addOrgAllowedChild({ id: parentType.id, childId: childType.id });
@@ -150,6 +168,7 @@ describe("Type Hierarchy Validation", () => {
 			const parentOrg = await createOrganization({
 				name: "Parent",
 				organizationTypeId: parentType.id,
+				layerId: orgLayer.id,
 			});
 			await db
 				.update(schema.organization)
@@ -161,13 +180,21 @@ describe("Type Hierarchy Validation", () => {
 					name: "Child",
 					organizationTypeId: childType.id,
 					parentOrganizationId: parentOrg.id,
+					layerId: orgLayer.id,
 				}),
 			).rejects.toThrow();
 		});
 
 		test("self-reference guard: rejects organization.parentOrganizationId == organization.id", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const type = await createTestOrganizationType();
-			const org = await createOrganization({ name: "SelfRef", organizationTypeId: type.id });
+			const org = await createOrganization({
+				name: "SelfRef",
+				organizationTypeId: type.id,
+				layerId: orgLayer.id,
+			});
 
 			await expect(
 				db
@@ -178,6 +205,9 @@ describe("Type Hierarchy Validation", () => {
 		});
 
 		test("Cycle Detection: rejects 2-level organization parent cycle (A->B then B->A)", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const rootType = await createTestOrganizationType();
 			const typeA = await createTestOrganizationType();
 			const typeB = await createTestOrganizationType();
@@ -185,16 +215,22 @@ describe("Type Hierarchy Validation", () => {
 			await addOrgAllowedChild({ id: typeA.id, childId: typeB.id });
 			await addOrgAllowedChild({ id: typeB.id, childId: typeA.id });
 
-			const rootOrg = await createOrganization({ name: "Root", organizationTypeId: rootType.id });
+			const rootOrg = await createOrganization({
+				name: "Root",
+				organizationTypeId: rootType.id,
+				layerId: orgLayer.id,
+			});
 			const orgA = await createOrganization({
 				name: "A",
 				organizationTypeId: typeA.id,
 				parentOrganizationId: rootOrg.id,
+				layerId: orgLayer.id,
 			});
 			const orgB = await createOrganization({
 				name: "B",
 				organizationTypeId: typeB.id,
 				parentOrganizationId: orgA.id,
+				layerId: orgLayer.id,
 			});
 
 			await expect(
@@ -394,6 +430,9 @@ describe("Type Hierarchy Validation", () => {
 
 	describe("Multi-Level Real Hierarchy", () => {
 		test("verifies valid 2-level org chain (Institution -> Dept -> Club)", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const inst = await createTestOrganizationType();
 			const dept = await createTestOrganizationType();
 			const club = await createTestOrganizationType();
@@ -404,22 +443,28 @@ describe("Type Hierarchy Validation", () => {
 			const instOrg = await createOrganization({
 				name: "Institution",
 				organizationTypeId: inst.id,
+				layerId: orgLayer.id,
 			});
 			const deptOrg = await createOrganization({
 				name: "Department",
 				organizationTypeId: dept.id,
 				parentOrganizationId: instOrg.id,
+				layerId: orgLayer.id,
 			});
 			await expect(
 				createOrganization({
 					name: "Club",
 					organizationTypeId: club.id,
 					parentOrganizationId: deptOrg.id,
+					layerId: orgLayer.id,
 				}),
 			).resolves.not.toThrow();
 		});
 
 		test("exposes broken sub-chain behavior (Institution -> Club without Dept allowed)", async () => {
+			const orgLayer = await createTestOrganizationHierarchyLayer({
+				sameLevelControlPolicy: "disallowed",
+			});
 			const inst = await createTestOrganizationType();
 			const dept = await createTestOrganizationType();
 			const club = await createTestOrganizationType();
@@ -430,11 +475,13 @@ describe("Type Hierarchy Validation", () => {
 			const instOrg = await createOrganization({
 				name: "Institution",
 				organizationTypeId: inst.id,
+				layerId: orgLayer.id,
 			});
 			const deptOrg = await createOrganization({
 				name: "Department",
 				organizationTypeId: dept.id,
 				parentOrganizationId: instOrg.id,
+				layerId: orgLayer.id,
 			});
 
 			await expect(
@@ -442,6 +489,7 @@ describe("Type Hierarchy Validation", () => {
 					name: "Club",
 					organizationTypeId: club.id,
 					parentOrganizationId: deptOrg.id,
+					layerId: orgLayer.id,
 				}),
 			).rejects.toThrow();
 		});
