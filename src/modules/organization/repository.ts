@@ -7,6 +7,7 @@ export const createOrganization = dbAction(
 		name: string;
 		organizationTypeId: number;
 		parentOrganizationId: number | null | undefined;
+		layerId: number;
 	}) => {
 		const [inserted] = await db
 			.insert(schema.organization)
@@ -14,6 +15,7 @@ export const createOrganization = dbAction(
 				name: data.name,
 				organizationTypeId: data.organizationTypeId,
 				parentOrganizationId: data.parentOrganizationId ?? null,
+				layerId: data.layerId,
 			})
 			.returning({ id: schema.organization.id });
 

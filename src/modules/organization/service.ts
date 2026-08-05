@@ -7,6 +7,7 @@ export async function createOrganization(input: schemas.CreateOrganizationSchema
 		name: input.name,
 		organizationTypeId: input.organizationTypeId,
 		parentOrganizationId: input.parentOrganizationId,
+		layerId: input.layerId,
 	});
 }
 

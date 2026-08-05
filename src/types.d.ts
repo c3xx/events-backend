@@ -14,6 +14,8 @@ declare global {
 	export type UserType = (typeof schema.userTypeEnum.enumValues)[number];
 	export type Role = typeof schema.role.$inferSelect;
 	export type Permission = typeof schema.permission.$inferSelect;
+	export type OrganizationSameLayerControlPolicy =
+		(typeof schema.organizationSameLayerControlPolicyEnum.enumValues)[number];
 	export type VenueAccessLevel = (typeof schema.venueAccessLevelEnum.enumValues)[number];
 	export type FacilityProviderEntityType =
 		(typeof schema.facilityProviderEntityTypeEnum.enumValues)[number];

@@ -26,6 +26,7 @@ import {
 	FACILITY_WORKFLOW_PARTICIPATION_POLICIES,
 	INSTITUTION_DOMAIN,
 	MANAGED_ENTITY_TYPES,
+	ORGANIZATIONS_SAME_LAYER_CONTROL_POLICIES,
 	PASSWORD_TOKEN_TYPES,
 	USER_TYPES,
 	VENUE_ACCESS_LEVELS,
@@ -42,6 +43,10 @@ import { buildCheck } from "./checks.js";
 export const userTypeEnum = pgEnum("user_type", USER_TYPES);
 export const managedEntityTypeEnum = pgEnum("managed_entity_type", MANAGED_ENTITY_TYPES);
 export const passwordTokenTypeEnum = pgEnum("password_token_type", PASSWORD_TOKEN_TYPES);
+export const organizationSameLayerControlPolicyEnum = pgEnum(
+	"organization_same_layer_control_policy",
+	ORGANIZATIONS_SAME_LAYER_CONTROL_POLICIES,
+);
 export const venueAccessLevelEnum = pgEnum("venue_access_level", VENUE_ACCESS_LEVELS);
 export const facilityProviderEntityTypeEnum = pgEnum(
 	"facility_provider_entity_type",
@@ -260,6 +265,25 @@ export const rolePermissionRelations = relations(rolePermission, (r) => ({
 	}),
 }));
 
+export const organizationHierarchyLayer = pgTable(
+	"organization_hierarchy_layer",
+	{
+		id: smallint().primaryKey().generatedAlwaysAsIdentity(),
+		label: text().notNull(),
+		nextLayerId: smallint().references((): AnyPgColumn => organizationHierarchyLayer.id),
+		sameLevelControlPolicy: organizationSameLayerControlPolicyEnum().notNull(),
+		...fields("common", "soft-delete"),
+	},
+	(t) => [
+		uniqueIndex("organization_hierarchy_layer_unique_next_layer_id")
+			.on(t.nextLayerId)
+			.where(sql`${t.nextLayerId} IS NULL AND ${t.deletedAt} IS NULL`),
+		uniqueIndex("organization_hierarchy_layer_unique_label")
+			.on(sql`lower(${t.label})`)
+			.where(sql`${t.deletedAt} IS NULL`),
+	],
+);
+
 export const organizationType = pgTable(
 	"organization_type",
 	{
@@ -320,6 +344,9 @@ export const organization = pgTable(
 			.references(() => organizationType.id)
 			.notNull(),
 		parentOrganizationId: integer().references((): AnyPgColumn => organization.id),
+		layerId: smallint()
+			.references(() => organizationHierarchyLayer.id)
+			.notNull(),
 		isActive: boolean().notNull().default(true),
 		...fields("common", "soft-delete"),
 	},

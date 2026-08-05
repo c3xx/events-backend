@@ -15,6 +15,9 @@ router.param("facilityId", facilityIdParamHandler);
 
 router.get("/:facilityId", controller.getFacility);
 
+// todo: add route for changing facility availability
+// todo: add route in venues for getting venue facilities separately
+
 router.use("/:facilityId/providers", providersRouter);
 router.use("/:facilityId/members", membersRouter);
 

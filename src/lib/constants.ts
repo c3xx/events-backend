@@ -22,6 +22,7 @@ export const PASSWORD_TOKEN_EXPIRY = 15 * MINUTE;
 export const USER_TYPES = ["admin", "end_user"] as const;
 export const PASSWORD_TOKEN_TYPES = ["set_password", "reset_password"] as const;
 export const MANAGED_ENTITY_TYPES = ["organization", "venue", "facility"] as const;
+export const ORGANIZATIONS_SAME_LAYER_CONTROL_POLICIES = ["allowed", "disallowed"] as const;
 export const VENUE_ACCESS_LEVELS = ["public", "private"] as const;
 export const FACILITY_PROVIDER_ENTITY_TYPES = ["organization", "venue"] as const;
 export const FACILITY_OVERLAP_POLICIES = ["shared", "exclusive"] as const;
@@ -76,6 +77,9 @@ export const PERMISSION = {
 		create: "Create organizations",
 		// get_members: "Get organization members", // todo: think hmmm
 		add_member: "Add users to organizations", // todo: rename to manage_members
+	},
+	organization_hierarchy: {
+		manage_layers: "Manage organization hierarchy layers",
 	},
 	organization_type: {
 		create: "Create organization types",

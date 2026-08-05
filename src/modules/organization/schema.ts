@@ -1,4 +1,5 @@
 import z from "zod";
+import { idLike } from "@/lib/helpers.js";
 
 export const createOrganizationSchema = z
 	.object({
@@ -9,6 +10,7 @@ export const createOrganizationSchema = z
 			.max(256, { error: "Name cannot exceed 256 characters" }),
 		organizationTypeId: z.int({ error: "Invalid organization type ID" }),
 		parentOrganizationId: z.int({ error: "Invalid organization ID" }).nullish(), // note: do this everywhere
+		layerId: idLike("Invalid organization hierarchy layer reference"),
 	})
 	.strict();
 
