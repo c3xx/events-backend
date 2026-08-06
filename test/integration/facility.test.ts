@@ -8,10 +8,7 @@ import {
 } from "@/modules/event/facility-assignments/service.js";
 import { findEventById } from "@/modules/event/repository.js";
 import { createEvent, getEvent, submitEvent } from "@/modules/event/service.js";
-import {
-	findFacilities,
-	findFacilityById,
-} from "@/modules/facility/repository.js";
+import { findFacilities, findFacilityById } from "@/modules/facility/repository.js";
 import { changeAvailability, createFacility } from "@/modules/facility/service.js";
 import {
 	createOrganizerTestSetup,
@@ -231,8 +228,6 @@ describe("Facility Integration Tests", () => {
 			expect(fetched?.providers[0]?.scope?.id).toBe(validVenueId);
 		});
 
-
-
 		test("soft-deleted provider row excluded from providers left join", async () => {
 			const facility = await createFacility({
 				name: `DeletedProv-${nanoid()}`,
@@ -272,7 +267,11 @@ describe("Facility Integration Tests", () => {
 					providerEntityType: "organization",
 					providerEntityRefId: validOrgId,
 				}),
-				createTestFacilityProvider({ facilityId: facility.id, providerEntityType: "venue", providerEntityRefId: validVenueId })
+				createTestFacilityProvider({
+					facilityId: facility.id,
+					providerEntityType: "venue",
+					providerEntityRefId: validVenueId,
+				}),
 			]);
 
 			const fetched = await findFacilityById(facility.id);
@@ -543,9 +542,9 @@ describe("Facility Integration Tests", () => {
 				overlapPolicy: "shared",
 			});
 
-			const testProviderOrg = await createTestOrganization({ 
-				name: `FacProviderOrg-${nanoid()}`, 
-				organizationTypeId: setup.eventOrg.organizationTypeId 
+			const testProviderOrg = await createTestOrganization({
+				name: `FacProviderOrg-${nanoid()}`,
+				organizationTypeId: setup.eventOrg.organizationTypeId,
 			});
 
 			await createTestFacilityProvider({
@@ -647,7 +646,7 @@ describe("Facility Integration Tests", () => {
 			const zeroFac = await findFacilityById(facility.id);
 			assert(zeroFac != null);
 			await expect(changeAvailability(zeroFac, { availability: true })).rejects.toThrow(
-				"Cannot make a facility without providers available for assignment"
+				"Cannot make a facility without providers available for assignment",
 			);
 		});
 
