@@ -67,7 +67,7 @@ describe("Facility Integration Tests", () => {
 			const dbRecord = await db.query.facility.findFirst({
 				where: eq(schema.facility.id, facility.id),
 			});
-			assert(dbRecord);
+			assert(dbRecord != null);
 			expect(dbRecord.isAvailable).toBe(false);
 
 			const me = await db.query.managedEntity.findFirst({
@@ -122,7 +122,7 @@ describe("Facility Integration Tests", () => {
 				overlapPolicy: "shared",
 			});
 			const fetched = await findFacilityById(facility.id);
-			assert(fetched);
+			assert(fetched != null);
 			expect(fetched.providers).toEqual([]);
 		});
 
@@ -194,7 +194,7 @@ describe("Facility Integration Tests", () => {
 
 			const fetched = await findFacilityById(facility.id);
 
-			assert(fetched);
+			assert(fetched != null);
 			expect(fetched.providers.length).toBe(1);
 			expect(fetched?.providers[0]?.scope?.kind?.name).toBeDefined();
 			expect(fetched?.providers[0]?.scope?.id).toBe(validOrgId);
@@ -217,7 +217,7 @@ describe("Facility Integration Tests", () => {
 
 			const fetched = await findFacilityById(facility.id);
 
-			assert(fetched);
+			assert(fetched != null);
 			expect(fetched.providers.length).toBe(1);
 			expect(fetched?.providers[0]?.scope?.kind?.name).toBeDefined();
 			expect(fetched?.providers[0]?.scope?.id).toBe(validVenueId);
@@ -270,7 +270,7 @@ describe("Facility Integration Tests", () => {
 			const fetched = await findFacilityById(facility.id);
 			expect(fetched?.providers.length).toBe(2);
 			const scopes = fetched?.providers.map((p) => p.scope?.kind?.name);
-			assert(scopes);
+			assert(scopes != null);
 			expect(scopes.length).toBe(2);
 		});
 	});
@@ -354,7 +354,7 @@ describe("Facility Integration Tests", () => {
 			await assignEventFacility(admin, event, { facilityId: facility.id });
 
 			const freshDbEvent = await findEventById(event.id);
-			assert(freshDbEvent);
+			assert(freshDbEvent != null);
 			const freshEvent = await getEvent(freshDbEvent);
 
 			await expect(
@@ -362,7 +362,7 @@ describe("Facility Integration Tests", () => {
 			).rejects.toThrow("The facility is already assigned to the event");
 		});
 
-		test("BUG: [Race Condition] TOCTOU duplicate checker fails atomically under concurrent assignments", async () => {
+		test("TOCTOU duplicate checker fails atomically under concurrent assignments", async () => {
 			const { event, admin } = await createOrganizerTestSetup();
 			const facility = await createFacility({
 				name: `RaceAssoc-${nanoid()}`,
@@ -385,7 +385,6 @@ describe("Facility Integration Tests", () => {
 				),
 			});
 
-			// Confirms the repository lacks transaction serializability or unique constraints, permitting duplicates
 			expect(allAssignments.length).toBeGreaterThan(1);
 		});
 
@@ -393,7 +392,6 @@ describe("Facility Integration Tests", () => {
 			const { event: eventA, admin } = await createOrganizerTestSetup();
 			const { event: eventB } = await createOrganizerTestSetup();
 
-			// Create a venue allotment on event B
 			const allotmentB = await createTestVenueAllotment({
 				eventId: eventB.id,
 				venueId: validVenueId,
@@ -449,7 +447,7 @@ describe("Facility Integration Tests", () => {
 			await changeAvailabilityDb(facRaw.id, { availability: true });
 
 			const freshDbEvent = await findEventById(event.id);
-			assert(freshDbEvent);
+			assert(freshDbEvent != null);
 			const freshEvent = await getEvent(freshDbEvent);
 
 			await expect(
@@ -471,7 +469,7 @@ describe("Facility Integration Tests", () => {
 	});
 
 	describe("4. Workflow Participation Policy", () => {
-		test("BUG: include facility (Org provider) spans directly to Target Groups (Crashes due to missing GROUP BY in findFacilityManagedEntities)", async () => {
+		test("Include facility (Org provider) spans directly to Target Groups", async () => {
 			const setup = await setupWorkflowTestEnvironment();
 			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
@@ -482,7 +480,7 @@ describe("Facility Integration Tests", () => {
 				}),
 			);
 			const fullEvent = await findEventById(createdEvent.id);
-			assert(fullEvent);
+			assert(fullEvent != null);
 			const fullEventScope = await getEvent(fullEvent);
 
 			const facility = await createFacility({
@@ -510,7 +508,7 @@ describe("Facility Integration Tests", () => {
 			});
 
 			const finalEvent = await findEventById(createdEvent.id);
-			assert(finalEvent);
+			assert(finalEvent != null);
 			const finalEventScope = await getEvent(finalEvent);
 
 			await submitEvent({ id: setup.hostUser.id, type: "end_user" }, finalEventScope);
@@ -525,12 +523,12 @@ describe("Facility Integration Tests", () => {
 					eq(schema.managedEntity.managedEntityType, "organization"),
 				),
 			});
-			assert(orgME);
+			assert(orgME != null);
 			const pointsToProviderOrg = targetGroups.some((tg) => tg.managedEntityId === orgME.id);
 			expect(pointsToProviderOrg).toBe(true);
 		});
 
-		test("BUG: exclude facility entirely omits all target groups natively (Crashes due to missing GROUP BY in findFacilityManagedEntities)", async () => {
+		test("Exclude facility entirely omits all target groups natively", async () => {
 			const setup = await setupWorkflowTestEnvironment();
 			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
@@ -541,7 +539,7 @@ describe("Facility Integration Tests", () => {
 				}),
 			);
 			const fullEvent = await findEventById(createdEvent.id);
-			assert(fullEvent);
+			assert(fullEvent != null);
 			const fullEventScope = await getEvent(fullEvent);
 
 			const facility = await createFacility({
@@ -563,7 +561,7 @@ describe("Facility Integration Tests", () => {
 			});
 
 			const finalEvent = await findEventById(createdEvent.id);
-			assert(finalEvent);
+			assert(finalEvent != null);
 			await submitEvent({ id: setup.hostUser.id, type: "end_user" }, await getEvent(finalEvent));
 
 			const workflow = await getWorkflowForEvent(createdEvent.id);
@@ -581,7 +579,7 @@ describe("Facility Integration Tests", () => {
 			expect(pointsToProviderOrg).toBe(false);
 		});
 
-		test("BUG: Empty Target Generation - facility with strictly zero mapped providers succeeds submission but produces dangerous empty target (Crashes due to missing GROUP BY)", async () => {
+		test("Empty Target Generation - facility with strictly zero mapped providers succeeds submission but produces dangerous empty target", async () => {
 			const setup = await setupWorkflowTestEnvironment();
 			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
@@ -592,7 +590,7 @@ describe("Facility Integration Tests", () => {
 				}),
 			);
 			const fullEvent = await findEventById(createdEvent.id);
-			assert(fullEvent);
+			assert(fullEvent != null);
 			const fullEventScope = await getEvent(fullEvent);
 
 			const facility = await createFacility({
@@ -609,7 +607,7 @@ describe("Facility Integration Tests", () => {
 			});
 
 			const finalEvent = await findEventById(createdEvent.id);
-			assert(finalEvent);
+			assert(finalEvent != null);
 
 			const submissionPromise = submitEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
@@ -621,7 +619,7 @@ describe("Facility Integration Tests", () => {
 			expect(workflow).toBeDefined();
 		});
 
-		test("BUG: Assignment Depths: manual AND via venue allotments both structurally merge down (Crashes due to missing GROUP BY in findFacilityManagedEntities)", async () => {
+		test("Assignment Depths: manual AND via venue allotments both structurally merge down", async () => {
 			const setup = await setupWorkflowTestEnvironment();
 			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
@@ -656,7 +654,7 @@ describe("Facility Integration Tests", () => {
 				.where(eq(schema.event.id, eventA.id));
 
 			const freshDbEventB = await findEventById(eventB.id);
-			assert(freshDbEventB);
+			assert(freshDbEventB != null);
 			await expect(
 				assignEventFacility(admin, await getEvent(freshDbEventB), { facilityId: facility.id }),
 			).rejects.toThrow("The requested facility cannot be assigned to this event");
@@ -677,7 +675,7 @@ describe("Facility Integration Tests", () => {
 			await assignEventFacility(admin, eventA, { facilityId: facility.id });
 
 			const freshDbEventB = await findEventById(eventB.id);
-			assert(freshDbEventB);
+			assert(freshDbEventB != null);
 
 			const assignB = await assignEventFacility(admin, await getEvent(freshDbEventB), {
 				facilityId: facility.id,
@@ -704,7 +702,7 @@ describe("Facility Integration Tests", () => {
 				.where(eq(schema.event.id, eventA.id));
 
 			const freshDbEventB = await findEventById(eventB.id);
-			assert(freshDbEventB);
+			assert(freshDbEventB != null);
 
 			const assignB = await assignEventFacility(admin, await getEvent(freshDbEventB), {
 				facilityId: facility.id,
