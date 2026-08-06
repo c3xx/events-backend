@@ -9,11 +9,10 @@ import {
 import { findEventById } from "@/modules/event/repository.js";
 import { createEvent, getEvent, submitEvent } from "@/modules/event/service.js";
 import {
-	changeAvailability as changeAvailabilityDb,
 	findFacilities,
 	findFacilityById,
 } from "@/modules/facility/repository.js";
-import { createFacility } from "@/modules/facility/service.js";
+import { changeAvailability, createFacility } from "@/modules/facility/service.js";
 import {
 	createOrganizerTestSetup,
 	createTestEventBody,
@@ -88,13 +87,22 @@ describe("Facility Integration Tests", () => {
 				overlapPolicy: "shared",
 			});
 
-			await changeAvailabilityDb(facility.id, { availability: true });
+			await createTestFacilityProvider({
+				facilityId: facility.id,
+				providerEntityType: "organization",
+				providerEntityRefId: validOrgId,
+			});
+			const facTrueFetch = await findFacilityById(facility.id);
+			assert(facTrueFetch != null);
+			await changeAvailability(facTrueFetch, { availability: true });
 			const recordTrue = await db.query.facility.findFirst({
 				where: eq(schema.facility.id, facility.id),
 			});
 			expect(recordTrue?.isAvailable).toBe(true);
 
-			await changeAvailabilityDb(facility.id, { availability: false });
+			const facFalseFetch = await findFacilityById(facility.id);
+			assert(facFalseFetch != null);
+			await changeAvailability(facFalseFetch, { availability: false });
 			const recordFalse = await db.query.facility.findFirst({
 				where: eq(schema.facility.id, facility.id),
 			});
@@ -285,7 +293,14 @@ describe("Facility Integration Tests", () => {
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
 			});
-			await changeAvailabilityDb(facility.id, { availability: true });
+			await createTestFacilityProvider({
+				facilityId: facility.id,
+				providerEntityType: "organization",
+				providerEntityRefId: validOrgId,
+			});
+			const facEventScope = await findFacilityById(facility.id);
+			assert(facEventScope != null);
+			await changeAvailability(facEventScope, { availability: true });
 
 			const assignment = await assignEventFacility(admin, event, {
 				facilityId: facility.id,
@@ -302,7 +317,14 @@ describe("Facility Integration Tests", () => {
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
 			});
-			await changeAvailabilityDb(facility.id, { availability: true });
+			await createTestFacilityProvider({
+				facilityId: facility.id,
+				providerEntityType: "organization",
+				providerEntityRefId: validOrgId,
+			});
+			const facVenueScope = await findFacilityById(facility.id);
+			assert(facVenueScope != null);
+			await changeAvailability(facVenueScope, { availability: true });
 
 			await expect(assignEventFacility(admin, event, { facilityId: facility.id })).rejects.toThrow(
 				"This facility can only be associated with a venue",
@@ -318,7 +340,14 @@ describe("Facility Integration Tests", () => {
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
 			});
-			await changeAvailabilityDb(facEvent.id, { availability: true });
+			await createTestFacilityProvider({
+				facilityId: facEvent.id,
+				providerEntityType: "organization",
+				providerEntityRefId: validOrgId,
+			});
+			const facEvtFetched = await findFacilityById(facEvent.id);
+			assert(facEvtFetched != null);
+			await changeAvailability(facEvtFetched, { availability: true });
 
 			await expect(
 				assignEventFacility(admin, event, { facilityId: facEvent.id, venueAllotmentId: 1 }),
@@ -349,7 +378,14 @@ describe("Facility Integration Tests", () => {
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
 			});
-			await changeAvailabilityDb(facility.id, { availability: true });
+			await createTestFacilityProvider({
+				facilityId: facility.id,
+				providerEntityType: "organization",
+				providerEntityRefId: validOrgId,
+			});
+			const facFetched = await findFacilityById(facility.id);
+			assert(facFetched != null);
+			await changeAvailability(facFetched, { availability: true });
 
 			await assignEventFacility(admin, event, { facilityId: facility.id });
 
@@ -371,7 +407,14 @@ describe("Facility Integration Tests", () => {
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
 			});
-			await changeAvailabilityDb(facility.id, { availability: true });
+			await createTestFacilityProvider({
+				facilityId: facility.id,
+				providerEntityType: "organization",
+				providerEntityRefId: validOrgId,
+			});
+			const facDupeCheck = await findFacilityById(facility.id);
+			assert(facDupeCheck != null);
+			await changeAvailability(facDupeCheck, { availability: true });
 
 			const promises = Array.from({ length: 5 }).map(() =>
 				assignEventFacility(admin, event, { facilityId: facility.id }).catch((e) => e),
@@ -406,7 +449,14 @@ describe("Facility Integration Tests", () => {
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
 			});
-			await changeAvailabilityDb(facility.id, { availability: true });
+			await createTestFacilityProvider({
+				facilityId: facility.id,
+				providerEntityType: "organization",
+				providerEntityRefId: validOrgId,
+			});
+			const crossAllotFac = await findFacilityById(facility.id);
+			assert(crossAllotFac != null);
+			await changeAvailability(crossAllotFac, { availability: true });
 
 			await expect(
 				assignEventFacility(admin, eventA, {
@@ -444,7 +494,9 @@ describe("Facility Integration Tests", () => {
 				providerEntityType: "venue",
 				providerEntityRefId: diffVenue.id,
 			});
-			await changeAvailabilityDb(facRaw.id, { availability: true });
+			const provMisFac = await findFacilityById(facRaw.id);
+			assert(provMisFac != null);
+			await changeAvailability(provMisFac, { availability: true });
 
 			const freshDbEvent = await findEventById(event.id);
 			assert(freshDbEvent != null);
@@ -501,7 +553,9 @@ describe("Facility Integration Tests", () => {
 				providerEntityType: "organization",
 				providerEntityRefId: testProviderOrg.id,
 			});
-			await changeAvailabilityDb(facility.id, { availability: true });
+			const incFac = await findFacilityById(facility.id);
+			assert(incFac != null);
+			await changeAvailability(incFac, { availability: true });
 
 			await assignEventFacility({ id: setup.hostUser.id, type: "end_user" }, fullEventScope, {
 				facilityId: facility.id,
@@ -554,7 +608,9 @@ describe("Facility Integration Tests", () => {
 				providerEntityType: "organization",
 				providerEntityRefId: validOrgId,
 			});
-			await changeAvailabilityDb(facility.id, { availability: true });
+			const excFac = await findFacilityById(facility.id);
+			assert(excFac != null);
+			await changeAvailability(excFac, { availability: true });
 
 			await assignEventFacility({ id: setup.hostUser.id, type: "end_user" }, fullEventScope, {
 				facilityId: facility.id,
@@ -579,20 +635,7 @@ describe("Facility Integration Tests", () => {
 			expect(pointsToProviderOrg).toBe(false);
 		});
 
-		test("Empty Target Generation - facility with strictly zero mapped providers succeeds submission but produces dangerous empty target", async () => {
-			const setup = await setupWorkflowTestEnvironment();
-			const createdEvent = await createEvent(
-				{ id: setup.hostUser.id, type: "end_user" },
-				createTestEventBody({
-					organizationId: setup.eventOrg.id,
-					typeId: setup.eventType.id,
-					categoryId: setup.category.id,
-				}),
-			);
-			const fullEvent = await findEventById(createdEvent.id);
-			assert(fullEvent != null);
-			const fullEventScope = await getEvent(fullEvent);
-
+		test("Empty Target Generation - facility with strictly zero mapped providers gets blocked natively by service layer", async () => {
 			const facility = await createFacility({
 				name: `TrgtEmpty-${nanoid()}`,
 				typeId: validFacilityTypeId,
@@ -600,23 +643,12 @@ describe("Facility Integration Tests", () => {
 				workflowParticipationPolicy: "include",
 				overlapPolicy: "shared",
 			});
-			await changeAvailabilityDb(facility.id, { availability: true });
 
-			await assignEventFacility({ id: setup.hostUser.id, type: "end_user" }, fullEventScope, {
-				facilityId: facility.id,
-			});
-
-			const finalEvent = await findEventById(createdEvent.id);
-			assert(finalEvent != null);
-
-			const submissionPromise = submitEvent(
-				{ id: setup.hostUser.id, type: "end_user" },
-				await getEvent(finalEvent),
+			const zeroFac = await findFacilityById(facility.id);
+			assert(zeroFac != null);
+			await expect(changeAvailability(zeroFac, { availability: true })).rejects.toThrow(
+				"Cannot make a facility without providers available for assignment"
 			);
-			await expect(submissionPromise).resolves.not.toThrow();
-
-			const workflow = await getWorkflowForEvent(createdEvent.id);
-			expect(workflow).toBeDefined();
 		});
 
 		test("Assignment Depths: manual AND via venue allotments both structurally merge down", async () => {
@@ -644,7 +676,14 @@ describe("Facility Integration Tests", () => {
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "exclusive",
 			});
-			await changeAvailabilityDb(facility.id, { availability: true });
+			await createTestFacilityProvider({
+				facilityId: facility.id,
+				providerEntityType: "organization",
+				providerEntityRefId: validOrgId,
+			});
+			const ovFac1 = await findFacilityById(facility.id);
+			assert(ovFac1 != null);
+			await changeAvailability(ovFac1, { availability: true });
 
 			await assignEventFacility(admin, eventA, { facilityId: facility.id });
 
@@ -670,7 +709,14 @@ describe("Facility Integration Tests", () => {
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "exclusive",
 			});
-			await changeAvailabilityDb(facility.id, { availability: true });
+			await createTestFacilityProvider({
+				facilityId: facility.id,
+				providerEntityType: "organization",
+				providerEntityRefId: validOrgId,
+			});
+			const ovFac2 = await findFacilityById(facility.id);
+			assert(ovFac2 != null);
+			await changeAvailability(ovFac2, { availability: true });
 
 			await assignEventFacility(admin, eventA, { facilityId: facility.id });
 
@@ -693,7 +739,14 @@ describe("Facility Integration Tests", () => {
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
 			});
-			await changeAvailabilityDb(facility.id, { availability: true });
+			await createTestFacilityProvider({
+				facilityId: facility.id,
+				providerEntityType: "organization",
+				providerEntityRefId: validOrgId,
+			});
+			const ovFac3 = await findFacilityById(facility.id);
+			assert(ovFac3 != null);
+			await changeAvailability(ovFac3, { availability: true });
 
 			await assignEventFacility(admin, eventA, { facilityId: facility.id });
 			await db
