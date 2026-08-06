@@ -242,25 +242,7 @@ describe("Facility Integration Tests", () => {
 			expect(fetched?.providers[0]?.scope?.id).toBe(validVenueId);
 		});
 
-		test.skip("BUG: provider with unrecognized providerEntityType appears with scope: null", async () => {
-			const facility = await createFacility({
-				name: `BadScope-${nanoid()}`,
-				typeId: validFacilityTypeId,
-				association: "event",
-				workflowParticipationPolicy: "exclude",
-				overlapPolicy: "shared",
-			});
 
-			await db.insert(schema.facilityProvider).values({
-				facilityId: facility.id,
-				// biome-ignore lint/suspicious/noExplicitAny: testing mapping failure
-				providerEntityType: "unhandled_fake_type" as any,
-				providerEntityRefId: 1,
-			});
-
-			const fetched = await findFacilityById(facility.id);
-			expect(fetched?.providers[0]?.scope).toBeNull();
-		});
 
 		test("soft-deleted provider row excluded from providers left join", async () => {
 			const facility = await createFacility({
@@ -514,7 +496,7 @@ describe("Facility Integration Tests", () => {
 	});
 
 	describe("4. Workflow Participation Policy", () => {
-		test.skip("BUG: include facility (Org provider) spans directly to Target Groups (Crashes due to missing GROUP BY in findFacilityManagedEntities)", async () => {
+		test("BUG: include facility (Org provider) spans directly to Target Groups (Crashes due to missing GROUP BY in findFacilityManagedEntities)", async () => {
 			const setup = await setupWorkflowTestEnvironment();
 			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
@@ -536,10 +518,16 @@ describe("Facility Integration Tests", () => {
 				overlapPolicy: "shared",
 			});
 
+			const [testProviderOrg] = await db
+				.insert(schema.organization)
+				.values({ name: `FacProviderOrg-${nanoid()}`, organizationTypeId: setup.eventOrg.organizationTypeId })
+				.returning();
+			assert(testProviderOrg);
+
 			await db.insert(schema.facilityProvider).values({
 				facilityId: facility.id,
 				providerEntityType: "organization",
-				providerEntityRefId: validOrgId,
+				providerEntityRefId: testProviderOrg.id,
 			});
 			await changeAvailabilityDb(facility.id, { availability: true });
 
@@ -559,7 +547,7 @@ describe("Facility Integration Tests", () => {
 
 			const orgME = await db.query.managedEntity.findFirst({
 				where: and(
-					eq(schema.managedEntity.refId, validOrgId),
+					eq(schema.managedEntity.refId, testProviderOrg.id),
 					eq(schema.managedEntity.managedEntityType, "organization"),
 				),
 			});
@@ -568,7 +556,7 @@ describe("Facility Integration Tests", () => {
 			expect(pointsToProviderOrg).toBe(true);
 		});
 
-		test.skip("BUG: exclude facility entirely omits all target groups natively (Crashes due to missing GROUP BY in findFacilityManagedEntities)", async () => {
+		test("BUG: exclude facility entirely omits all target groups natively (Crashes due to missing GROUP BY in findFacilityManagedEntities)", async () => {
 			const setup = await setupWorkflowTestEnvironment();
 			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
@@ -619,7 +607,7 @@ describe("Facility Integration Tests", () => {
 			expect(pointsToProviderOrg).toBe(false);
 		});
 
-		test.skip("BUG: Empty Target Generation - facility with strictly zero mapped providers succeeds submission but produces dangerous empty target (Crashes due to missing GROUP BY)", async () => {
+		test("BUG: Empty Target Generation - facility with strictly zero mapped providers succeeds submission but produces dangerous empty target (Crashes due to missing GROUP BY)", async () => {
 			const setup = await setupWorkflowTestEnvironment();
 			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
@@ -659,7 +647,7 @@ describe("Facility Integration Tests", () => {
 			expect(workflow).toBeDefined();
 		});
 
-		test.skip("BUG: Assignment Depths: manual AND via venue allotments both structurally merge down (Crashes due to missing GROUP BY in findFacilityManagedEntities)", async () => {
+		test("BUG: Assignment Depths: manual AND via venue allotments both structurally merge down (Crashes due to missing GROUP BY in findFacilityManagedEntities)", async () => {
 			const setup = await setupWorkflowTestEnvironment();
 			const createdEvent = await createEvent(
 				{ id: setup.hostUser.id, type: "end_user" },
