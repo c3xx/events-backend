@@ -301,7 +301,7 @@ export const insertWorkflowInstance = dbAction(
 
 			await resolveStep(tx, firstStep.id);
 
-			return { id: instance.id };
+			return { id: instance.id, initialStepId: firstStep.id };
 		});
 	},
 );

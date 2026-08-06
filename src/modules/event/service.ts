@@ -1,6 +1,7 @@
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors.js";
 import { orderWorkflowSteps, unreachable } from "@/lib/helpers.js";
 import * as eventTypeRepository from "@/modules/event-type/repository.js";
+import * as notificationService from "@/modules/notification/service.js";
 import * as organizationRepository from "@/modules/organization/repository.js";
 import * as permissionRepository from "@/modules/permission/repository.js";
 import * as roleRepository from "@/modules/role/repository.js";
@@ -307,6 +308,30 @@ export async function submitEvent(user: AuthenticatedUser, event: EventScope["ev
 		submittedBy: user.id,
 		steps,
 	});
+
+	const firstStepName = orderedSteps[0]?.name ?? "";
+
+	// O1: notify organizers — event submitted + first stage is now active
+	notificationService
+		.sendWorkflowSubmittedNotification(
+			event.id,
+			event.title,
+			firstStepName,
+			event.startsAt,
+			event.endsAt,
+		)
+		.catch(() => {});
+
+	// F1: notify approvers who have pending assignments on the first step
+	notificationService
+		.sendStepActivatedNotification(
+			result.initialStepId,
+			event.title,
+			firstStepName,
+			event.startsAt,
+			event.endsAt,
+		)
+		.catch(() => {});
 
 	return result;
 }
