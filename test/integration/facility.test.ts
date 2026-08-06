@@ -460,7 +460,7 @@ describe("Facility Integration Tests", () => {
 			);
 		});
 
-		test("Unassignment strictly enforces ownership permissions and valid ID bindings", async () => {
+		test("rejects unassigning a non-existent facility assignment", async () => {
 			const { event, admin } = await createOrganizerTestSetup();
 			await expect(unassignEventFacility(admin, event, 327679)).rejects.toThrow(
 				"Could not find the facility assignment",
