@@ -16,6 +16,7 @@ router.post("/", requireUserType("admin"), controller.createFacility);
 router.param("facilityId", facilityIdParamHandler);
 
 router.get("/:facilityId", controller.getFacility);
+router.patch("/:facilityId", controller.changeAvailability);
 
 router.use("/:facilityId/providers", providersRouter);
 router.use("/:facilityId/members", membersRouter);

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import * as controller from "./controller.js";
+import facilityAssignmentRouter from "./facility-assignments/routes.js";
 import organizerRouter from "./organizer/routes.js";
 import organizerInvitationRouter from "./organizer-invitation/routes.js";
 import { eventIdParamHandler } from "./scopes.js";
@@ -24,6 +25,7 @@ router.post("/:eventId/cancel", controller.cancelEvent);
 
 // todo: adjust the following router to utilize the eventId scope handler
 router.use("/:eventId/venue-allotments", venueAllotmentRouter);
+router.use("/:eventId/facility-assignments", facilityAssignmentRouter);
 router.use("/:eventId/organizers", organizerRouter);
 router.use("/:eventId/organizer-invitations", organizerInvitationRouter);
 router.use("/:eventId/workflows", workflowInstanceRouter);

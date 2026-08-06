@@ -58,6 +58,7 @@ export const findVenueById = dbAction(async (venueId: number) => {
 				id: schema.venueType.id,
 				name: schema.venueType.name,
 			}),
+			venueTypeId: schema.venue.venueTypeId,
 			maxCapacity: schema.venue.maxCapacity,
 			accessLevel: schema.venue.accessLevel,
 			isAvailable: schema.venue.isAvailable,

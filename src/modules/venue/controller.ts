@@ -34,6 +34,7 @@ export const getVenue: ApiRequestHandler<{
 		id: number;
 		name: string;
 	};
+	venueTypeId: number;
 	maxCapacity: number;
 	accessLevel: VenueAccessLevel;
 	isAvailable: boolean;
