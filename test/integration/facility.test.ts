@@ -17,7 +17,13 @@ import { createFacility } from "@/modules/facility/service.js";
 import {
 	createOrganizerTestSetup,
 	createTestEventBody,
+	createTestFacilityProvider,
+	createTestFacilityType,
+	createTestOrganization,
+	createTestOrganizationType,
 	createTestVenue,
+	createTestVenueAllotment,
+	createTestVenueType,
 	getWorkflowForEvent,
 	setupWorkflowTestEnvironment,
 } from "./integration-test-helpers.js";
@@ -29,43 +35,22 @@ describe("Facility Integration Tests", () => {
 	let validVenueTypeId: number;
 
 	beforeAll(async () => {
-		const [fType] = await db
-			.insert(schema.facilityType)
-			.values({ name: `TestFacilityType-${nanoid()}` })
-			.returning();
-		assert(fType);
+		const fType = await createTestFacilityType();
 		validFacilityTypeId = fType.id;
 
-		const [orgType] = await db
-			.insert(schema.organizationType)
-			.values({ name: `org-type-${nanoid()}` })
-			.returning();
-		assert(orgType);
-		const [org] = await db
-			.insert(schema.organization)
-			.values({ name: `org-${nanoid()}`, organizationTypeId: orgType.id })
-			.returning();
-		assert(org);
+		const orgType = await createTestOrganizationType();
+		const org = await createTestOrganization({ organizationTypeId: orgType.id });
 		validOrgId = org.id;
 
-		const [vType] = await db
-			.insert(schema.venueType)
-			.values({ name: `venue-type-${nanoid()}` })
-			.returning();
-		assert(vType);
+		const vType = await createTestVenueType();
 		validVenueTypeId = vType.id;
-		assert(vType);
-		const [venue] = await db
-			.insert(schema.venue)
-			.values({
-				name: `venue-${nanoid()}`,
-				venueTypeId: vType.id,
-				accessLevel: "public",
-				isAvailable: true,
-				maxCapacity: 100,
-			})
-			.returning();
-		assert(venue);
+		const venue = await createTestVenue({
+			venueTypeId: vType.id,
+			name: `venue-${nanoid()}`,
+			accessLevel: "public",
+			isAvailable: true,
+			maxCapacity: 100,
+		});
 		validVenueId = venue.id;
 	});
 
@@ -149,11 +134,7 @@ describe("Facility Integration Tests", () => {
 		});
 
 		test("[Edge Case] facility becomes unfetchable via findFacilityById once its facilityType is soft-deleted", async () => {
-			const [tempType] = await db
-				.insert(schema.facilityType)
-				.values({ name: `TempType-${nanoid()}` })
-				.returning();
-			assert(tempType);
+			const tempType = await createTestFacilityType({ name: `TempType-${nanoid()}` });
 			const facility = await createFacility({
 				name: `TempFac-${nanoid()}`,
 				typeId: tempType.id,
@@ -205,7 +186,7 @@ describe("Facility Integration Tests", () => {
 				overlapPolicy: "shared",
 			});
 
-			await db.insert(schema.facilityProvider).values({
+			await createTestFacilityProvider({
 				facilityId: facility.id,
 				providerEntityType: "organization",
 				providerEntityRefId: validOrgId,
@@ -228,7 +209,7 @@ describe("Facility Integration Tests", () => {
 				overlapPolicy: "shared",
 			});
 
-			await db.insert(schema.facilityProvider).values({
+			await createTestFacilityProvider({
 				facilityId: facility.id,
 				providerEntityType: "venue",
 				providerEntityRefId: validVenueId,
@@ -253,7 +234,7 @@ describe("Facility Integration Tests", () => {
 				overlapPolicy: "shared",
 			});
 
-			await db.insert(schema.facilityProvider).values({
+			await createTestFacilityProvider({
 				facilityId: facility.id,
 				providerEntityType: "organization",
 				providerEntityRefId: validOrgId,
@@ -277,13 +258,13 @@ describe("Facility Integration Tests", () => {
 				overlapPolicy: "shared",
 			});
 
-			await db.insert(schema.facilityProvider).values([
-				{
+			await Promise.all([
+				createTestFacilityProvider({
 					facilityId: facility.id,
 					providerEntityType: "organization",
 					providerEntityRefId: validOrgId,
-				},
-				{ facilityId: facility.id, providerEntityType: "venue", providerEntityRefId: validVenueId },
+				}),
+				createTestFacilityProvider({ facilityId: facility.id, providerEntityType: "venue", providerEntityRefId: validVenueId })
 			]);
 
 			const fetched = await findFacilityById(facility.id);
@@ -413,15 +394,12 @@ describe("Facility Integration Tests", () => {
 			const { event: eventB } = await createOrganizerTestSetup();
 
 			// Create a venue allotment on event B
-			const [allotmentB] = await db
-				.insert(schema.venueAllotment)
-				.values({
-					eventId: eventB.id,
-					venueId: validVenueId,
-					startsAt: new Date(Date.now() + 86400000).toISOString(),
-					endsAt: new Date(Date.now() + 172800000).toISOString(),
-				})
-				.returning({ id: schema.venueAllotment.id });
+			const allotmentB = await createTestVenueAllotment({
+				eventId: eventB.id,
+				venueId: validVenueId,
+				startsAt: new Date(Date.now() + 86400000).toISOString(),
+				endsAt: new Date(Date.now() + 172800000).toISOString(),
+			});
 
 			const facility = await createFacility({
 				name: `CrossAllot-${nanoid()}`,
@@ -448,15 +426,12 @@ describe("Facility Integration Tests", () => {
 				name: `DiffVen-${nanoid()}`,
 			});
 
-			const [allotment] = await db
-				.insert(schema.venueAllotment)
-				.values({
-					eventId: event.id,
-					venueId: validVenueId,
-					startsAt: new Date(Date.now() + 86400000).toISOString(),
-					endsAt: new Date(Date.now() + 172800000).toISOString(),
-				})
-				.returning({ id: schema.venueAllotment.id });
+			const allotment = await createTestVenueAllotment({
+				eventId: event.id,
+				venueId: validVenueId,
+				startsAt: new Date(Date.now() + 86400000).toISOString(),
+				endsAt: new Date(Date.now() + 172800000).toISOString(),
+			});
 
 			const facRaw = await createFacility({
 				name: `ProviderMismatch-${nanoid()}`,
@@ -466,7 +441,7 @@ describe("Facility Integration Tests", () => {
 				overlapPolicy: "shared",
 			});
 
-			await db.insert(schema.facilityProvider).values({
+			await createTestFacilityProvider({
 				facilityId: facRaw.id,
 				providerEntityType: "venue",
 				providerEntityRefId: diffVenue.id,
@@ -518,13 +493,12 @@ describe("Facility Integration Tests", () => {
 				overlapPolicy: "shared",
 			});
 
-			const [testProviderOrg] = await db
-				.insert(schema.organization)
-				.values({ name: `FacProviderOrg-${nanoid()}`, organizationTypeId: setup.eventOrg.organizationTypeId })
-				.returning();
-			assert(testProviderOrg);
+			const testProviderOrg = await createTestOrganization({ 
+				name: `FacProviderOrg-${nanoid()}`, 
+				organizationTypeId: setup.eventOrg.organizationTypeId 
+			});
 
-			await db.insert(schema.facilityProvider).values({
+			await createTestFacilityProvider({
 				facilityId: facility.id,
 				providerEntityType: "organization",
 				providerEntityRefId: testProviderOrg.id,
@@ -577,7 +551,7 @@ describe("Facility Integration Tests", () => {
 				workflowParticipationPolicy: "exclude",
 				overlapPolicy: "shared",
 			});
-			await db.insert(schema.facilityProvider).values({
+			await createTestFacilityProvider({
 				facilityId: facility.id,
 				providerEntityType: "organization",
 				providerEntityRefId: validOrgId,

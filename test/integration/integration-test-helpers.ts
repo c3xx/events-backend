@@ -940,3 +940,36 @@ export async function assignRolePermission(data: { roleId: number; permissionId:
 	if (!rp) throw new Error("Failed to assign role permission");
 	return rp;
 }
+
+export async function createTestFacilityType(data?: Partial<typeof schema.facilityType.$inferInsert>) {
+	const [type] = await db
+		.insert(schema.facilityType)
+		.values({
+			name: data?.name ?? `TestFacilityType-${nanoid()}`,
+			...data,
+		})
+		.returning();
+
+	if (!type) throw new Error("Failed to create facility type in test helper");
+	return type;
+}
+
+export async function createTestFacilityProvider(data: typeof schema.facilityProvider.$inferInsert) {
+	const [provider] = await db
+		.insert(schema.facilityProvider)
+		.values(data)
+		.returning();
+
+	if (!provider) throw new Error("Failed to create facility provider in test helper");
+	return provider;
+}
+
+export async function createTestVenueAllotment(data: typeof schema.venueAllotment.$inferInsert) {
+	const [allotment] = await db
+		.insert(schema.venueAllotment)
+		.values(data)
+		.returning();
+
+	if (!allotment) throw new Error("Failed to create venue allotment in test helper");
+	return allotment;
+}
