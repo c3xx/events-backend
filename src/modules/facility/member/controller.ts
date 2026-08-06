@@ -41,7 +41,7 @@ export const updateFacilityMemberRoles: ApiRequestHandler<
 > = async (req, res) => {
 	const params = schemas.facilityMemberScopedSchema.parse(req.params);
 	const body = schemas.assignFacilityMemberRolesSchema.parse(req.body);
-	const result = await service.assignFacilityMemberRoles(params.id, params.userId, body);
+	const result = await service.assignFacilityMemberRoles(params.facilityId, params.userId, body);
 	return ok(res, result);
 };
 
@@ -51,6 +51,6 @@ export const deleteVenueMember: ApiRequestHandler<
 	}[]
 > = async (req, res) => {
 	const params = schemas.facilityMemberScopedSchema.parse(req.params);
-	const result = await service.deleteFacilityMember(params.id, params.userId);
+	const result = await service.deleteFacilityMember(params.facilityId, params.userId);
 	return ok(res, result);
 };

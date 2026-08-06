@@ -2,7 +2,9 @@ import z from "zod";
 
 export const facilityMemberScopedSchema = z
 	.object({
-		id: z.coerce.number({ error: "Invalid facility ID" }).int({ error: "Invalid facility ID" }),
+		facilityId: z.coerce
+			.number({ error: "Invalid facility ID" })
+			.int({ error: "Invalid facility ID" }),
 		userId: z.coerce.number({ error: "Invalid user ID" }).int({ error: "Invalid user ID" }),
 	})
 	.strict();
