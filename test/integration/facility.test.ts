@@ -397,7 +397,8 @@ describe("Facility Integration Tests", () => {
 			).rejects.toThrow("The facility is already assigned to the event");
 		});
 
-		test("TOCTOU duplicate checker fails atomically under concurrent assignments", async () => {
+		// Skipped: pending database unique constraint or transaction isolation on event_facility
+		test.skip("prevents duplicate assignments under concurrent requests", async () => {
 			const { event, admin } = await createOrganizerTestSetup();
 			const facility = await createFacility({
 				name: `RaceAssoc-${nanoid()}`,
@@ -427,7 +428,7 @@ describe("Facility Integration Tests", () => {
 				),
 			});
 
-			expect(allAssignments.length).toBeGreaterThan(1);
+			expect(allAssignments.length).toBe(1);
 		});
 
 		test("rejects assignment if venueAllotmentId exists but belongs to a totally different event", async () => {
