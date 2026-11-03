@@ -8,6 +8,10 @@ export const getLayers: ApiRequestHandler<
 		nextLayerId: number | null;
 		label: string;
 		sameLevelControlPolicy: "allowed" | "disallowed";
+		organizations: {
+			id: number;
+			name: string;
+		}[];
 	}[]
 > = async (_req, res) => {
 	const result = await service.getAllLayers();
@@ -19,6 +23,10 @@ export const getLayer: ApiRequestHandler<{
 	nextLayerId: number | null;
 	label: string;
 	sameLevelControlPolicy: "allowed" | "disallowed";
+	organizations: {
+		id: number;
+		name: string;
+	}[];
 }> = async (req, res) => {
 	const params = schemas.layerScopedSchema.parse(req.params);
 	const result = await service.getLayer(params.layerId);

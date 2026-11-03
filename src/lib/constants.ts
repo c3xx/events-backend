@@ -112,6 +112,10 @@ export const PERMISSION = {
 	event: {
 		manage: "Manage events",
 		view_own: "View own organization's events of all statuses",
+		cancel_same_layer_events: "Cancel any events hosted by any organization on the same layer",
+		override_same_layer_events: "Override any events hosted by any organization on the same layer",
+		cancel_others_events: "Cancel any events hosted by any organization on layers below",
+		override_others_events: "Override any events hosted by any organization on layers below",
 	},
 	event_organizer_invitation: {
 		respond: "Accept or reject an organizer invitation",
