@@ -22,7 +22,6 @@ export const PASSWORD_TOKEN_EXPIRY = 15 * MINUTE;
 export const USER_TYPES = ["admin", "end_user"] as const;
 export const PASSWORD_TOKEN_TYPES = ["set_password", "reset_password"] as const;
 export const MANAGED_ENTITY_TYPES = ["organization", "venue", "facility"] as const;
-export const ORGANIZATIONS_SAME_LAYER_CONTROL_POLICIES = ["allowed", "disallowed"] as const;
 export const VENUE_ACCESS_LEVELS = ["public", "private"] as const;
 export const FACILITY_PROVIDER_ENTITY_TYPES = ["organization", "venue"] as const;
 export const FACILITY_OVERLAP_POLICIES = ["shared", "exclusive"] as const;
@@ -78,9 +77,6 @@ export const PERMISSION = {
 		// get_members: "Get organization members", // todo: think hmmm
 		add_member: "Add users to organizations", // todo: rename to manage_members
 	},
-	organization_hierarchy: {
-		manage_layers: "Manage organization hierarchy layers",
-	},
 	organization_type: {
 		create: "Create organization types",
 		modify_hierarchy: "Modify hierarchy of organization types",
@@ -112,10 +108,6 @@ export const PERMISSION = {
 	event: {
 		manage: "Manage events",
 		view_own: "View own organization's events of all statuses",
-		cancel_same_layer_events: "Cancel any events hosted by any organization on the same layer",
-		override_same_layer_events: "Override any events hosted by any organization on the same layer",
-		cancel_others_events: "Cancel any events hosted by any organization on layers below",
-		override_others_events: "Override any events hosted by any organization on layers below",
 	},
 	event_organizer_invitation: {
 		respond: "Accept or reject an organizer invitation",

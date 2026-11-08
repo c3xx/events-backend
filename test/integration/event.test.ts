@@ -455,7 +455,7 @@ describe("Workflow Instance Management", () => {
 		expect(newWorkflowInstance.status).toBe("active");
 	});
 	test("Submitting an event with an inactive host organizer should fail", async () => {
-		const { admin, hostOrg, eventType, category, orgLayer } = await createBasicEventSetup();
+		const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
 
 		const [inactiveOrganizer] = await db
 			.insert(schema.organization)
@@ -464,7 +464,6 @@ describe("Workflow Instance Management", () => {
 				organizationTypeId: hostOrg.organizationTypeId,
 				parentOrganizationId: hostOrg.parentOrganizationId,
 				isActive: false,
-				layerId: orgLayer.id,
 			})
 			.returning();
 		assert(inactiveOrganizer != null);
@@ -648,7 +647,7 @@ describe("Workflow Instance Management", () => {
 	});
 
 	test("Submitting an event with an inactive cohost organizer should fail", async () => {
-		const { admin, hostOrg, eventType, category, orgLayer } = await createBasicEventSetup();
+		const { admin, hostOrg, eventType, category } = await createBasicEventSetup();
 		const createdEvent = await createEvent(
 			{ id: admin.id, type: "admin" },
 			createTestEventBody({
@@ -665,7 +664,6 @@ describe("Workflow Instance Management", () => {
 				organizationTypeId: hostOrg.organizationTypeId,
 				parentOrganizationId: hostOrg.parentOrganizationId,
 				isActive: false,
-				layerId: orgLayer.id,
 			})
 			.returning();
 		assert(inactiveOrganizer != null);
