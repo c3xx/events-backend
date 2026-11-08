@@ -2,6 +2,7 @@ import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import { jsonAggDistinct, jsonBuildObject } from "@/db/helpers.js";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
+import { PgDialect } from "drizzle-orm/pg-core";
 
 export const getAll = dbAction(async () => {
 	return await db
@@ -147,3 +148,29 @@ export const remove = dbAction(async (layerId: number) => {
 			);
 	});
 });
+
+export const findLayersAboveOrEqual = dbAction(async (layerId: number) => {
+	const results = await db.execute(sql`WITH RECURSIVE layers AS (
+			SELECT
+				id, next_layer_id, 0 AS depth, ARRAY[id] as visited
+ 			FROM organization_hierarchy_layer
+    		WHERE id = ${layerId} AND deleted_at IS NULL
+
+      		UNION ALL
+
+        	SELECT
+         		parent.id,
+         		parent.next_layer_id,
+         		child.depth + 1,
+         		child.visited || parent.id
+        	FROM organization_hierarchy_layer parent
+         	INNER JOIN layers child
+          		ON parent.next_layer_id = child.id
+            WHERE parent.deleted_at IS NULL AND NOT (parent.id = ANY(child.visited))
+		)
+		SELECT id FROM layers;`);
+
+	console.log(results.rows);
+});
+
+await findLayersAboveOrEqual(19);
