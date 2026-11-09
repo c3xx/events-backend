@@ -28,16 +28,16 @@ export function jsonBuildObject<T extends SelectedFields<any, any>>(shape: T) {
 
 export function jsonAgg<T>(shape: SQL<T>, filterOn?: SQL | PgColumn) {
 	return filterOn
-		? sql<T[]>`coalesce(json_agg(${shape}) filter (where ${filterOn} is not null),'[]'::json)`
-		: sql<T[]>`coalesce(json_agg(${shape}), '[]'::json)`;
+		? sql<T[]>`coalesce(jsonb_agg(${shape}) filter (where ${filterOn} is not null),'[]'::json)`
+		: sql<T[]>`coalesce(jsonb_agg(${shape}), '[]'::json)`;
 }
 
 export function jsonAggDistinct<T>(shape: SQL<T>, filterOn?: SQL | PgColumn) {
 	return filterOn
 		? sql<
 				T[]
-			>`coalesce(json_agg(distinct ${shape}) filter (where ${filterOn} is not null),'[]'::json)`
-		: sql<T[]>`coalesce(json_agg(distinct ${shape}), '[]'::json)`;
+			>`coalesce(jsonb_agg(distinct ${shape}) filter (where ${filterOn} is not null),'[]'::json)`
+		: sql<T[]>`coalesce(jsonb_agg(distinct ${shape}), '[]'::json)`;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: I dont know how & I dont have time
