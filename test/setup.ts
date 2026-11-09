@@ -2,9 +2,9 @@ import { sql } from "drizzle-orm";
 import { beforeAll } from "vitest";
 import { db, schema } from "@/db/index.js";
 import { hashPassword } from "@/lib/argon2.js";
-import { FLATTENED_PERMISSIONS } from "@/lib/constants.js";
+import { FLATTENED_USER_PERMISSIONS } from "@/lib/constants.js";
 import { env } from "@/lib/env.js";
-import { isPermission, unreachable } from "@/lib/helpers.js";
+import { isUserPermission, unreachable } from "@/lib/helpers.js";
 
 beforeAll(async () => {
 	const tables = await db.execute<{ tablename: string }>(
@@ -27,11 +27,12 @@ beforeAll(async () => {
 		passwordHash: await hashPassword(env.ADMIN_LOGIN_PASSWORD),
 	});
 
-	for (const permission in FLATTENED_PERMISSIONS) {
-		if (!isPermission(permission)) unreachable();
+	for (const permission in FLATTENED_USER_PERMISSIONS) {
+		if (!isUserPermission(permission)) unreachable();
 		await db.insert(schema.permission).values({
+			type: "user",
 			code: permission,
-			description: FLATTENED_PERMISSIONS[permission],
+			description: FLATTENED_USER_PERMISSIONS[permission],
 		});
 	}
 });

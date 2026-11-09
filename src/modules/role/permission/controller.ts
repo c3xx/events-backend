@@ -6,7 +6,8 @@ import * as service from "./service.js";
 export const getRolePermissions: ApiRequestHandler<
 	{
 		id: number;
-		code: PermissionCode;
+		type: PermissionType; // actually, in case of userroles, its always "user"
+		code: string;
 		description: string;
 	}[]
 > = async (req, res) => {

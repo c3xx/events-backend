@@ -43,28 +43,30 @@ export const getUsers = dbAction(async () => {
 	});
 });
 
-export const getUserOrganizations = dbAction(async (id: number, permission?: PermissionCode) => {
-	const conditions: SQL[] = [
-		eq(schema.userRole.userId, id),
-		eq(schema.managedEntity.managedEntityType, "organization"),
-		isNull(schema.userRole.deletedAt),
-	];
+export const getUserOrganizations = dbAction(
+	async (id: number, permission?: UserPermissionCode) => {
+		const conditions: SQL[] = [
+			eq(schema.userRole.userId, id),
+			eq(schema.managedEntity.managedEntityType, "organization"),
+			isNull(schema.userRole.deletedAt),
+		];
 
-	if (permission) {
-		conditions.push(eq(schema.permission.code, permission));
-	}
+		if (permission) {
+			conditions.push(eq(schema.permission.code, permission));
+		}
 
-	const rows = await db
-		.selectDistinct({ id: schema.organization.id, name: schema.organization.name })
-		.from(schema.userRole)
-		.innerJoin(schema.managedEntity, eq(schema.userRole.managedEntityId, schema.managedEntity.id))
-		.innerJoin(schema.role, eq(schema.userRole.roleId, schema.role.id))
-		.innerJoin(schema.rolePermission, eq(schema.role.id, schema.rolePermission.roleId))
-		.innerJoin(schema.permission, eq(schema.rolePermission.permissionId, schema.permission.id))
-		.innerJoin(schema.organization, eq(schema.managedEntity.refId, schema.organization.id))
-		.where(and(...conditions));
-	return rows;
-});
+		const rows = await db
+			.selectDistinct({ id: schema.organization.id, name: schema.organization.name })
+			.from(schema.userRole)
+			.innerJoin(schema.managedEntity, eq(schema.userRole.managedEntityId, schema.managedEntity.id))
+			.innerJoin(schema.role, eq(schema.userRole.roleId, schema.role.id))
+			.innerJoin(schema.rolePermission, eq(schema.role.id, schema.rolePermission.roleId))
+			.innerJoin(schema.permission, eq(schema.rolePermission.permissionId, schema.permission.id))
+			.innerJoin(schema.organization, eq(schema.managedEntity.refId, schema.organization.id))
+			.where(and(...conditions));
+		return rows;
+	},
+);
 
 export const findUserById = dbAction(async (id: number) => {
 	return await db.query.user.findFirst({

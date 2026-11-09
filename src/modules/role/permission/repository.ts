@@ -6,13 +6,16 @@ export const getRolePermissions = dbAction(async (rolePermissionId: number) => {
 	return await db
 		.select({
 			id: schema.permission.id,
+			type: schema.permission.type,
 			code: schema.permission.code,
 			description: schema.permission.description,
 		})
 		.from(schema.rolePermission)
 		.innerJoin(schema.permission, eq(schema.rolePermission.permissionId, schema.permission.id))
-		.where(eq(schema.rolePermission.roleId, rolePermissionId));
-	// note: no deletedAt
+		.where(
+			// note: no deletedAt
+			and(eq(schema.rolePermission.roleId, rolePermissionId), eq(schema.permission.type, "user")),
+		);
 });
 
 export const deleteAll = dbAction(async (roleId: number) => {

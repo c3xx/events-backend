@@ -4,7 +4,7 @@ import type { PgTransaction } from "drizzle-orm/pg-core";
 import type * as express from "express";
 import type { JWTPayload } from "jose";
 import type { schema } from "@/db/index.ts";
-import type { PERMISSION } from "@/lib/constants.ts";
+import type { AUTHORITY_PERMISSIONS, USER_PERMISSIONS } from "@/lib/constants.ts";
 import type { ErrorCode } from "@/lib/errors.ts";
 
 declare global {
@@ -14,6 +14,7 @@ declare global {
 	export type UserType = (typeof schema.userTypeEnum.enumValues)[number];
 	export type Role = typeof schema.role.$inferSelect;
 	export type Permission = typeof schema.permission.$inferSelect;
+	export type PermissionType = (typeof schema.permissionTypeEnum.enumValues)[number];
 	export type VenueAccessLevel = (typeof schema.venueAccessLevelEnum.enumValues)[number];
 	export type FacilityProviderEntityType =
 		(typeof schema.facilityProviderEntityTypeEnum.enumValues)[number];
@@ -103,10 +104,8 @@ declare global {
 
 	type AuthenticatedUser = Pick<User, "id" | "type">;
 
-	export type PermissionScope = keyof typeof PERMISSION;
-	export type PermissionCode =
-		// | keyof typeof PERMISSION
-		FlattenPermission<typeof PERMISSION>;
+	export type UserPermissionCode = FlattenScopeObject<typeof USER_PERMISSIONS>;
+	export type AuthorityPermissionCode = FlattenScopeObject<typeof AUTHORITY_PERMISSIONS>;
 
 	export type IJWTPayload = JWTPayload & AuthenticatedUser;
 
@@ -137,7 +136,7 @@ declare global {
 
 	// utility types
 	export type MaybePromise<T> = T | Promise<T>;
-	type FlattenPermission<T> = {
+	type FlattenScopeObject<T> = {
 		[K in keyof T]: `${K & string}:${keyof T[K] & string}`;
 	}[keyof T];
 

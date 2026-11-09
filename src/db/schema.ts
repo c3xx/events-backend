@@ -27,6 +27,7 @@ import {
 	INSTITUTION_DOMAIN,
 	MANAGED_ENTITY_TYPES,
 	PASSWORD_TOKEN_TYPES,
+	PERMISSION_TYPES,
 	USER_TYPES,
 	VENUE_ACCESS_LEVELS,
 	WORKFLOW_INSTANCE_STATUS,
@@ -43,6 +44,7 @@ export const userTypeEnum = pgEnum("user_type", USER_TYPES);
 export const managedEntityTypeEnum = pgEnum("managed_entity_type", MANAGED_ENTITY_TYPES);
 export const passwordTokenTypeEnum = pgEnum("password_token_type", PASSWORD_TOKEN_TYPES);
 export const venueAccessLevelEnum = pgEnum("venue_access_level", VENUE_ACCESS_LEVELS);
+export const permissionTypeEnum = pgEnum("permission_type", PERMISSION_TYPES);
 export const facilityProviderEntityTypeEnum = pgEnum(
 	"facility_provider_entity_type",
 	FACILITY_PROVIDER_ENTITY_TYPES,
@@ -224,15 +226,17 @@ export const permission = pgTable(
 	"permission",
 	{
 		id: integer().primaryKey().generatedAlwaysAsIdentity(),
-		code: text().$type<PermissionCode>().notNull(),
+		type: permissionTypeEnum().notNull(),
+		code: text().notNull(),
 		description: text().notNull(),
 		...fields("common"), // hard delete
 	},
-	(t) => [unique().on(t.code)],
+	(t) => [unique().on(t.type, t.code)],
 );
 
 export const permissionRelations = relations(permission, (r) => ({
 	associatedRoles: r.many(rolePermission),
+	associatedAuthorityPermissions: r.many(managedEntityAuthorityPermission),
 }));
 
 export const rolePermission = pgTable(
@@ -341,6 +345,63 @@ export const organizationRelations = relations(organization, (r) => ({
 	}),
 	// soft-fk(managed_entity)
 }));
+
+// note at the time of implementation: this could've easily been just simply
+// focused on organizations alone, but when i thought of it, extending this to
+// abstractly support any managed entity type, might actually benefit in the
+// future, in case needed? maybe organizations can finally manage venues &
+// facilities?? >> BUT ANYWAY, CURRENTLY just simply restrict to just
+// "organization".
+
+export const managedEntityAuthority = pgTable(
+	"managed_entity_authority",
+	{
+		id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+		holderType: managedEntityTypeEnum().notNull(), // the type of managed entity of the entity who holds the power
+		holderRefId: integer().notNull(), // soft-fk(organization / venue / facility)
+		subjectType: managedEntityTypeEnum().notNull(), // type of me of the entity who is subjected to the power
+		subjectRefId: integer().notNull(), // soft-fk(organization / venue / facility)
+		...fields("common", "soft-delete"),
+	},
+	(t) => [
+		uniqueIndex()
+			.on(t.holderType, t.holderRefId, t.subjectType, t.subjectRefId)
+			.where(sql`${t.deletedAt} IS NULL`),
+	],
+);
+
+export const managedEntityAuthorityRelations = relations(managedEntityAuthority, (r) => ({
+	authorityPermissions: r.many(managedEntityAuthorityPermission),
+}));
+
+export const managedEntityAuthorityPermission = pgTable(
+	"managed_entity_authority_permission",
+	{
+		id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+		authorityId: bigint({ mode: "number" })
+			.references(() => managedEntityAuthority.id)
+			.notNull(),
+		permissionId: integer()
+			.references(() => permission.id)
+			.notNull(),
+		...fields("common"), // it is also hard just like role-permissions
+	},
+	(t) => [unique().on(t.authorityId, t.permissionId)],
+);
+
+export const managedEntityAuthorityPermissionRelations = relations(
+	managedEntityAuthorityPermission,
+	(r) => ({
+		authority: r.one(managedEntityAuthority, {
+			fields: [managedEntityAuthorityPermission.authorityId],
+			references: [managedEntityAuthority.id],
+		}),
+		permission: r.one(permission, {
+			fields: [managedEntityAuthorityPermission.permissionId],
+			references: [permission.id],
+		}),
+	}),
+);
 
 export const venueType = pgTable(
 	"venue_type",

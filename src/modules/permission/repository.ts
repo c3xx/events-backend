@@ -6,6 +6,7 @@ export const getPermissions = dbAction(async () => {
 	return await db
 		.select({
 			id: schema.permission.id,
+			type: schema.permission.type,
 			code: schema.permission.code,
 			description: schema.permission.description,
 		})
@@ -20,7 +21,7 @@ export const hasPermissionInManagedEntity = dbAction(
 		},
 		managedEntityType: ManagedEntityType,
 		refId: number[],
-		permission: PermissionCode,
+		permission: UserPermissionCode,
 		userRoleId?: number,
 	) => {
 		if (user.type === "admin") return true;

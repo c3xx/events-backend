@@ -1,10 +1,10 @@
 import { confirm } from "@inquirer/prompts";
-import { eq, inArray, type SQL, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db, schema } from "@/db/index.js";
 import { hashPassword, verifyPassword } from "@/lib/argon2.js";
-import { FLATTENED_PERMISSIONS } from "@/lib/constants.js";
+import { FLATTENED_AUTHORITY_PERMISSIONS, FLATTENED_USER_PERMISSIONS } from "@/lib/constants.js";
 import { env } from "@/lib/env.js";
-import { isPermission, unreachable } from "@/lib/helpers.js";
+import { isAuthorityPermission, isUserPermission, unreachable } from "@/lib/helpers.js";
 
 // === Setup 'admin' user account
 
@@ -53,94 +53,154 @@ if (existingAdminAccounts.length === 0) {
 // === Sync permissions
 console.log("Setting up permissions");
 
-const existingPermissions = await db
-	.select()
-	.from(schema.permission)
-	.then((perms) => Object.fromEntries(perms.map((perm) => [perm.code, perm])));
+async function syncPermissionSet<TCode extends string>({
+	type,
+	definitions,
+	isPermissionCode,
+	cleanupAssignments,
+}: {
+	type: PermissionType;
+	definitions: Record<TCode, string>;
+	isPermissionCode: (code: string) => code is TCode;
+	cleanupAssignments: (ids: number[]) => Promise<void>;
+}) {
+	const existingRows = await db
+		.select()
+		.from(schema.permission)
+		.where(eq(schema.permission.type, type));
 
-const permissionsToInsert: PermissionCode[] = [];
-const permissionsToUpdate: PermissionCode[] = [];
-const permissionsToDelete: number[] = [];
-
-for (const permissionCode in FLATTENED_PERMISSIONS) {
-	if (!isPermission(permissionCode)) unreachable();
-	if (permissionCode in existingPermissions && existingPermissions[permissionCode] != null) {
-		if (FLATTENED_PERMISSIONS[permissionCode] !== existingPermissions[permissionCode].description) {
-			// mismatch in display names
-			permissionsToUpdate.push(permissionCode);
-		} else {
-			// don't care
-		}
-	} else {
-		permissionsToInsert.push(permissionCode);
-	}
-}
-for (const permissionCode in existingPermissions) {
-	if (permissionCode in FLATTENED_PERMISSIONS) {
-		// don't care. have already handled the modification state.
-	} else {
-		if (existingPermissions[permissionCode] == null) {
-			unreachable();
-		}
-		permissionsToDelete.push(existingPermissions[permissionCode].id);
-	}
-}
-
-console.log({ permissionsToInsert, permissionsToUpdate, permissionsToDelete });
-
-if (
-	permissionsToInsert.length > 0 &&
-	(await confirm({
-		message: `Insert ${permissionsToInsert.length} permissions?`,
-	}))
-) {
-	const inserted = await db.insert(schema.permission).values(
-		permissionsToInsert.map(
-			(permission) =>
-				({
-					code: permission,
-					description: FLATTENED_PERMISSIONS[permission],
-				}) satisfies typeof schema.permission.$inferInsert,
-		),
+	const existingPermissions = new Map(
+		existingRows.map((permission) => [permission.code, permission] as const),
 	);
-	console.log("inserted", inserted.rowCount, "permissions");
-}
 
-if (
-	permissionsToUpdate.length > 0 &&
-	(await confirm({
-		message: `Update ${permissionsToUpdate.length} permissions?`,
-	}))
-) {
-	const sqlChunks: SQL[] = [];
-	sqlChunks.push(sql`(case`);
-	for (const permissionCode of permissionsToUpdate) {
-		sqlChunks.push(
-			sql`when code = '${permissionCode}' then '${FLATTENED_PERMISSIONS[permissionCode]}'`,
-		);
+	const permissionsToInsert: TCode[] = [];
+	const permissionsToUpdate: { code: TCode; description: string }[] = [];
+	const permissionsToDelete: number[] = [];
+
+	for (const rawCode of Object.keys(definitions)) {
+		if (!isPermissionCode(rawCode)) unreachable();
+
+		const existing = existingPermissions.get(rawCode);
+		const description = definitions[rawCode];
+
+		if (existing) {
+			if (description !== existing.description) {
+				permissionsToUpdate.push({ code: rawCode, description });
+			}
+		} else {
+			permissionsToInsert.push(rawCode);
+		}
 	}
-	sqlChunks.push(sql`end)`);
-	const finalSql: SQL = sql.join(sqlChunks, sql.raw(" "));
-	const updated = await db
-		.update(schema.permission)
-		.set({ description: finalSql })
-		.where(inArray(schema.permission.code, permissionsToUpdate));
-	console.log("updated", updated.rowCount, "permissions");
+
+	const desiredCodes = new Set(Object.keys(definitions));
+
+	for (const existing of existingRows) {
+		if (!desiredCodes.has(existing.code)) {
+			permissionsToDelete.push(existing.id);
+		}
+	}
+
+	console.log(`${type} permissions`, {
+		permissionsToInsert,
+		permissionsToUpdate,
+		permissionsToDelete,
+	});
+
+	if (
+		permissionsToInsert.length > 0 &&
+		(await confirm({
+			message: `Insert ${permissionsToInsert.length} ${type} permissions?`,
+		}))
+	) {
+		const inserted = await db.insert(schema.permission).values(
+			permissionsToInsert.map(
+				(code) =>
+					({
+						type,
+						code,
+						description: definitions[code],
+					}) satisfies typeof schema.permission.$inferInsert,
+			),
+		);
+
+		console.log("inserted", inserted.rowCount, `${type} permissions`);
+	}
+
+	if (
+		permissionsToUpdate.length > 0 &&
+		(await confirm({
+			message: `Update ${permissionsToUpdate.length} ${type} permissions?`,
+		}))
+	) {
+		const cases = permissionsToUpdate.map(
+			({ code, description }) => sql`when ${schema.permission.code} = ${code} then ${description}`,
+		);
+
+		const finalSql = sql`
+			case ${sql.join(cases, sql.raw(" "))}
+			else ${schema.permission.description}
+			end
+		`;
+
+		const updated = await db
+			.update(schema.permission)
+			.set({ description: finalSql })
+			.where(
+				and(
+					eq(schema.permission.type, type),
+					inArray(
+						schema.permission.code,
+						permissionsToUpdate.map(({ code }) => code),
+					),
+				),
+			);
+
+		console.log("updated", updated.rowCount, `${type} permissions`);
+	}
+
+	if (
+		permissionsToDelete.length > 0 &&
+		(await confirm({
+			message: `Delete ${permissionsToDelete.length} ${type} permissions?`,
+		}))
+	) {
+		// Remove dependent assignments before deleting permissions.
+		await cleanupAssignments(permissionsToDelete);
+
+		const deleted = await db
+			.delete(schema.permission)
+			.where(
+				and(eq(schema.permission.type, type), inArray(schema.permission.id, permissionsToDelete)),
+			);
+
+		console.log("hard-deleted", deleted.rowCount, `${type} permissions`);
+	}
 }
 
-if (
-	permissionsToDelete.length > 0 &&
-	(await confirm({
-		message: `Delete ${permissionsToDelete.length} permissions?`,
-	}))
-) {
-	const hardDeleted = await db
-		.delete(schema.permission)
-		.where(inArray(schema.permission.id, permissionsToDelete));
-	console.log("hard-deleted", hardDeleted.rowCount, "permissions");
+// User permissions
+await syncPermissionSet({
+	type: "user",
+	definitions: FLATTENED_USER_PERMISSIONS,
+	isPermissionCode: isUserPermission,
+	cleanupAssignments: async (ids) => {
+		const deleted = await db
+			.delete(schema.rolePermission)
+			.where(inArray(schema.rolePermission.permissionId, ids));
 
-	const hardDeletedRolePermissions = await db
-		.delete(schema.rolePermission)
-		.where(inArray(schema.rolePermission.permissionId, permissionsToDelete));
-	console.log("hard-deleted", hardDeletedRolePermissions.rowCount, "role permissions");
-}
+		console.log("hard-deleted", deleted.rowCount, "role permissions");
+	},
+});
+
+// Authority permissions
+await syncPermissionSet({
+	type: "managed_entity_authority",
+	definitions: FLATTENED_AUTHORITY_PERMISSIONS,
+	isPermissionCode: isAuthorityPermission,
+	cleanupAssignments: async (ids) => {
+		const deleted = await db
+			.delete(schema.managedEntityAuthorityPermission)
+			.where(inArray(schema.managedEntityAuthorityPermission.permissionId, ids));
+
+		console.log("hard-deleted", deleted.rowCount, "organization authority permissions");
+	},
+});

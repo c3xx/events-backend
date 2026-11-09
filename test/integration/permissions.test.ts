@@ -70,7 +70,7 @@ describe("Permissions Integration Tests", () => {
 
 	describe("Permission CRUD", () => {
 		test("creates permission with unique code and rejects duplicate code", async () => {
-			const code = `PERM_${nanoid()}` as PermissionCode;
+			const code = `PERM_${nanoid()}` as UserPermissionCode;
 			await expect(createTestPermission({ code })).resolves.not.toThrow();
 			await expect(createTestPermission({ code })).rejects.toThrow();
 		});
@@ -214,7 +214,7 @@ describe("Permissions Integration Tests", () => {
 				user,
 				"organization",
 				[org.id],
-				perm.code as PermissionCode,
+				perm.code as UserPermissionCode,
 			);
 
 			// The action is denied since the role assignment is currently inactive
@@ -242,7 +242,7 @@ describe("Permissions Integration Tests", () => {
 				user,
 				"organization",
 				[org.id],
-				perm.code as PermissionCode,
+				perm.code as UserPermissionCode,
 			);
 			expect(result).toBe(true);
 		});
@@ -265,7 +265,7 @@ describe("Permissions Integration Tests", () => {
 				user,
 				"organization",
 				[org.id],
-				unusedPerm.code as PermissionCode,
+				unusedPerm.code as UserPermissionCode,
 			);
 			expect(result).toBe(false);
 		});
@@ -298,7 +298,7 @@ describe("Permissions Integration Tests", () => {
 				user,
 				"organization",
 				[org.id],
-				perm.code as PermissionCode,
+				perm.code as UserPermissionCode,
 			);
 			expect(result).toBe(false);
 		});
@@ -338,7 +338,7 @@ describe("Permissions Integration Tests", () => {
 				user,
 				"organization",
 				[childOrg.id],
-				perm.code as PermissionCode,
+				perm.code as UserPermissionCode,
 			);
 			expect(resultOnChildOnly).toBe(false); // Proves NO implicit DB cascade down trees natively
 
@@ -347,7 +347,7 @@ describe("Permissions Integration Tests", () => {
 				user,
 				"organization",
 				[childOrg.id, parentOrg.id],
-				perm.code as PermissionCode,
+				perm.code as UserPermissionCode,
 			);
 			expect(resultExplicitArray).toBe(true);
 		});
