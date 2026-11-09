@@ -1,51 +1,55 @@
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
-import type { PgTransaction } from "drizzle-orm/pg-core";
+import type { PgEnum, PgTransaction } from "drizzle-orm/pg-core";
 import type * as express from "express";
 import type { JWTPayload } from "jose";
 import type { schema } from "@/db/index.ts";
 import type { AUTHORITY_PERMISSIONS, USER_PERMISSIONS } from "@/lib/constants.ts";
 import type { ErrorCode } from "@/lib/errors.ts";
 
+type EValues<E extends PgEnum> = E["enumValues"][number];
+
 declare global {
 	// schema types
-	export type ManagedEntityType = (typeof schema.managedEntityTypeEnum.enumValues)[number];
+	export type ManagedEntityType = EValues<typeof schema.managedEntityTypeEnum>;
 	export type User = typeof schema.user.$inferSelect;
-	export type UserType = (typeof schema.userTypeEnum.enumValues)[number];
+	export type UserType = EValues<typeof schema.userTypeEnum>;
 	export type Role = typeof schema.role.$inferSelect;
 	export type Permission = typeof schema.permission.$inferSelect;
-	export type PermissionType = (typeof schema.permissionTypeEnum.enumValues)[number];
-	export type VenueAccessLevel = (typeof schema.venueAccessLevelEnum.enumValues)[number];
-	export type FacilityProviderEntityType =
-		(typeof schema.facilityProviderEntityTypeEnum.enumValues)[number];
-	export type FacilityAssociationMethod =
-		(typeof schema.facilityAssociationMethodEnum.enumValues)[number];
-	export type FacilityOverlapPolicy = (typeof schema.facilityOverlapPolicyEnum.enumValues)[number];
-	export type FacilityWorkflowParticipationPolicy =
-		(typeof schema.facilityWorkflowParticipationPolicyEnum.enumValues)[number];
-	export type PasswordTokenType = (typeof schema.passwordTokenTypeEnum.enumValues)[number];
+	export type PermissionType = EValues<typeof schema.permissionTypeEnum>;
+	export type VenueAccessLevel = EValues<typeof schema.venueAccessLevelEnum>;
+	export type FacilityProviderEntityType = EValues<typeof schema.facilityProviderEntityTypeEnum>;
+	export type FacilityAssociationMethod = EValues<typeof schema.facilityAssociationMethodEnum>;
+	export type FacilityOverlapPolicy = EValues<typeof schema.facilityOverlapPolicyEnum>;
+	export type FacilityWorkflowParticipationPolicy = EValues<
+		typeof schema.facilityWorkflowParticipationPolicyEnum
+	>;
+	export type PasswordTokenType = EValues<typeof schema.passwordTokenTypeEnum>;
 
 	// -- events
-	export type EventStatus = (typeof schema.eventStatusEnum.enumValues)[number];
-	export type EventOrganizerRole = (typeof schema.eventOrganizerRoleEnum.enumValues)[number];
-	export type EventOrganizerInvitationRole =
-		(typeof schema.eventOrganizerInvitationRoleEnum.enumValues)[number];
-	export type EventOrganizerInvitationStatus =
-		(typeof schema.eventOrganizerInvitationStatusEnum.enumValues)[number];
+	export type EventStatus = EValues<typeof schema.eventStatusEnum>;
+	export type EventOrganizerRole = EValues<typeof schema.eventOrganizerRoleEnum>;
+	export type EventOrganizerInvitationRole = EValues<
+		typeof schema.eventOrganizerInvitationRoleEnum
+	>;
+	export type EventOrganizerInvitationStatus = EValues<
+		typeof schema.eventOrganizerInvitationStatusEnum
+	>;
 
-	export type EventTypeVenuePolicy = (typeof schema.eventTypeVenuePolicyEnum.enumValues)[number];
-	export type EventTypeCollaborationPolicy =
-		(typeof schema.eventTypeCollaborationPolicyEnum.enumValues)[number];
+	export type EventTypeVenuePolicy = EValues<typeof schema.eventTypeVenuePolicyEnum>;
+	export type EventTypeCollaborationPolicy = EValues<
+		typeof schema.eventTypeCollaborationPolicyEnum
+	>;
 
 	// -- workflows
-	export type WorkflowTargetGroupApprovalCriteria =
-		(typeof schema.workflowTargetGroupApprovalCriteriaEnum.enumValues)[number];
-	export type WorkflowInstanceStatus =
-		(typeof schema.workflowInstanceStatusEnum.enumValues)[number];
-	export type WorkflowInstanceStepStatus =
-		(typeof schema.workflowInstanceStepStatusEnum.enumValues)[number];
-	export type WorkflowInstanceStepAssignmentStatus =
-		(typeof schema.workflowInstanceStepAssignmentStatusEnum.enumValues)[number];
+	export type WorkflowTargetGroupApprovalCriteria = EValues<
+		typeof schema.workflowTargetGroupApprovalCriteriaEnum
+	>;
+	export type WorkflowInstanceStatus = EValues<typeof schema.workflowInstanceStatusEnum>;
+	export type WorkflowInstanceStepStatus = EValues<typeof schema.workflowInstanceStepStatusEnum>;
+	export type WorkflowInstanceStepAssignmentStatus = EValues<
+		typeof schema.workflowInstanceStepAssignmentStatusEnum
+	>;
 
 	// system types
 

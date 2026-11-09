@@ -1,6 +1,6 @@
-import { NotFoundError } from "@/lib/errors.js";
 import * as repository from "./repository.js";
 import type * as schemas from "./schema.js";
+import type { OrganizationScope } from "./scopes.js";
 
 export async function createOrganization(input: schemas.CreateOrganizationSchema) {
 	return await repository.createOrganization({
@@ -14,8 +14,30 @@ export async function getOrganizations() {
 	return await repository.getOrganizations();
 }
 
-export async function getOrganization(organizationId: number) {
-	const organization = await repository.getOrganization(organizationId);
-	if (organization == null) throw new NotFoundError("Could not find the organization");
-	return organization;
+export async function getOrganization(organization: OrganizationScope["organization"]) {
+	return {
+		id: organization.id,
+		name: organization.name,
+		type: {
+			id: organization.type.id,
+			name: organization.type.name,
+		},
+		parentOrganization:
+			organization.parentOrganization != null
+				? {
+						id: organization.parentOrganization.id,
+						name: organization.parentOrganization.name,
+						type: {
+							id: organization.parentOrganization.type.id,
+							name: organization.parentOrganization.type.name,
+						},
+					}
+				: null,
+
+		createdAt: organization.createdAt,
+		isActive: organization.isActive,
+
+		organizationTypeId: organization.organizationTypeId,
+		parentOrganizationId: organization.parentOrganizationId,
+	};
 }

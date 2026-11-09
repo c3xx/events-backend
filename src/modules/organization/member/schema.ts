@@ -1,12 +1,9 @@
 import z from "zod";
+import { idLike } from "@/lib/helpers.js";
+import { organizationScopedSchema } from "../schema.js";
 
-export const organizationMemberScopedSchema = z
-	.object({
-		id: z.coerce
-			.number({ error: "Invalid organization ID" })
-			.int({ error: "Invalid organization ID" }),
-		userId: z.coerce.number({ error: "Invalid user ID" }).int({ error: "Invalid user ID" }),
-	})
+export const organizationMemberScopedSchema = organizationScopedSchema
+	.extend({ userId: idLike("Invalid user ID") })
 	.strict();
 
 export const getOrganizationMembersQuerySchema = z.object({

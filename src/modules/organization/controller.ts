@@ -1,5 +1,6 @@
 import { ok } from "@/lib/helpers.js";
 import * as schemas from "./schema.js";
+import type { OrganizationScope } from "./scopes.js";
 import * as service from "./service.js";
 
 export const createOrganization: ApiRequestHandler<{
@@ -24,14 +25,30 @@ export const getOrganizations: ApiRequestHandler<
 	return ok(res, result);
 };
 
-export const getOrganization: ApiRequestHandler<{
-	organizationTypeId: number;
-	id: number;
-	name: string;
-	parentOrganizationId: number | null;
-	isActive: boolean;
-}> = async (req, res) => {
-	const params = schemas.organizationScopedSchema.parse(req.params);
-	const result = await service.getOrganization(params.id);
+export const getOrganization: ScopedApiRequestHandler<
+	OrganizationScope,
+	{
+		id: number;
+		name: string;
+		isActive: boolean;
+		createdAt: string;
+		type: {
+			id: number;
+			name: string;
+		};
+		parentOrganization: {
+			id: number;
+			name: string;
+			type: {
+				id: number;
+				name: string;
+			};
+		} | null;
+		// todo: the following ids are legacy, remove once they are updated in frontend.
+		organizationTypeId: number;
+		parentOrganizationId: number | null;
+	}
+> = async (_req, res) => {
+	const result = await service.getOrganization(res.locals.organization);
 	return ok(res, result);
 };
