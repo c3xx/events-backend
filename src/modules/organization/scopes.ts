@@ -1,5 +1,6 @@
 import { NotFoundError } from "@/lib/errors.js";
 import { idLike, scopedParamHandler } from "@/lib/helpers.js";
+import * as authorityRepository from "./authority/repository.js";
 import * as repository from "./repository.js";
 
 export type OrganizationScope = {
@@ -28,11 +29,45 @@ export type OrganizationScope = {
 	};
 };
 
-export const organizationIdParamHandler = scopedParamHandler<OrganizationScope, number>(
+export const organizationIdParamHandler = scopedParamHandler<OrganizationScope, IdLike>(
 	idLike("Invalid organization ID"),
 	async (_req, res, _next, organizationId) => {
 		const organization = await repository.getOrganization(organizationId);
 		if (organization == null) throw new NotFoundError("Could not find the organization");
 		res.locals.organization = organization;
+	},
+);
+
+export type OrganizationAuthorityHolderScope = OrganizationScope & {
+	authorityHolder: {
+		id: IdLike;
+		organization: {
+			id: number;
+			name: string;
+			type: {
+				id: number;
+				name: string;
+			};
+		};
+		permissions: {
+			code: string;
+			description: string;
+		}[];
+	};
+};
+
+export const authorityHolderOrganizationIdParamHandler = scopedParamHandler<
+	OrganizationAuthorityHolderScope,
+	IdLike
+>(
+	idLike("Invalid authority holder organization ID"),
+	async (_req, res, _next, authorityHolderOrganizationId) => {
+		const authorityHolder = await authorityRepository.find(
+			res.locals.organization.id,
+			authorityHolderOrganizationId,
+		);
+		if (authorityHolder == null)
+			throw new NotFoundError("Could not find the authority holder organization");
+		res.locals.authorityHolder = authorityHolder;
 	},
 );

@@ -63,3 +63,9 @@ export function jsonBuildObjectNullable<T extends SelectedFields<any, any>>(
 
 	return sql<SelectResultFields<T> | null>`case when ${nullableOn} is null then null else jsonb_build_object(${sql.join(chunks)}) end`;
 }
+
+export function arrayAgg<T>(shape: SQL<T>, filterOn?: SQL | PgColumn) {
+	return filterOn
+		? sql<T[]>`coalesce(array_agg(${shape}) filter (where ${filterOn} is not null), '{}')`
+		: sql<T[]>`coalesce(array_agg(${shape}), '{}')`;
+}

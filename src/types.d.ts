@@ -53,6 +53,8 @@ declare global {
 
 	// system types
 
+	export type IdLike = number;
+
 	export type WorkflowInstance = {
 		id: number;
 		createdAt: string;

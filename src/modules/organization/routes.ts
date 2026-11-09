@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireUserType } from "@/middlewares/index.js";
+import authoritiesRouter from "./authority/routes.js";
 import * as controller from "./controller.js";
-
 import membersRouter from "./member/routes.js";
 import { organizationIdParamHandler } from "./scopes.js";
 
@@ -17,5 +17,6 @@ router.param("organizationId", organizationIdParamHandler);
 router.get("/:organizationId", controller.getOrganization);
 
 router.use("/:organizationId/members", membersRouter);
+router.use("/:organizationId/authorities", authoritiesRouter);
 
 export default router;
