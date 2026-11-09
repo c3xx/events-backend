@@ -131,7 +131,7 @@ function flattenPermissionSet<T extends Record<string, Record<string, string>>>(
 	permissionSet: T,
 ): Record<string, string> {
 	return Object.fromEntries(
-		Object.entries(permissionSet).map(([scope, actions]) =>
+		Object.entries(permissionSet).flatMap(([scope, actions]) =>
 			Object.entries(actions).map(([action, description]) => [`${scope}:${action}`, description]),
 		),
 	) as Record<string, string>;
