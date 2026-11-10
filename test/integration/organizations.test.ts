@@ -10,7 +10,7 @@ import { createTestOrganization, createTestOrganizationType } from "./integratio
 
 async function getOrganization(organizationId: IdLike) {
 	const organization = await organizationRepository.getOrganization(organizationId);
-	if (organization == null) throw new Error("expected organization to exist");
+	if (organization == null) throw new NotFoundError("Could not find the organization");
 	return organization;
 }
 
