@@ -56,16 +56,10 @@ export type OrganizationAuthorityHolderScope = OrganizationScope & {
 	};
 };
 
-export const authorityHolderOrganizationIdParamHandler = scopedParamHandler<
-	OrganizationAuthorityHolderScope,
-	IdLike
->(
-	idLike("Invalid authority holder organization ID"),
-	async (_req, res, _next, authorityHolderOrganizationId) => {
-		const authorityHolder = await authorityRepository.find(
-			res.locals.organization.id,
-			authorityHolderOrganizationId,
-		);
+export const authorityIdParamHandler = scopedParamHandler<OrganizationAuthorityHolderScope, IdLike>(
+	idLike("Invalid authority ID"),
+	async (_req, res, _next, authorityId) => {
+		const authorityHolder = await authorityRepository.find(res.locals.organization.id, authorityId);
 		if (authorityHolder == null)
 			throw new NotFoundError("Could not find the authority holder organization");
 		res.locals.authorityHolder = authorityHolder;

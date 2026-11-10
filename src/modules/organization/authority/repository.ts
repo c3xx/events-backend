@@ -6,11 +6,14 @@ import { dbAction } from "@/lib/helpers.js";
 export const findAll = dbAction(async (subjectOrganizationId: number) => {
 	return await db
 		.select({
-			id: schema.organization.id,
-			name: schema.organization.name,
-			type: jsonBuildObject({
-				id: schema.organizationType.id,
-				name: schema.organizationType.name,
+			id: schema.managedEntityAuthority.id,
+			organization: jsonBuildObject({
+				id: schema.organization.id,
+				name: schema.organization.name,
+				type: jsonBuildObject({
+					id: schema.organizationType.id,
+					name: schema.organizationType.name,
+				}),
 			}),
 		})
 		.from(schema.managedEntityAuthority)
@@ -51,64 +54,62 @@ export const insert = dbAction(
 	},
 );
 
-export const find = dbAction(
-	async (subjectOrganizationId: IdLike, holderOrganizationId: IdLike) => {
-		const [authority] = await db
-			.select({
-				id: schema.managedEntityAuthority.id,
-				organization: jsonBuildObject({
-					id: schema.organization.id,
-					name: schema.organization.name,
-					type: jsonBuildObject({
-						id: schema.organizationType.id,
-						name: schema.organizationType.name,
-					}),
+export const find = dbAction(async (subjectOrganizationId: IdLike, authorityId: IdLike) => {
+	const [authority] = await db
+		.select({
+			id: schema.managedEntityAuthority.id,
+			organization: jsonBuildObject({
+				id: schema.organization.id,
+				name: schema.organization.name,
+				type: jsonBuildObject({
+					id: schema.organizationType.id,
+					name: schema.organizationType.name,
 				}),
-				permissions: jsonAgg(
-					jsonBuildObject({
-						code: schema.permission.code,
-						description: schema.permission.description,
-					}),
-					schema.permission.id,
-				),
-			})
-			.from(schema.managedEntityAuthority)
-			.innerJoin(
-				schema.organization,
-				and(
-					eq(schema.organization.id, schema.managedEntityAuthority.holderRefId),
-					isNull(schema.organization.deletedAt),
-				),
-			)
-			.innerJoin(
-				schema.organizationType,
-				and(
-					eq(schema.organizationType.id, schema.organization.organizationTypeId),
-					isNull(schema.organizationType.deletedAt),
-				),
-			)
-			.leftJoin(
-				schema.managedEntityAuthorityPermission,
-				eq(schema.managedEntityAuthorityPermission.authorityId, schema.managedEntityAuthority.id),
-			)
-			.leftJoin(
-				schema.permission,
-				eq(schema.managedEntityAuthorityPermission.permissionId, schema.permission.id),
-			)
-			.groupBy(schema.managedEntityAuthority.id)
-			.where(
-				and(
-					eq(schema.managedEntityAuthority.holderType, "organization"),
-					eq(schema.managedEntityAuthority.holderRefId, holderOrganizationId),
-					eq(schema.managedEntityAuthority.subjectType, "organization"),
-					eq(schema.managedEntityAuthority.subjectRefId, subjectOrganizationId),
-					isNull(schema.managedEntityAuthority.deletedAt),
-				),
-			);
+			}),
+			permissions: jsonAgg(
+				jsonBuildObject({
+					code: schema.permission.code,
+					description: schema.permission.description,
+				}),
+				schema.permission.id,
+			),
+		})
+		.from(schema.managedEntityAuthority)
+		.innerJoin(
+			schema.organization,
+			and(
+				eq(schema.organization.id, schema.managedEntityAuthority.holderRefId),
+				isNull(schema.organization.deletedAt),
+			),
+		)
+		.innerJoin(
+			schema.organizationType,
+			and(
+				eq(schema.organizationType.id, schema.organization.organizationTypeId),
+				isNull(schema.organizationType.deletedAt),
+			),
+		)
+		.leftJoin(
+			schema.managedEntityAuthorityPermission,
+			eq(schema.managedEntityAuthorityPermission.authorityId, schema.managedEntityAuthority.id),
+		)
+		.leftJoin(
+			schema.permission,
+			eq(schema.managedEntityAuthorityPermission.permissionId, schema.permission.id),
+		)
+		.groupBy(schema.organization.id, schema.organizationType.id, schema.managedEntityAuthority.id)
+		.where(
+			and(
+				eq(schema.managedEntityAuthority.id, authorityId),
+				eq(schema.managedEntityAuthority.holderType, "organization"),
+				eq(schema.managedEntityAuthority.subjectType, "organization"),
+				eq(schema.managedEntityAuthority.subjectRefId, subjectOrganizationId),
+				isNull(schema.managedEntityAuthority.deletedAt),
+			),
+		);
 
-		return authority;
-	},
-);
+	return authority;
+});
 
 export const remove = dbAction(async (authorityId: IdLike) => {
 	await db

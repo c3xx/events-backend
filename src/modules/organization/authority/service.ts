@@ -27,6 +27,7 @@ export async function getAuthorityHolder(
 	authorityHolder: OrganizationAuthorityHolderScope["authorityHolder"],
 ) {
 	return {
+		id: authorityHolder.id,
 		organization: {
 			id: authorityHolder.organization.id,
 			name: authorityHolder.organization.name,

@@ -6,11 +6,14 @@ import * as service from "./service.js";
 export const getAllAuthorityHolders: ScopedApiRequestHandler<
 	OrganizationScope,
 	{
-		id: number;
-		name: string;
-		type: {
+		id: IdLike;
+		organization: {
 			id: number;
 			name: string;
+			type: {
+				id: number;
+				name: string;
+			};
 		};
 	}[]
 > = async (_req, res) => {
@@ -30,6 +33,7 @@ export const createAuthorityHolder: ScopedApiRequestHandler<OrganizationScope, t
 export const getAuthorityHolder: ScopedApiRequestHandler<
 	OrganizationAuthorityHolderScope,
 	{
+		id: IdLike;
 		organization: {
 			id: number;
 			name: string;
