@@ -115,6 +115,8 @@ export const USER_PERMISSIONS = {
 		respond: "Accept or reject an organizer invitation",
 	},
 	authority_organization: {
+		view_organization_events:
+			"View events of a target organization where this organization has authority on.",
 		cancel_organization_events:
 			"Cancel events of a target organization where this organization has authority on.",
 	},
@@ -122,6 +124,7 @@ export const USER_PERMISSIONS = {
 
 export const AUTHORITY_PERMISSIONS = {
 	event: {
+		view: "View events hosted by the organization who is subjected to the authority",
 		cancel: "Cancel event of another organization with the assigned power",
 	},
 } as const;
