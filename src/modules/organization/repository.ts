@@ -77,6 +77,7 @@ export const getOrganization = dbAction(async (organizationId: number) => {
 		.innerJoin(
 			schema.managedEntity,
 			and(
+				eq(schema.managedEntity.managedEntityType, "organization"),
 				eq(schema.managedEntity.refId, schema.organization.id),
 				isNull(schema.managedEntity.deletedAt),
 			),
