@@ -68,6 +68,7 @@ export const WORKFLOW_INSTANCE_STEP_ASSIGNMENT_STATUS = [
 ] as const;
 export const WORKFLOW_TARGET_GROUP_APPROVAL_CRITERIA = ["all", "any"] as const;
 
+// todo: consider splitting system vs. managed entity scoped.
 // note: keep it sorted like the schema:
 export const USER_PERMISSIONS = {
 	facility: {
@@ -91,7 +92,7 @@ export const USER_PERMISSIONS = {
 	},
 	venue: {
 		create: "Create venues",
-		add_member: "Add users to organizations", // todo: rename to manage_members
+		add_member: "Add users to venues", // todo: rename to manage_members
 		modify_facilities: "Modify facilities of venues",
 	},
 	venue_type: {
@@ -112,6 +113,10 @@ export const USER_PERMISSIONS = {
 	},
 	event_organizer_invitation: {
 		respond: "Accept or reject an organizer invitation",
+	},
+	authority_organization: {
+		cancel_organization_events:
+			"Cancel events of a target organization where this organization has authority on.",
 	},
 } as const;
 

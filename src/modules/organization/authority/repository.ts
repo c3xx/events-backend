@@ -1,47 +1,63 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { jsonAgg, jsonBuildObject } from "@/db/helpers.js";
 import { db, schema } from "@/db/index.js";
 import { dbAction } from "@/lib/helpers.js";
 
-export const findAll = dbAction(async (subjectOrganizationId: number) => {
-	return await db
-		.select({
-			id: schema.managedEntityAuthority.id,
-			organization: jsonBuildObject({
-				id: schema.organization.id,
-				name: schema.organization.name,
-				type: jsonBuildObject({
-					id: schema.organizationType.id,
-					name: schema.organizationType.name,
+export const findAll = dbAction(
+	async (subjectOrganizationId: number, withPermissions?: AuthorityPermissionCode[]) => {
+		return await db
+			.select({
+				id: schema.managedEntityAuthority.id,
+				organization: jsonBuildObject({
+					id: schema.organization.id,
+					name: schema.organization.name,
+					type: jsonBuildObject({
+						id: schema.organizationType.id,
+						name: schema.organizationType.name,
+					}),
 				}),
-			}),
-		})
-		.from(schema.managedEntityAuthority)
-		.innerJoin(
-			schema.organization,
-			and(
-				eq(schema.organization.id, schema.managedEntityAuthority.holderRefId),
-				isNull(schema.organization.deletedAt),
-			),
-		)
-		.innerJoin(
-			schema.organizationType,
-			and(
-				eq(schema.organizationType.id, schema.organization.organizationTypeId),
-				isNull(schema.organizationType.deletedAt),
-			),
-		)
-		.where(
-			and(
-				// note: only organization-to-organization power is implemented right now.
-				// if this is no longer the case, then please remove these type comparisons
-				eq(schema.managedEntityAuthority.holderType, "organization"),
-				eq(schema.managedEntityAuthority.subjectType, "organization"),
-				eq(schema.managedEntityAuthority.subjectRefId, subjectOrganizationId),
-				isNull(schema.managedEntityAuthority.deletedAt),
-			),
-		);
-});
+			})
+			.from(schema.managedEntityAuthority)
+			.innerJoin(
+				schema.organization,
+				and(
+					eq(schema.organization.id, schema.managedEntityAuthority.holderRefId),
+					isNull(schema.organization.deletedAt),
+				),
+			)
+			.innerJoin(
+				schema.organizationType,
+				and(
+					eq(schema.organizationType.id, schema.organization.organizationTypeId),
+					isNull(schema.organizationType.deletedAt),
+				),
+			)
+			.leftJoin(
+				schema.managedEntityAuthorityPermission,
+				eq(schema.managedEntityAuthorityPermission.authorityId, schema.managedEntityAuthority.id),
+			)
+			.leftJoin(
+				schema.permission,
+				eq(schema.managedEntityAuthorityPermission.permissionId, schema.permission.id),
+			)
+			.groupBy(schema.organization.id, schema.organizationType.id, schema.managedEntityAuthority.id)
+			.having(
+				withPermissions?.length
+					? sql`count(distinct ${schema.permission.code}) filter (where ${inArray(schema.permission.code, withPermissions)}) = ${withPermissions.length}`
+					: undefined,
+			)
+			.where(
+				and(
+					// note: only organization-to-organization power is implemented right now.
+					// if this is no longer the case, then please remove these type comparisons
+					eq(schema.managedEntityAuthority.holderType, "organization"),
+					eq(schema.managedEntityAuthority.subjectType, "organization"),
+					eq(schema.managedEntityAuthority.subjectRefId, subjectOrganizationId),
+					isNull(schema.managedEntityAuthority.deletedAt),
+				),
+			);
+	},
+);
 
 export const insert = dbAction(
 	async (subjectOrganizationId: IdLike, holderOrganizationId: IdLike) => {

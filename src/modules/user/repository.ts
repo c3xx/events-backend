@@ -128,8 +128,6 @@ export const getFullUser = dbAction(async (userId: number) => {
 		.where(and(isNull(schema.role.deletedAt), inArray(schema.role.id, [...allRoleIds])))
 		.groupBy(schema.role.id);
 
-	console.log(roles);
-
 	const managedEntities = await db
 		.select({
 			id: schema.managedEntity.id,
