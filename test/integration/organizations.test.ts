@@ -3,13 +3,16 @@ import { nanoid } from "nanoid";
 import { assert, describe, expect, test } from "vitest";
 import { db, schema } from "@/db/index.js";
 import { NotFoundError } from "@/lib/errors.js";
+import * as organizationRepository from "@/modules/organization/repository.js";
 import { findOrganizationManagedEntity } from "@/modules/organization/repository.js";
-import {
-	createOrganization,
-	getOrganization,
-	getOrganizations,
-} from "@/modules/organization/service.js";
+import { createOrganization, getOrganizations } from "@/modules/organization/service.js";
 import { createTestOrganization, createTestOrganizationType } from "./integration-test-helpers.js";
+
+async function getOrganization(organizationId: IdLike) {
+	const organization = await organizationRepository.getOrganization(organizationId);
+	if (organization == null) throw new NotFoundError("Could not find the organization");
+	return organization;
+}
 
 describe("Organization Integration Tests", () => {
 	describe("Create Organization", () => {

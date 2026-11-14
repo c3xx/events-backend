@@ -1,6 +1,10 @@
 import { styleText } from "node:util";
 import { db, schema } from "@/db/index.js";
-import { FLATTENED_PERMISSIONS, IS_PROD } from "@/lib/constants.js";
+import {
+	FLATTENED_AUTHORITY_PERMISSIONS,
+	FLATTENED_USER_PERMISSIONS,
+	IS_PROD,
+} from "@/lib/constants.js";
 
 export async function prepare() {
 	if (!IS_PROD) {
@@ -8,9 +12,10 @@ export async function prepare() {
 		return;
 	}
 
-	const localPermissions = new Set<PermissionCode>(
-		Object.keys(FLATTENED_PERMISSIONS) as PermissionCode[],
-	);
+	const localPermissions = new Set([
+		...Object.keys(FLATTENED_USER_PERMISSIONS),
+		...Object.keys(FLATTENED_AUTHORITY_PERMISSIONS),
+	]);
 	const dbPermissions = await db
 		.select({ code: schema.permission.code })
 		.from(schema.permission)

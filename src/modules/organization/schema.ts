@@ -1,4 +1,5 @@
 import z from "zod";
+import { idLike } from "@/lib/helpers.js";
 
 export const createOrganizationSchema = z
 	.object({
@@ -13,11 +14,7 @@ export const createOrganizationSchema = z
 	.strict();
 
 export const organizationScopedSchema = z
-	.object({
-		id: z.coerce
-			.number({ error: "Invalid organization ID" })
-			.int({ error: "Invalid organization ID" }),
-	})
+	.object({ organizationId: idLike("Invalid organization ID") })
 	.strict();
 
 export type CreateOrganizationSchema = z.output<typeof createOrganizationSchema>;

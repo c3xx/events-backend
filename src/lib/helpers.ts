@@ -4,19 +4,18 @@ import type * as express from "express";
 import { customAlphabet } from "nanoid";
 import z from "zod";
 import type { $ZodType } from "zod/v4/core";
-import { FLATTENED_PERMISSIONS, PERMISSION_SCOPES } from "@/lib/constants.js";
-import { handleDbError, UnauthorizedError, UnreachableError } from "./errors.js";
+import { FLATTENED_AUTHORITY_PERMISSIONS, FLATTENED_USER_PERMISSIONS } from "@/lib/constants.js";
+import { AppError, handleDbError, UnauthorizedError, UnreachableError } from "./errors.js";
 
 export function unreachable(): never {
 	throw new UnreachableError("never supposed to reach here");
 }
 
-export function isPermissionScope(scope: string): scope is PermissionScope {
-	return (PERMISSION_SCOPES as string[]).includes(scope);
+export function isUserPermission(permission: string): permission is UserPermissionCode {
+	return permission in FLATTENED_USER_PERMISSIONS;
 }
-
-export function isPermission(permission: string): permission is PermissionCode {
-	return permission in FLATTENED_PERMISSIONS;
+export function isAuthorityPermission(permission: string): permission is AuthorityPermissionCode {
+	return permission in FLATTENED_AUTHORITY_PERMISSIONS;
 }
 
 export function getAuthenticatedUser(req: Express.Request): AuthenticatedUser {
@@ -35,7 +34,9 @@ export function dbAction<T extends unknown[], R>(
 		try {
 			return await fn(...args);
 		} catch (error) {
-			if (error instanceof DrizzleQueryError) {
+			if (error instanceof AppError) {
+				throw error;
+			} else if (error instanceof DrizzleQueryError) {
 				handleDbError(error);
 			} else {
 				// then it must be some unrelated shitty case. will have to inspect later.

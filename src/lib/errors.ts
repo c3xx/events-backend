@@ -72,6 +72,12 @@ export class ValidationError extends AppError {
 	}
 }
 
+export class InternalError extends AppError {
+	constructor(message: string) {
+		super(500, ERROR_CODES.internal_server_error, message);
+	}
+}
+
 export const POSTGRESQL_ERROR_CLASSES = {
 	integrity_constraint_violation: "23",
 	pl_pgsql_error: "P0",

@@ -6,6 +6,7 @@ import * as permissionRepository from "@/modules/permission/repository.js";
 import * as roleRepository from "@/modules/role/repository.js";
 import * as userRepository from "@/modules/user/repository.js";
 import * as workflowTemplateRepository from "@/modules/workflow-template/repository.js";
+import * as organizationAuthorityRepository from "../organization/authority/repository.js";
 import * as repository from "./repository.js";
 import type * as schemas from "./schema.js";
 import type { EventScope } from "./scopes.js";
@@ -334,14 +335,30 @@ export async function discardDraftEvent(user: AuthenticatedUser, event: EventSco
 		throw new NotFoundError("Host organizer not found");
 	}
 
-	const hasPermission = await permissionRepository.hasPermissionInManagedEntity(
+	const hasDirectPermission = await permissionRepository.hasPermissionInManagedEntity(
 		user,
 		"organization",
 		[host.organization.id],
 		"event:manage",
 	);
-	if (!hasPermission) {
-		throw new ForbiddenError("You do not have any required permission for this");
+	if (!hasDirectPermission) {
+		// that's the fast fail, now check for any authoritative rights.
+		// find authority holding organizations of the host organization with the permission to cancel.
+		const authorityHoldingOrganizations = await organizationAuthorityRepository.findAll(
+			host.organization.id,
+			["event:cancel"],
+		);
+		if (authorityHoldingOrganizations.length === 0)
+			throw new ForbiddenError("You do not have the permission to discard this draft event");
+		// okay, there is at least one authority holding organization. but, do i have the permission in it?
+		const canExerciseAuthority = await permissionRepository.hasPermissionInManagedEntity(
+			user,
+			"organization",
+			authorityHoldingOrganizations.map(({ organization }) => organization.id),
+			"authority_organization:cancel_organization_events",
+		);
+		if (!canExerciseAuthority)
+			throw new ForbiddenError("You do not have the permission to discard this draft event");
 	}
 
 	if (event.status !== "draft") {
@@ -357,14 +374,28 @@ export async function cancelApprovedEvent(user: AuthenticatedUser, event: EventS
 		throw new NotFoundError("Host organizer not found");
 	}
 
-	const hasPermission = await permissionRepository.hasPermissionInManagedEntity(
+	// todo: should exrtact this into some function that resolves the permission
+	const hasDirectPermission = await permissionRepository.hasPermissionInManagedEntity(
 		user,
 		"organization",
 		[host.organization.id],
 		"event:manage",
 	);
-	if (!hasPermission) {
-		throw new ForbiddenError("You do not have any required permission for this");
+	if (!hasDirectPermission) {
+		const authorityHoldingOrganizations = await organizationAuthorityRepository.findAll(
+			host.organization.id,
+			["event:cancel"],
+		);
+		if (authorityHoldingOrganizations.length === 0)
+			throw new ForbiddenError("You do not have the permission to cancel this event");
+		const canExerciseAuthority = await permissionRepository.hasPermissionInManagedEntity(
+			user,
+			"organization",
+			authorityHoldingOrganizations.map(({ organization }) => organization.id),
+			"authority_organization:cancel_organization_events",
+		);
+		if (!canExerciseAuthority)
+			throw new ForbiddenError("You do not have the permission to cancel this event");
 	}
 
 	if (event.status !== "approved") {

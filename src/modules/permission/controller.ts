@@ -4,7 +4,8 @@ import * as service from "./service.js";
 export const getPermissions: ApiRequestHandler<
 	{
 		id: number;
-		code: PermissionCode;
+		type: PermissionType;
+		code: string;
 		description: string;
 	}[]
 > = async (_req, res) => {

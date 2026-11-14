@@ -23,6 +23,7 @@ export const USER_TYPES = ["admin", "end_user"] as const;
 export const PASSWORD_TOKEN_TYPES = ["set_password", "reset_password"] as const;
 export const MANAGED_ENTITY_TYPES = ["organization", "venue", "facility"] as const;
 export const VENUE_ACCESS_LEVELS = ["public", "private"] as const;
+export const PERMISSION_TYPES = ["user", "managed_entity_authority"] as const;
 export const FACILITY_PROVIDER_ENTITY_TYPES = ["organization", "venue"] as const;
 export const FACILITY_OVERLAP_POLICIES = ["shared", "exclusive"] as const;
 export const FACILITY_WORKFLOW_PARTICIPATION_POLICIES = ["include", "exclude"] as const;
@@ -67,8 +68,9 @@ export const WORKFLOW_INSTANCE_STEP_ASSIGNMENT_STATUS = [
 ] as const;
 export const WORKFLOW_TARGET_GROUP_APPROVAL_CRITERIA = ["all", "any"] as const;
 
+// todo: consider splitting system vs. managed entity scoped.
 // note: keep it sorted like the schema:
-export const PERMISSION = {
+export const USER_PERMISSIONS = {
 	facility: {
 		create: "Create facility",
 	},
@@ -90,7 +92,7 @@ export const PERMISSION = {
 	},
 	venue: {
 		create: "Create venues",
-		add_member: "Add users to organizations", // todo: rename to manage_members
+		add_member: "Add users to venues", // todo: rename to manage_members
 		modify_facilities: "Modify facilities of venues",
 	},
 	venue_type: {
@@ -106,28 +108,39 @@ export const PERMISSION = {
 		create: "Create event categories",
 	},
 	event: {
-		manage: "Manage events",
+		manage: "Manage events", // todo: split into, create, modify, cancel
 		view_own: "View own organization's events of all statuses",
 	},
 	event_organizer_invitation: {
 		respond: "Accept or reject an organizer invitation",
 	},
+	authority_organization: {
+		view_organization_events:
+			"View events of a target organization where this organization has authority on.",
+		cancel_organization_events:
+			"Cancel events of a target organization where this organization has authority on.",
+	},
 } as const;
 
-export const PERMISSION_SCOPES = Object.keys(PERMISSION) as PermissionScope[];
+export const AUTHORITY_PERMISSIONS = {
+	event: {
+		view: "View events hosted by the organization who is subjected to the authority",
+		cancel: "Cancel event of another organization with the assigned power",
+	},
+} as const;
 
-export const FLATTENED_PERMISSIONS = Object.fromEntries(
-	Object.entries(PERMISSION).flatMap(([scope, permissions]) => {
-		return flattenPermissions(scope as PermissionScope, permissions);
-	}),
-) as Record<PermissionCode, string>;
+export const FLATTENED_USER_PERMISSIONS: Record<UserPermissionCode, string> =
+	flattenPermissionSet(USER_PERMISSIONS);
 
-function flattenPermissions<T extends keyof typeof PERMISSION>(
-	scope: T,
-	actions: (typeof PERMISSION)[T],
-): [string, string][] {
-	return Object.entries(actions).map(([action, description]) => [
-		`${scope}:${action}`,
-		description,
-	]);
+export const FLATTENED_AUTHORITY_PERMISSIONS: Record<AuthorityPermissionCode, string> =
+	flattenPermissionSet(AUTHORITY_PERMISSIONS);
+
+function flattenPermissionSet<T extends Record<string, Record<string, string>>>(
+	permissionSet: T,
+): Record<string, string> {
+	return Object.fromEntries(
+		Object.entries(permissionSet).flatMap(([scope, actions]) =>
+			Object.entries(actions).map(([action, description]) => [`${scope}:${action}`, description]),
+		),
+	) as Record<string, string>;
 }

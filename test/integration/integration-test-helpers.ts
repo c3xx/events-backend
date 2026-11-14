@@ -198,7 +198,7 @@ export async function createTestUserRole(data: {
 	return userRole;
 }
 
-export async function grantPermissionToRole(roleId: number, permissionCode: PermissionCode) {
+export async function grantPermissionToRole(roleId: number, permissionCode: UserPermissionCode) {
 	let [perm] = await db
 		.select()
 		.from(schema.permission)
@@ -208,6 +208,7 @@ export async function grantPermissionToRole(roleId: number, permissionCode: Perm
 		[perm] = await db
 			.insert(schema.permission)
 			.values({
+				type: "user",
 				code: permissionCode,
 				description: `Description for ${permissionCode}`,
 			})
@@ -298,7 +299,7 @@ export async function createBasicEventSetup() {
 		managedEntityType: "organization",
 		typeRefId: orgType.id,
 	});
-	await grantPermissionToRole(endUserRole.id, "event:manage" as PermissionCode);
+	await grantPermissionToRole(endUserRole.id, "event:manage" as UserPermissionCode);
 	await createTestUserRole({
 		userId: endUser.id,
 		roleId: endUserRole.id,
@@ -328,8 +329,11 @@ export async function createOrganizerTestSetup() {
 		typeRefId: setup.orgType.id,
 	});
 
-	await grantPermissionToRole(mockRole.id, "event_organizer_invitation:respond" as PermissionCode);
-	await grantPermissionToRole(mockRole.id, "event:manage" as PermissionCode);
+	await grantPermissionToRole(
+		mockRole.id,
+		"event_organizer_invitation:respond" as UserPermissionCode,
+	);
+	await grantPermissionToRole(mockRole.id, "event:manage" as UserPermissionCode);
 
 	const userRole = await createTestUserRole({
 		userId: setup.admin.id,
@@ -735,7 +739,7 @@ export async function setupRecipientUser(organizationId: number, organizationTyp
 		managedEntityType: "organization",
 		typeRefId: organizationTypeId,
 	});
-	await grantPermissionToRole(role.id, "event_organizer_invitation:respond" as PermissionCode);
+	await grantPermissionToRole(role.id, "event_organizer_invitation:respond" as UserPermissionCode);
 
 	const me = await getManagedEntity({
 		managedEntityType: "organization",
@@ -898,11 +902,15 @@ export function createMockExpressContext(headers: Record<string, string> = {}) {
 	return { req, res };
 }
 
-export async function createTestPermission(data?: { code?: PermissionCode; description?: string }) {
+export async function createTestPermission(data?: {
+	code?: UserPermissionCode;
+	description?: string;
+}) {
 	const [p] = await db
 		.insert(schema.permission)
 		.values({
-			code: data?.code ?? (`PERM_${nanoid()}` as PermissionCode),
+			type: "user",
+			code: data?.code ?? (`PERM_${nanoid()}` as UserPermissionCode),
 			description: data?.description ?? "Test permission",
 		})
 		.returning();

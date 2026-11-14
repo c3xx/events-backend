@@ -6,7 +6,9 @@ import * as service from "./service.js";
 export const getRolePermissions: ApiRequestHandler<
 	{
 		id: number;
-		code: PermissionCode;
+		// todo: don't expose internally used permission type.
+		type: PermissionType; // actually, in case of userroles, its always "user"
+		code: string;
 		description: string;
 	}[]
 > = async (req, res) => {
@@ -15,6 +17,7 @@ export const getRolePermissions: ApiRequestHandler<
 	return ok(res, result);
 };
 
+// todo: split this into assign + unassign permissions, also not by their permission id, but by code.
 export const setRolePermissions: ApiRequestHandler<{ permissionId: number }[]> = async (
 	req,
 	res,
