@@ -53,14 +53,14 @@ if (existingAdminAccounts.length === 0) {
 // === Sync permissions
 console.log("Setting up permissions");
 
-async function syncPermissionSet<TCode extends string>({
+async function syncPermissionSet<TCode extends string, O extends SimplePermissionSetOptions>({
 	type,
 	definitions,
 	isPermissionCode,
 	cleanupAssignments,
 }: {
 	type: PermissionType;
-	definitions: Record<TCode, string>;
+	definitions: FlattenedPermissionSet<TCode, O>;
 	isPermissionCode: (code: string) => code is TCode;
 	cleanupAssignments: (ids: number[]) => Promise<void>;
 }) {
@@ -81,11 +81,11 @@ async function syncPermissionSet<TCode extends string>({
 		if (!isPermissionCode(rawCode)) unreachable();
 
 		const existing = existingPermissions.get(rawCode);
-		const description = definitions[rawCode];
+		const details = definitions[rawCode];
 
 		if (existing) {
-			if (description !== existing.description) {
-				permissionsToUpdate.push({ code: rawCode, description });
+			if (details.description !== existing.description) {
+				permissionsToUpdate.push({ code: rawCode, description: details.description });
 			}
 		} else {
 			permissionsToInsert.push(rawCode);
@@ -118,7 +118,7 @@ async function syncPermissionSet<TCode extends string>({
 					({
 						type,
 						code,
-						description: definitions[code],
+						description: definitions[code].description,
 					}) satisfies typeof schema.permission.$inferInsert,
 			),
 		);

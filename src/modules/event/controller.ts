@@ -135,6 +135,37 @@ export const getParentableEvents: ApiRequestHandler<
 	return ok(res, result);
 };
 
+export const getVenueCandidates: ScopedApiRequestHandler<
+	EventScope,
+	{
+		id: IdLike;
+		name: string;
+		type: {
+			id: IdLike;
+			name: string;
+		};
+		accessLevel: VenueAccessLevel;
+		maxCapacity: number;
+		isAvailable: boolean;
+		unavailabilityReason: string | null;
+		ownerOrganization: {
+			id: IdLike;
+			name: string;
+			type: {
+				id: IdLike;
+				name: string;
+			};
+			isActive: boolean;
+		} | null;
+		isActive: boolean;
+	}[]
+> = async (req, res) => {
+	const user = getAuthenticatedUser(req);
+	// todo: take time as input query and use it to filter the available venues.
+	const result = await service.getVenueCandidates(user, res.locals.event);
+	return ok(res, result);
+};
+
 export const discardEvent: ScopedApiRequestHandler<EventScope, true> = async (req, res) => {
 	const user = getAuthenticatedUser(req);
 	await service.discardDraftEvent(user, res.locals.event);

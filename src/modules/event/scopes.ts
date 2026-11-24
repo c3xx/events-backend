@@ -2,7 +2,7 @@ import { ForbiddenError, NotFoundError } from "@/lib/errors.js";
 import { getAuthenticatedUser, idLike, scopedParamHandler } from "@/lib/helpers.js";
 import * as eventRepository from "@/modules/event/repository.js";
 import * as permissionRepository from "@/modules/permission/repository.js";
-import * as organizationAuthorityRepository from "../organization/authority/repository.js";
+import * as authorityRepository from "@/repositories/managed-entity-authority.js";
 import { hasPermissionInManagedEntity } from "../permission/repository.js";
 
 export type EventScope = {
@@ -95,9 +95,15 @@ export const eventIdParamHandler = scopedParamHandler<EventScope, number>(
 			if (host == null) throw err;
 
 			// no direct permission, but what are the authority holders of this host organization, with permission to view these events?
-			const authorityHoldingOrganizations = await organizationAuthorityRepository.findAll(
-				host.organization.id,
-				["event:view"],
+			const authorityHoldingOrganizations = await authorityRepository.findAllAuthorityHolders(
+				{
+					subjectType: "organization",
+					subjectRefId: host.organization.id,
+				},
+				{
+					holderTypes: ["organization"],
+					withPermissions: ["event:view"],
+				},
 			);
 			if (authorityHoldingOrganizations.length === 0) throw err;
 
@@ -105,7 +111,7 @@ export const eventIdParamHandler = scopedParamHandler<EventScope, number>(
 			const canExerciseAuthority = await permissionRepository.hasPermissionInManagedEntity(
 				user,
 				"organization",
-				authorityHoldingOrganizations.map(({ organization }) => organization.id),
+				authorityHoldingOrganizations.map(({ scope }) => scope.id),
 				"authority_organization:view_organization_events",
 			);
 			if (!canExerciseAuthority) throw err;

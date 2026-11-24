@@ -32,7 +32,7 @@ beforeAll(async () => {
 		await db.insert(schema.permission).values({
 			type: "user",
 			code: permission,
-			description: FLATTENED_USER_PERMISSIONS[permission],
+			description: FLATTENED_USER_PERMISSIONS[permission].description,
 		});
 	}
 
@@ -41,7 +41,7 @@ beforeAll(async () => {
 		await db.insert(schema.permission).values({
 			type: "managed_entity_authority",
 			code: permission,
-			description: FLATTENED_AUTHORITY_PERMISSIONS[permission],
+			description: FLATTENED_AUTHORITY_PERMISSIONS[permission].description,
 		});
 	}
 });

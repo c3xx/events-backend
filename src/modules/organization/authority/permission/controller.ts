@@ -5,7 +5,7 @@ import * as service from "./service.js";
 
 export const getAuthorityHolderPermissions: ScopedApiRequestHandler<
 	OrganizationAuthorityHolderScope,
-	{ code: string; description: string }[]
+	{ code: AuthorityPermissionCode; description: string }[]
 > = async (_req, res) => {
 	const result = await service.getAuthorityHolderPermissions(res.locals.authorityHolder);
 	return ok(res, result);

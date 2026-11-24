@@ -7,11 +7,12 @@ export const getAllAuthorityHolders: ScopedApiRequestHandler<
 	OrganizationScope,
 	{
 		id: IdLike;
-		organization: {
-			id: number;
+		scope: {
+			type: ManagedEntityType;
+			id: IdLike;
 			name: string;
-			type: {
-				id: number;
+			kind: {
+				id: IdLike;
 				name: string;
 			};
 		};
@@ -34,16 +35,17 @@ export const getAuthorityHolder: ScopedApiRequestHandler<
 	OrganizationAuthorityHolderScope,
 	{
 		id: IdLike;
-		organization: {
-			id: number;
+		scope: {
+			type: ManagedEntityType;
+			id: IdLike;
 			name: string;
-			type: {
-				id: number;
+			kind: {
+				id: IdLike;
 				name: string;
 			};
 		};
 		permissions: {
-			code: string;
+			code: AuthorityPermissionCode;
 			description: string;
 		}[];
 	}
@@ -56,6 +58,6 @@ export const removeAuthorityHolder: ScopedApiRequestHandler<
 	OrganizationAuthorityHolderScope,
 	true
 > = async (_req, res) => {
-	await service.removeAuthorityHolder(res.locals.authorityHolder);
+	await service.removeAuthorityHolder(res.locals.organization, res.locals.authorityHolder);
 	return ok(res, true);
 };

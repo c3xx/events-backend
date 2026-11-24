@@ -1,5 +1,6 @@
 import { ok } from "@/lib/helpers.js";
 import * as schemas from "./schema.js";
+import type { VenueScope } from "./scopes.js";
 import * as service from "./service.js";
 
 export const createVenue: ApiRequestHandler<{
@@ -12,6 +13,7 @@ export const createVenue: ApiRequestHandler<{
 
 export const getVenues: ApiRequestHandler<
 	{
+		id: number;
 		name: string;
 		venueTypeId: number;
 		organizationId: number | null;
@@ -19,7 +21,6 @@ export const getVenues: ApiRequestHandler<
 		accessLevel: VenueAccessLevel;
 		isAvailable: boolean;
 		unavailabilityReason: string | null;
-		id: number;
 		isActive: boolean;
 	}[]
 > = async (_req, res) => {
@@ -27,35 +28,37 @@ export const getVenues: ApiRequestHandler<
 	return ok(res, result);
 };
 
-export const getVenue: ApiRequestHandler<{
-	id: number;
-	name: string;
-	type: {
-		id: number;
-		name: string;
-	};
-	venueTypeId: number;
-	maxCapacity: number;
-	accessLevel: VenueAccessLevel;
-	isAvailable: boolean;
-	unavailabilityReason: string | null;
-	isActive: boolean;
-	createdAt: string;
-	organization: {
-		id: number;
-		name: string;
-	} | null;
-	facilities: {
+export const getVenue: ScopedApiRequestHandler<
+	VenueScope,
+	{
 		id: number;
 		name: string;
 		type: {
 			id: number;
 			name: string;
 		};
+		venueTypeId: number;
+		maxCapacity: number;
+		accessLevel: VenueAccessLevel;
 		isAvailable: boolean;
-	}[];
-}> = async (req, res) => {
-	const params = schemas.venueScopedSchema.parse(req.params);
-	const result = await service.getVenue(params.id);
+		unavailabilityReason: string | null;
+		isActive: boolean;
+		createdAt: string;
+		organization: {
+			id: number;
+			name: string;
+		} | null;
+		facilities: {
+			id: number;
+			name: string;
+			type: {
+				id: number;
+				name: string;
+			};
+			isAvailable: boolean;
+		}[];
+	}
+> = async (_req, res) => {
+	const result = await service.getVenue(res.locals.venue);
 	return ok(res, result);
 };

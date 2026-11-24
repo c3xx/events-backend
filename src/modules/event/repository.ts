@@ -1,6 +1,11 @@
-import { and, eq, gt, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, exists, gt, inArray, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { jsonAggDistinct, jsonBuildObject, jsonBuildObjectNullable } from "@/db/helpers.js";
+import {
+	jsonAggDistinct,
+	jsonBuildObject,
+	jsonBuildObjectNullable,
+	makeAliases,
+} from "@/db/helpers.js";
 import { db, schema } from "@/db/index.js";
 import { dbAction, unreachable } from "@/lib/helpers.js";
 
@@ -463,4 +468,99 @@ export const cancelApprovedEvent = dbAction(async (eventId: number) => {
 		)
 		.returning({ id: schema.event.id });
 	return updated;
+});
+
+export const findVenueCandidates = dbAction(async (data: { organizationIds: IdLike[] }) => {
+	// todo: find a way to make this not run on every call. can't simply just
+	// move outside the dbaction because of possible name conflicts.
+
+	const aliases = makeAliases({
+		ownerOrganization: schema.organization,
+		ownerOrganizationType: schema.organizationType,
+	});
+
+	const venueCandidates = await db
+		.selectDistinctOn([schema.venue.id], {
+			id: schema.venue.id,
+			name: schema.venue.name,
+			type: jsonBuildObject({
+				id: schema.venueType.id,
+				name: schema.venueType.name,
+			}),
+			accessLevel: schema.venue.accessLevel,
+			maxCapacity: schema.venue.maxCapacity,
+			isAvailable: schema.venue.isAvailable,
+			unavailabilityReason: schema.venue.unavailabilityReason,
+			ownerOrganization: jsonBuildObjectNullable(
+				{
+					id: aliases.ownerOrganization.id,
+					name: aliases.ownerOrganization.name,
+					type: jsonBuildObject({
+						id: aliases.ownerOrganizationType.id,
+						name: aliases.ownerOrganizationType.name,
+					}),
+					isActive: aliases.ownerOrganization.isActive,
+				},
+				aliases.ownerOrganization.id,
+			),
+			isActive: schema.venue.isActive,
+		})
+		.from(schema.managedEntityAuthority)
+		.innerJoin(
+			schema.venue,
+			and(
+				eq(schema.managedEntityAuthority.subjectType, "venue"),
+				eq(schema.managedEntityAuthority.subjectRefId, schema.venue.id),
+				isNull(schema.venue.deletedAt),
+			),
+		)
+		.innerJoin(
+			schema.venueType,
+			and(eq(schema.venueType.id, schema.venue.venueTypeId), isNull(schema.venueType.deletedAt)),
+		)
+		.leftJoin(
+			aliases.ownerOrganization,
+			and(
+				eq(aliases.ownerOrganization.id, schema.venue.organizationId),
+				isNull(aliases.ownerOrganization.deletedAt),
+			),
+		)
+		.leftJoin(
+			aliases.ownerOrganizationType,
+			and(
+				eq(aliases.ownerOrganization.organizationTypeId, aliases.ownerOrganizationType.id),
+				isNull(aliases.ownerOrganizationType.deletedAt),
+			),
+		)
+		.where(
+			and(
+				isNull(schema.managedEntityAuthority.deletedAt), // find all non-deleted...
+				eq(schema.managedEntityAuthority.subjectType, "venue"), // ...venue access definitions...
+
+				eq(schema.managedEntityAuthority.holderType, "organization"), // ...owned by organizations...
+				inArray(schema.managedEntityAuthority.holderRefId, data.organizationIds), // ...in the list (any)...
+
+				exists(
+					// ...with permission to...
+					db
+						.select({ id: schema.managedEntityAuthorityPermission.id })
+						.from(schema.managedEntityAuthorityPermission)
+						.innerJoin(
+							schema.permission,
+							eq(schema.permission.id, schema.managedEntityAuthorityPermission.permissionId),
+						)
+						.where(
+							and(
+								eq(
+									schema.managedEntityAuthorityPermission.authorityId,
+									schema.managedEntityAuthority.id,
+								),
+								eq(schema.permission.code, "venue:request" satisfies AuthorityPermissionCode), // ...request the venue...
+							),
+						),
+				),
+			),
+		);
+
+	return venueCandidates;
 });

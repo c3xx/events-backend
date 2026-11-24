@@ -2,6 +2,7 @@ import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "@
 import { unreachable } from "@/lib/helpers.js";
 import type { EventScope } from "@/modules/event/scopes.js";
 import * as permissionRepository from "@/modules/permission/repository.js";
+import * as authorityRepository from "@/repositories/managed-entity-authority.js";
 import * as repository from "./repository.js";
 import type * as schemas from "./schema.js";
 
@@ -16,26 +17,46 @@ export async function createVenueAllotment(
 	if (hostOrganizers.length !== 1 || hostOrganizers[0] == null) unreachable();
 	const hostOrganizer = hostOrganizers[0]; // note: only host can do stuff.
 
-	const hasAccess = await permissionRepository.hasPermissionInManagedEntity(
+	const hasEventManageAccess = await permissionRepository.hasPermissionInManagedEntity(
 		user,
 		"organization",
 		[hostOrganizer.organization.id],
 		"event:manage",
 	);
 
-	if (!hasAccess) {
+	if (!hasEventManageAccess)
 		throw new ForbiddenError("You do not have permission to manage venues of this event");
+
+	// does any of the hosts or co-hosts have access over the venue to request the venue?
+	const hasAuthorityOverVenue = await authorityRepository.hasAuthorityHolder(
+		{
+			subjectType: "venue",
+			subjectRefId: input.venueId,
+		},
+		{
+			holderTypes: ["organization"],
+			withPermissions: ["venue:request"],
+			holderRefIds: event.organizers
+				.filter((organizer) => organizer.role === "host" || organizer.role === "co_host")
+				.map((organizer) => organizer.organization.id),
+		},
+	);
+	if (!hasAuthorityOverVenue)
+		throw new ForbiddenError("None of the organizers are allowed to request this venue for events");
+
+	if (
+		input.startsAt < event.startsAt ||
+		input.endsAt > event.endsAt ||
+		input.startsAt >= input.endsAt
+	) {
+		throw new BadRequestError("Allotment must fall within the event's period");
 	}
 
 	const result = await repository.insertVenueAllotment(event.id, input);
 
-	if (!result.success) {
+	if (!result.success)
 		throw new ConflictError("Venue is not available for the requested time slot", result.conflict);
-	}
 
-	if (input.startsAt < event.startsAt || event.startsAt > event.endsAt) {
-		throw new BadRequestError("You cannot allot venues beyond an event's period");
-	}
 	return { id: result.id };
 }
 
@@ -66,7 +87,6 @@ export async function deleteVenueAllotment(
 	}
 
 	const result = await repository.deleteVenueAllotment(event.id, allotmentId);
-	if (result == null) {
-		throw new NotFoundError("Venue allotment not found");
-	}
+
+	if (result == null) throw new NotFoundError("Venue allotment not found");
 }

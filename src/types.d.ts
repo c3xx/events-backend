@@ -110,6 +110,19 @@ declare global {
 
 	type AuthenticatedUser = Pick<User, "id" | "type">;
 
+	export type PermissionSet<T extends { description: string }> = Record<string, Record<string, T>>;
+	export type FlattenedPermissionSet<PC extends string, O extends { description: string }> = Record<
+		PC,
+		O
+	>;
+
+	export type SimplePermissionSetOptions = { description: string };
+	export type AuthorityPermissionSetOptions = {
+		description: string;
+		subject: ManagedEntityType;
+		holder: ManagedEntityType;
+	};
+
 	export type UserPermissionCode = FlattenScopeObject<typeof USER_PERMISSIONS>;
 	export type AuthorityPermissionCode = FlattenScopeObject<typeof AUTHORITY_PERMISSIONS>;
 

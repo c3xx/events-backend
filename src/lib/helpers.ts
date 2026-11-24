@@ -7,7 +7,8 @@ import type { $ZodType } from "zod/v4/core";
 import { FLATTENED_AUTHORITY_PERMISSIONS, FLATTENED_USER_PERMISSIONS } from "@/lib/constants.js";
 import { AppError, handleDbError, UnauthorizedError, UnreachableError } from "./errors.js";
 
-export function unreachable(): never {
+export function unreachable(message?: string): never {
+	console.error("unreachable:", message);
 	throw new UnreachableError("never supposed to reach here");
 }
 
@@ -16,6 +17,14 @@ export function isUserPermission(permission: string): permission is UserPermissi
 }
 export function isAuthorityPermission(permission: string): permission is AuthorityPermissionCode {
 	return permission in FLATTENED_AUTHORITY_PERMISSIONS;
+}
+export function isScopedAuthorityPermission(
+	permission: AuthorityPermissionCode,
+	holder: ManagedEntityType,
+	subject: ManagedEntityType,
+) {
+	const details = FLATTENED_AUTHORITY_PERMISSIONS[permission as AuthorityPermissionCode];
+	return details.holder === holder && details.subject === subject;
 }
 
 export function getAuthenticatedUser(req: Express.Request): AuthenticatedUser {

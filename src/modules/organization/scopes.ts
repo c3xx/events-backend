@@ -1,6 +1,6 @@
 import { NotFoundError } from "@/lib/errors.js";
 import { idLike, scopedParamHandler } from "@/lib/helpers.js";
-import * as authorityRepository from "./authority/repository.js";
+import * as authorityRepository from "@/repositories/managed-entity-authority.js";
 import * as repository from "./repository.js";
 
 export type OrganizationScope = {
@@ -41,16 +41,14 @@ export const organizationIdParamHandler = scopedParamHandler<OrganizationScope, 
 export type OrganizationAuthorityHolderScope = OrganizationScope & {
 	authorityHolder: {
 		id: IdLike;
-		organization: {
-			id: number;
+		scope: {
+			type: ManagedEntityType;
+			id: IdLike;
 			name: string;
-			type: {
-				id: number;
-				name: string;
-			};
+			kind: { id: IdLike; name: string };
 		};
 		permissions: {
-			code: string;
+			code: AuthorityPermissionCode;
 			description: string;
 		}[];
 	};
@@ -59,9 +57,12 @@ export type OrganizationAuthorityHolderScope = OrganizationScope & {
 export const authorityIdParamHandler = scopedParamHandler<OrganizationAuthorityHolderScope, IdLike>(
 	idLike("Invalid authority ID"),
 	async (_req, res, _next, authorityId) => {
-		const authorityHolder = await authorityRepository.find(res.locals.organization.id, authorityId);
-		if (authorityHolder == null)
-			throw new NotFoundError("Could not find the authority holder organization");
+		const authorityHolder = await authorityRepository.findAuthorityRelation({
+			subjectType: "organization",
+			subjectRefId: res.locals.organization.id,
+			authorityId: authorityId,
+		});
+		if (authorityHolder == null) throw new NotFoundError("Could not find the authority holder");
 		res.locals.authorityHolder = authorityHolder;
 	},
 );

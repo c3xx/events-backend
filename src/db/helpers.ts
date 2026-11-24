@@ -1,5 +1,5 @@
 import { is, type SelectedFields, type SQL, sql } from "drizzle-orm";
-import { type PgColumn, PgTimestampString } from "drizzle-orm/pg-core";
+import { alias, type PgColumn, type PgTable, PgTimestampString } from "drizzle-orm/pg-core";
 import type { SelectResultFields } from "drizzle-orm/query-builders/select.types";
 
 // todo: use the helpers in older code
@@ -68,4 +68,15 @@ export function arrayAgg<T>(shape: SQL<T>, filterOn?: SQL | PgColumn) {
 	return filterOn
 		? sql<T[]>`coalesce(array_agg(${shape}) filter (where ${filterOn} is not null), '{}')`
 		: sql<T[]>`coalesce(array_agg(${shape}), '{}')`;
+}
+
+type Aliases<T extends Record<string, PgTable>> = {
+	[K in keyof T]: ReturnType<typeof alias<T[K], K & string>>;
+};
+
+// todo: make use of this everywhere:
+export function makeAliases<T extends Record<string, PgTable>>(record: T): Aliases<T> {
+	return Object.fromEntries(
+		Object.entries(record).map(([key, table]) => [key, alias(table, key)]),
+	) as Aliases<T>;
 }

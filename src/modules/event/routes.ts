@@ -23,6 +23,8 @@ router.post("/:eventId/submit", controller.submitEvent);
 router.delete("/:eventId", controller.discardEvent);
 router.post("/:eventId/cancel", controller.cancelEvent);
 
+router.use("/:eventId/venue-candidates", controller.getVenueCandidates);
+
 // todo: adjust the following router to utilize the eventId scope handler
 router.use("/:eventId/venue-allotments", venueAllotmentRouter);
 router.use("/:eventId/facility-assignments", facilityAssignmentRouter);

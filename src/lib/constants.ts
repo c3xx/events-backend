@@ -72,75 +72,100 @@ export const WORKFLOW_TARGET_GROUP_APPROVAL_CRITERIA = ["all", "any"] as const;
 // note: keep it sorted like the schema:
 export const USER_PERMISSIONS = {
 	facility: {
-		create: "Create facility",
+		create: { description: "Create facility" },
 	},
 	organization: {
-		create: "Create organizations",
+		create: { description: "Create organizations" },
 		// get_members: "Get organization members", // todo: think hmmm
-		add_member: "Add users to organizations", // todo: rename to manage_members
+		add_member: { description: "Add users to organizations" }, // todo: rename to manage_members
 	},
 	organization_type: {
-		create: "Create organization types",
-		modify_hierarchy: "Modify hierarchy of organization types",
-		create_role: "Create roles under organization types",
+		create: { description: "Create organization types" },
+		modify_hierarchy: { description: "Modify hierarchy of organization types" },
+		create_role: { description: "Create roles under organization types" },
 	},
 	role: {
-		modify_permissions: "Modify permissions of roles",
+		modify_permissions: { description: "Modify permissions of roles" },
 	},
 	user: {
-		create: "Create users",
+		create: { description: "Create users" },
 	},
 	venue: {
-		create: "Create venues",
-		add_member: "Add users to venues", // todo: rename to manage_members
-		modify_facilities: "Modify facilities of venues",
+		create: { description: "Create venues" },
+		add_member: { description: "Add users to venues" }, // todo: rename to manage_members
+		modify_facilities: { description: "Modify facilities of venues" },
 	},
 	venue_type: {
-		create: "Create venue types",
-		create_role: "Create roles under venue types",
+		create: { description: "Create venue types" },
+		create_role: { description: "Create roles under venue types" },
 	},
 	event_type: {
-		create: "Create event types",
-		delete: "Delete event types",
-		modify_hierarchy: "Modify hierarchy of event types",
+		create: { description: "Create event types" },
+		delete: { description: "Delete event types" },
+		modify_hierarchy: { description: "Modify hierarchy of event types" },
 	},
 	event_category: {
-		create: "Create event categories",
+		create: { description: "Create event categories" },
 	},
 	event: {
-		manage: "Manage events", // todo: split into, create, modify, cancel
-		view_own: "View own organization's events of all statuses",
+		manage: { description: "Manage events" }, // todo: split into, create, modify, cancel
+		view_own: { description: "View own organization's events of all statuses" },
 	},
 	event_organizer_invitation: {
-		respond: "Accept or reject an organizer invitation",
+		respond: { description: "Accept or reject an organizer invitation" },
 	},
 	authority_organization: {
-		view_organization_events:
-			"View events of a target organization where this organization has authority on.",
-		cancel_organization_events:
-			"Cancel events of a target organization where this organization has authority on.",
+		view_organization_events: {
+			description:
+				"View events of a target organization, on which this organization has authority on",
+		},
+		cancel_organization_events: {
+			description:
+				"Cancel events of a target organization, on which this organization has authority on",
+		},
 	},
-} as const;
+} satisfies PermissionSet<SimplePermissionSetOptions>;
 
 export const AUTHORITY_PERMISSIONS = {
 	event: {
-		view: "View events hosted by the organization who is subjected to the authority",
-		cancel: "Cancel event of another organization with the assigned power",
+		view: {
+			subject: "organization",
+			holder: "organization",
+			description: "View events hosted by the organization who is subjected to the authority",
+		},
+		cancel: {
+			subject: "organization",
+			holder: "organization",
+			description: "Cancel events hosted by the organization who is subjected to the authority",
+		},
 	},
-} as const;
+	venue: {
+		request: {
+			subject: "organization",
+			holder: "venue",
+			description: "Request the venue which is subjected to the authority of the organization",
+		},
+	},
+} satisfies PermissionSet<AuthorityPermissionSetOptions>;
 
-export const FLATTENED_USER_PERMISSIONS: Record<UserPermissionCode, string> =
-	flattenPermissionSet(USER_PERMISSIONS);
+export const FLATTENED_USER_PERMISSIONS: FlattenedPermissionSet<
+	UserPermissionCode,
+	SimplePermissionSetOptions
+> = flattenPermissionSet(USER_PERMISSIONS);
 
-export const FLATTENED_AUTHORITY_PERMISSIONS: Record<AuthorityPermissionCode, string> =
-	flattenPermissionSet(AUTHORITY_PERMISSIONS);
+export const FLATTENED_AUTHORITY_PERMISSIONS: FlattenedPermissionSet<
+	AuthorityPermissionCode,
+	AuthorityPermissionSetOptions
+> = flattenPermissionSet(AUTHORITY_PERMISSIONS);
 
-function flattenPermissionSet<T extends Record<string, Record<string, string>>>(
-	permissionSet: T,
-): Record<string, string> {
+function flattenPermissionSet<
+	PC extends string,
+	O extends { description: string },
+	T extends PermissionSet<O>,
+>(permissionSet: T): Record<PC, O> {
 	return Object.fromEntries(
 		Object.entries(permissionSet).flatMap(([scope, actions]) =>
 			Object.entries(actions).map(([action, description]) => [`${scope}:${action}`, description]),
 		),
-	) as Record<string, string>;
+	) as Record<PC, O>;
 }
