@@ -360,37 +360,10 @@ export async function discardDraftEvent(user: AuthenticatedUser, event: EventSco
 		user,
 		"organization",
 		[host.organization.id],
-		"event:manage", // todo: separate to event:cancel
+		"event:manage",
 	);
 	if (!hasDirectPermission) {
-		// todo: could probably merge both findAllAuthorityHolders() +
-		// hasPermissionInManagedEntity() as a single repository function to
-		// make the queries faster.
-
-		// that's the fast fail, now check for any authoritative rights. find
-		// authority holding organizations of the host organization with the
-		// permission to cancel.
-		const authorityHoldingOrganizations = await authorityRepository.findAllAuthorityHolders(
-			{
-				subjectType: "organization",
-				subjectRefId: host.organization.id,
-			},
-			{
-				holderTypes: ["organization"],
-				withPermissions: ["event:cancel"],
-			},
-		);
-		if (authorityHoldingOrganizations.length === 0)
-			throw new ForbiddenError("You do not have the permission to discard this draft event");
-		// okay, there is at least one authority holding organization. but, do i have the permission in it?
-		const canExerciseAuthority = await permissionRepository.hasPermissionInManagedEntity(
-			user,
-			"organization",
-			authorityHoldingOrganizations.map(({ scope }) => scope.id),
-			"authority_organization:cancel_organization_events",
-		);
-		if (!canExerciseAuthority)
-			throw new ForbiddenError("You do not have the permission to discard this draft event");
+		throw new ForbiddenError("You do not have the permission to discard this draft event");
 	}
 
 	if (event.status !== "draft") {
@@ -400,9 +373,10 @@ export async function discardDraftEvent(user: AuthenticatedUser, event: EventSco
 	await repository.discardDraftEvent(event.id);
 }
 
+// todo: mj pillai cancels ACM's event in behalf of CGPU or ACM? must provide a input for that.
 export async function cancelApprovedEvent(user: AuthenticatedUser, event: EventScope["event"]) {
 	const host = event.organizers.find((o) => o.role === "host");
-	if (!host) {
+	if (host == null) {
 		throw new NotFoundError("Host organizer not found");
 	}
 
@@ -411,9 +385,18 @@ export async function cancelApprovedEvent(user: AuthenticatedUser, event: EventS
 		user,
 		"organization",
 		[host.organization.id],
-		"event:manage",
+		"event:manage", // todo: separate to event:cancel
 	);
 	if (!hasDirectPermission) {
+		// that's the fast fail, now check for any authoritative rights. find
+		// authority holding organizations of the host organization with the
+		// permission to cancel.
+
+		const err = new ForbiddenError("You do not have the permission to cancel this event");
+
+		// todo: could probably merge both findAllAuthorityHolders() +
+		// hasPermissionInManagedEntity() as a single repository function to
+		// make the queries faster.
 		const authorityHoldingOrganizations = await authorityRepository.findAllAuthorityHolders(
 			{
 				subjectType: "organization",
@@ -424,16 +407,16 @@ export async function cancelApprovedEvent(user: AuthenticatedUser, event: EventS
 				withPermissions: ["event:cancel"],
 			},
 		);
-		if (authorityHoldingOrganizations.length === 0)
-			throw new ForbiddenError("You do not have the permission to cancel this event");
+		if (authorityHoldingOrganizations.length === 0) throw err;
+
+		// okay, there is at least one authority holding organization. but, do i have the permission in it?
 		const canExerciseAuthority = await permissionRepository.hasPermissionInManagedEntity(
 			user,
 			"organization",
 			authorityHoldingOrganizations.map(({ scope }) => scope.id),
 			"authority_organization:cancel_organization_events",
 		);
-		if (!canExerciseAuthority)
-			throw new ForbiddenError("You do not have the permission to cancel this event");
+		if (!canExerciseAuthority) throw err;
 	}
 
 	if (event.status !== "approved") {
