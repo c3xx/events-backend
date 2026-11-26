@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, or, type SQL, sql } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { jsonAgg, jsonBuildObject } from "@/db/helpers.js";
 import { db, schema } from "@/db/index.js";
@@ -37,7 +37,6 @@ function matchingScopeDetailsQuery<T extends ManagedEntityType>(
 			limit 1
 		)`);
 	}
-
 	if (filter.includes("venue")) {
 		cases.push(sql`when ${typeCol} = 'venue' then (
 			select json_build_object(
@@ -52,7 +51,6 @@ function matchingScopeDetailsQuery<T extends ManagedEntityType>(
 			limit 1
 		)`);
 	}
-
 	if (filter.includes("facility")) {
 		cases.push(sql`when ${typeCol} = 'facility' then (
 			select json_build_object(
@@ -85,14 +83,16 @@ export const findAllAuthorityHolders = dbAction(
 			subjectRefId: number;
 		},
 		filters?: {
-			holderTypes?: ManagedEntityType[];
+			holderScopes?: {
+				type: ManagedEntityType;
+				refIds?: IdLike[];
+			}[];
 			withPermissions?: AuthorityPermissionCode[];
-			holderRefIds?: IdLike[];
 		},
 	) => {
 		// todo: @think what should happen if any of the filters are empty arrays?
 
-		if (filters?.holderTypes?.length === 0 || filters?.holderRefIds?.length === 0) return [];
+		if (filters?.holderScopes?.length === 0) return [];
 
 		const requiredPermissions = filters?.withPermissions?.length
 			? [...new Set(filters.withPermissions)]
@@ -104,8 +104,8 @@ export const findAllAuthorityHolders = dbAction(
 				scope: matchingScopeDetailsQuery(
 					schema.managedEntityAuthority.holderType,
 					schema.managedEntityAuthority.holderRefId,
-					filters?.holderTypes != null && filters.holderTypes.length > 0
-						? filters.holderTypes
+					filters?.holderScopes != null
+						? filters.holderScopes.map((holder) => holder.type)
 						: ["organization", "venue", "facility"],
 				),
 			})
@@ -121,14 +121,21 @@ export const findAllAuthorityHolders = dbAction(
 			.where(
 				and(
 					eq(schema.managedEntityAuthority.subjectType, data.subjectType),
-					filters?.holderTypes != null
-						? inArray(schema.managedEntityAuthority.holderType, filters.holderTypes)
-						: undefined,
-					filters?.holderRefIds != null
-						? inArray(schema.managedEntityAuthority.holderRefId, filters.holderRefIds)
-						: undefined,
 					eq(schema.managedEntityAuthority.subjectRefId, data.subjectRefId),
 					isNull(schema.managedEntityAuthority.deletedAt),
+
+					filters?.holderScopes != null
+						? or(
+								...filters.holderScopes.map((holder) =>
+									and(
+										eq(schema.managedEntityAuthority.holderType, holder.type),
+										holder.refIds != null
+											? inArray(schema.managedEntityAuthority.holderRefId, holder.refIds)
+											: undefined,
+									),
+								),
+							)
+						: undefined,
 				),
 			)
 			.groupBy(schema.managedEntityAuthority.id)
@@ -147,12 +154,14 @@ export const hasAuthorityHolder = dbAction(
 			subjectRefId: number;
 		},
 		filters?: {
-			holderTypes?: ManagedEntityType[];
+			holderScopes?: {
+				type: ManagedEntityType;
+				refIds?: IdLike[];
+			}[];
 			withPermissions?: AuthorityPermissionCode[];
-			holderRefIds?: IdLike[];
 		},
 	) => {
-		if (filters?.holderTypes?.length === 0 || filters?.holderRefIds?.length === 0) return false;
+		if (filters?.holderScopes?.length === 0) return false;
 
 		const requiredPermissions = filters?.withPermissions?.length
 			? [...new Set(filters.withPermissions)]
@@ -176,11 +185,17 @@ export const hasAuthorityHolder = dbAction(
 					eq(schema.managedEntityAuthority.subjectType, data.subjectType),
 					eq(schema.managedEntityAuthority.subjectRefId, data.subjectRefId),
 					isNull(schema.managedEntityAuthority.deletedAt),
-					filters?.holderTypes != null
-						? inArray(schema.managedEntityAuthority.holderType, filters.holderTypes)
-						: undefined,
-					filters?.holderRefIds != null
-						? inArray(schema.managedEntityAuthority.holderRefId, filters.holderRefIds)
+					filters?.holderScopes != null
+						? or(
+								...filters.holderScopes.map((holder) =>
+									and(
+										eq(schema.managedEntityAuthority.holderType, holder.type),
+										holder.refIds != null
+											? inArray(schema.managedEntityAuthority.holderRefId, holder.refIds)
+											: undefined,
+									),
+								),
+							)
 						: undefined,
 				),
 			)

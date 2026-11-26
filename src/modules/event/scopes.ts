@@ -101,7 +101,7 @@ export const eventIdParamHandler = scopedParamHandler<EventScope, number>(
 					subjectRefId: host.organization.id,
 				},
 				{
-					holderTypes: ["organization"],
+					holderScopes: [{ type: "organization" }],
 					withPermissions: ["event:view"],
 				},
 			);

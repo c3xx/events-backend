@@ -34,11 +34,15 @@ export async function createVenueAllotment(
 			subjectRefId: input.venueId,
 		},
 		{
-			holderTypes: ["organization"],
+			holderScopes: [
+				{
+					type: "organization",
+					refIds: event.organizers
+						.filter((organizer) => organizer.role === "host" || organizer.role === "co_host")
+						.map((organizer) => organizer.organization.id),
+				},
+			],
 			withPermissions: ["venue:request"],
-			holderRefIds: event.organizers
-				.filter((organizer) => organizer.role === "host" || organizer.role === "co_host")
-				.map((organizer) => organizer.organization.id),
 		},
 	);
 	if (!hasAuthorityOverVenue)

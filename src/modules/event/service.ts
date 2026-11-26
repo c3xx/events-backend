@@ -403,7 +403,7 @@ export async function cancelApprovedEvent(user: AuthenticatedUser, event: EventS
 				subjectRefId: host.organization.id,
 			},
 			{
-				holderTypes: ["organization"],
+				holderScopes: [{ type: "organization" }],
 				withPermissions: ["event:cancel"],
 			},
 		);
