@@ -2,6 +2,7 @@ import { BadRequestError, ConflictError, NotFoundError, ValidationError } from "
 import { orderWorkflowSteps, unreachable } from "@/lib/helpers.js";
 import * as eventRepository from "@/modules/event/repository.js";
 import * as workflowInstanceRepository from "@/modules/event/workflow-instance/repository.js";
+import * as notificationService from "@/modules/notification/service.js";
 import { hasPermissionInManagedEntity } from "@/modules/permission/repository.js";
 import * as repository from "./repository.js";
 import type { RespondToAssignmentsSchema } from "./schema.js";
@@ -86,4 +87,53 @@ export async function respondToAssignments(
 		status: body.decision,
 		remarks: body.remarks,
 	});
+
+	// Trigger notifications after assignment resolution transaction completes
+	const updatedInstance = await workflowInstanceRepository.getWorkflowInstance(eventId, instanceId);
+	const fullEvent = await eventRepository.findEventById(eventId);
+
+	if (updatedInstance != null && fullEvent != null) {
+		if (updatedInstance.status === "completed") {
+			// O3: Workflow fully approved through all stages
+			notificationService
+				.sendWorkflowApprovedNotification(
+					eventId,
+					fullEvent.title,
+					fullEvent.startsAt,
+					fullEvent.endsAt,
+				)
+				.catch(() => {});
+		} else if (updatedInstance.status === "denied") {
+			// O4: Workflow rejected at this step
+			notificationService
+				.sendWorkflowDeniedNotification(
+					eventId,
+					fullEvent.title,
+					activeStep.name,
+					body.remarks ?? null,
+				)
+				.catch(() => {});
+		} else if (updatedInstance.status === "active") {
+			const updatedOrderedSteps = orderWorkflowSteps(
+				updatedInstance.steps,
+				updatedInstance.initialStepId,
+			);
+			const nextActiveStep = updatedOrderedSteps.find((step) => step.status === "active");
+
+			if (nextActiveStep != null && nextActiveStep.id !== activeStep.id) {
+				// O2 + F1: Stage N cleared, Stage N+1 started + notify next approvers
+				notificationService
+					.sendStepTransitionNotification(
+						eventId,
+						fullEvent.title,
+						activeStep.name,
+						nextActiveStep.name,
+						nextActiveStep.id,
+						fullEvent.startsAt,
+						fullEvent.endsAt,
+					)
+					.catch(() => {});
+			}
+		}
+	}
 }

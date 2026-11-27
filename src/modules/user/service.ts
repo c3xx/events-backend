@@ -1,5 +1,5 @@
-import { sendEmail } from "@/lib/email.js";
-import { getAccountCreatedContent } from "@/lib/email-templates.js";
+import { getAccountCreatedContent } from "@/lib/email/auth-email-templates.js";
+import { sendEmail } from "@/lib/email/index.js";
 import { env } from "@/lib/env.js";
 import * as repository from "./repository.js";
 import type * as schemas from "./schema.js";
@@ -16,6 +16,8 @@ export async function createUser(input: schemas.CreateUserSchema) {
 		to: [input.email],
 		subject: "Your account has been created",
 		html: html,
+	}).catch(() => {
+		/* ignore */
 	});
 
 	return user;

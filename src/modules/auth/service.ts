@@ -1,12 +1,12 @@
 import { jwtVerify } from "jose";
 import { hashPassword, verifyPassword } from "@/lib/argon2.js";
-import { sendEmail } from "@/lib/email.js";
 import {
 	getPasswordChangedContent,
 	getPasswordSetContent,
 	getPasswordSetupTokenContent,
 	getResetPasswordContent,
-} from "@/lib/email-templates.js";
+} from "@/lib/email/auth-email-templates.js";
+import { sendEmail } from "@/lib/email/index.js";
 import { env } from "@/lib/env.js";
 import { BadRequestError, ForbiddenError, UnauthorizedError } from "@/lib/errors.js";
 import { generatePasswordToken, hexSha256 } from "@/lib/helpers.js";

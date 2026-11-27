@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 import { env } from "@/lib/env.js";
-import { AppError, ERROR_CODES } from "./errors.js";
+import { AppError, ERROR_CODES } from "../errors.js";
 
 const resend = new Resend(env.RESEND_API_TOKEN);
 
